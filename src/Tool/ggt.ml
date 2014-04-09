@@ -80,7 +80,7 @@ let pp_poly fmt f =
     F.fprintf fmt "%a" (pp_list " " pp_pvar) f
 
 let pp_qprefix fmt (c,l,d) =
-  F.fprintf fmt "[%i,l%i + %i]" c l d
+  F.fprintf fmt "[%i,l%i%s]" c l (if d <> 0 then " + "^(string_of_int d) else "")
 
 let pp_range fmt (i,qp) =
   F.fprintf fmt "r%i in %a" i pp_qprefix qp
@@ -114,7 +114,7 @@ let bdhe =
     ; mk_re [] [("Y",[])] 
       (* M3 = All r1 in [0,l1]. X^r1 *)
     ; forall 0 1 0 ("X"^r1)
-      (* M4 = All r1 in [0,l1]. X^r1 *)
+      (* M4 = All r1 in [0,l1]. X^(l1 + 1 + r1 *)
     ; forall 0 1 0 ("X" ^ (l1 + (c 2) + r1))
     ]
   in
