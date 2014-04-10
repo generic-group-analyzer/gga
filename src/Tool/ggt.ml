@@ -96,6 +96,71 @@ let pp_rexpr_level fmt (l,re) =
 (*******************************************************************)
 (* Testing *)
 
+(* l_i (range limit): extract from qprefix of input
+   r_i_j (range index): extract from input
+   delta_i: one for each input
+   k
+*)
+
+module ConstrPoly = MakePoly(struct
+  type t = string
+  let pp fmt v = F.fprintf fmt "%s" v
+end) (IntRing)
+
+type eq_type = Eq | Leq
+
+type constr = ConstrPoly.t * ConstrPoly.t * eq_type
+
+let pp_eq_type fmt eqt =
+  match eqt with
+  | Eq  -> F.fprintf fmt "="
+  | Leq -> F.fprintf fmt "<="
+
+let pp_constr fmt (p1,p2,eqt) =
+  F.fprintf fmt "%a %a %a" ConstrPoly.pp p1 pp_eq_type eqt ConstrPoly.pp p2
+
+let level_to_poly l =
+  ConstrPoly.(
+    match l with
+    | LevelFixed j  -> const j
+    | LevelOffset j -> minus (var "k") (const j))
+
+let delta_var i =
+  ConstrPoly.var ("delta"^string_of_int i)
+
+let mult_limit_constr input =
+    ConstrPoly.(
+      (ladd
+         (List.mapi
+            (fun i (l,_) ->
+               let d = delta_var i in
+               mult (level_to_poly l) d) input)
+     , var "k"
+     , Leq))
+
+let delta_pos input =
+  List.mapi
+    (fun i _ ->
+      ConstrPoly.(const 0, delta_var i, Leq))
+    input
+
+let range_limit_upper _input = []
+
+let range_limit_lower _input = []
+
+let degree_equal _input _challenge = []
+
+let gen_constrs input challenge =
+    [ mult_limit_constr input]
+  @ delta_pos input
+  @ degree_equal input challenge
+  @ range_limit_lower input
+  @ range_limit_upper input
+
+(* let find_model (constrs : constr list) =
+  Some [("l1",4); ("r_1_1", 5)]
+ *)
+
 let bdhe =
   let mk_re qp f = (LevelFixed 1, mk_rexpr qp f) in
   let forall c l d f = mk_re [(c,l,d)] f in
@@ -110,6 +175,9 @@ let bdhe =
       mk_re [] []
       (* M2 = Y *)
     ; mk_re [] [("Y",one)] 
+    ; (LevelFixed 2, mk_rexpr [] [("Z1",one)])
+    ; (LevelOffset 2, mk_rexpr [] [("Z2",one)])
+
       (* M3 = All r1 in [0,l1]. X^r1 *)
     ; forall 0 1 0 ("X"^r1)
       (* M4 = All r1 in [0,l1]. X^(l1 + 1 + r1 *)
@@ -118,14 +186,7 @@ let bdhe =
   in
   let challenge = (LevelFixed 2, ("X"^(l1 + (c 1))) @ ("Y"^(c 1))) in
   F.printf "input: @\n  %a@\n@\n" (pp_list ",@\n  " pp_rexpr_level) input;
-  F.printf "challenge: %a @@ level %a\n" pp_input_monomial (snd challenge) pp_level (fst challenge)
+  F.printf "challenge: %a @@ level %a\n" pp_input_monomial (snd challenge) pp_level (fst challenge);
+  F.printf "constrs:\n %a\n" (pp_list "\n" pp_constr) (gen_constrs input challenge)
 
-(* type rel = 
 
-type constr =
-  EqZero (poly 
-
-let find_model (constrs : constr list) =
-  Some [("l1",4); ("r_1_1", 5)]
-
- *)
