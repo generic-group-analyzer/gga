@@ -15,11 +15,11 @@ end
 
 module MakePoly : functor (V : Var) -> functor (C : Ring) ->
 sig
+  type t
   type var = V.t
   type coeff = C.t
   type monom
   type term
-  type t
   val pp_monom : Format.formatter -> monom -> unit
   val pp_term : Format.formatter -> term -> unit
   val pp : Format.formatter -> t -> unit
@@ -34,6 +34,11 @@ sig
   val var : var -> t
   val const : coeff -> t
   val eval : (var -> t) -> t -> t
+  (* val vdeg : var -> t -> int *)
+  val vars : t -> var list
+  val partition : ((C.t * V.t list) -> bool) -> t -> (t * t)
+  val to_terms : t -> (C.t * V.t list) list
+  val from_terms : (C.t * V.t list) list -> t
 end
 
 module IntRing : (Ring with type t = int)

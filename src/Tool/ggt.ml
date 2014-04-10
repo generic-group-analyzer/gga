@@ -6,7 +6,7 @@ module F = Format
 (*******************************************************************)
 (* Range expressions *)
 
-(* random variable (polynomial in L) *)
+(* random variable (assume: polynomials in L are monomials) *)
 type rvar = string
 
 type rlimit_var = int
@@ -24,8 +24,10 @@ let pp_level fmt l =
 
 type exp_var = 
   | Rlimit of rlimit_var  (* l_i *)
-  | Ridx   of ridx_var    (* r_i *)
+  | Ridx   of ridx_var    (* r_i, de-Bruin-like index starting at 1 for outermost quantifier *)
   | Level                 (* k   *)
+
+let is_Ridx = function Ridx _ -> true | _ -> false
 
 let pp_exp_var fmt v =
   match v with
@@ -87,20 +89,14 @@ let pp_rexpr fmt re =
   | [] -> pp_input_monomial fmt re.re_input_monomial
   | qps ->
     F.fprintf fmt "All %a. %a"
-      (pp_list "," pp_range) (List.mapi (fun i qp -> (i+1,qp)) qps)
+      (pp_list "," pp_range) (mapi' (fun i qp -> (i,qp)) qps)
       pp_input_monomial re.re_input_monomial
 
 let pp_rexpr_level fmt (l,re) =
   F.fprintf fmt "%a @@ level %a" pp_rexpr re pp_level l
 
 (*******************************************************************)
-(* Testing *)
-
-(* l_i (range limit): extract from qprefix of input
-   r_i_j (range index): extract from input
-   delta_i: one for each input
-   k
-*)
+(* Constraints *)
 
 module ConstrPoly = MakePoly(struct
   type t = string
@@ -109,15 +105,15 @@ end) (IntRing)
 
 type eq_type = Eq | Leq
 
-type constr = ConstrPoly.t * ConstrPoly.t * eq_type
+type constr = ConstrPoly.t * ConstrPoly.t * eq_type * string
 
 let pp_eq_type fmt eqt =
   match eqt with
   | Eq  -> F.fprintf fmt "="
   | Leq -> F.fprintf fmt "<="
 
-let pp_constr fmt (p1,p2,eqt) =
-  F.fprintf fmt "%a %a %a" ConstrPoly.pp p1 pp_eq_type eqt ConstrPoly.pp p2
+let pp_constr fmt (p1,p2,eqt,comment) =
+  F.fprintf fmt "%a %a %a \t// %s" ConstrPoly.pp p1 pp_eq_type eqt ConstrPoly.pp p2 comment
 
 let level_to_poly l =
   ConstrPoly.(
@@ -125,41 +121,94 @@ let level_to_poly l =
     | LevelFixed j  -> const j
     | LevelOffset j -> minus (var "k") (const j))
 
-let delta_var i =
-  ConstrPoly.var ("delta"^string_of_int i)
+(*******************************************************************)
+(* Constraint helper functions *)
 
-let mult_limit_constr input =
-    ConstrPoly.(
+let delta_var i = ConstrPoly.var ("delta"^string_of_int i)
+
+let ridx_var i j = ConstrPoly.var (F.sprintf "r_%i_%i" i j)
+
+let rlimit_var i = ConstrPoly.var (F.sprintf "l_%i" i)
+
+let expPoly_to_constrPoly j f =
+  let expvar_to_string v =
+    match v with
+    | Level    -> "k"
+    | Rlimit i -> F.sprintf "l_%i" i
+    | Ridx   i -> F.sprintf "l_%i_%i" i j
+  in
+  f
+  |> ExpPoly.to_terms
+  |> List.map (fun (c,m) -> (c, List.map expvar_to_string m))
+  |> ConstrPoly.from_terms
+
+(*******************************************************************)
+(* Constraint creation *)
+
+let constr_mult_limit input =
+  ConstrPoly.(
+    (ladd (mapi' (fun i (l,_) -> mult (level_to_poly l) (delta_var i)) input)
+    , var "k"
+    , Leq
+    , F.sprintf "multiplications bounded by arity"))
+
+let constr_delta_pos input =
+  mapi' (fun i _ -> ConstrPoly.(const 0, delta_var i, Leq, F.sprintf "delta_%i positive" i)) input
+
+let constr_range_limits input =
+  List.concat
+    (mapi'
+       (fun j (_l,re) ->
+          List.concat
+            (mapi'
+              (fun i (c,l,d) ->
+                 [ ( ConstrPoly.(mult (delta_var j) (const c))
+                   , ridx_var i j
+                   , Leq
+                   , F.sprintf "range variable r_%i in %i-th input monomial, lower bound" i j)
+                 ; ( ridx_var i j
+                   , ConstrPoly.(mult (delta_var j) (add (rlimit_var l) (const d)))
+                   , Leq
+                   , F.sprintf "range variable r_%i in %i-th input monomial, upper bound" i j)
+                 ])
+              re.re_qprefix))
+       input)
+
+let constr_degree_equal input (_,c_monomial) =
+  let input_monomials : input_monomial list = 
+    List.map (fun (_level,re) -> re.re_input_monomial) input 
+  in
+  let rvars =
+    sorted_nub (  List.map fst c_monomial
+                @ List.concat (List.map (List.map fst) input_monomials))
+  in
+  let vdeg_challenge rv =
+    try  expPoly_to_constrPoly 0 (List.assoc rv c_monomial)
+    with Not_found -> ConstrPoly.const 0
+  in
+  let vdeg_input rv =
+    ConstrPoly.
       (ladd
-         (List.mapi
-            (fun i (l,_) ->
-               let d = delta_var i in
-               mult (level_to_poly l) d) input)
-     , var "k"
-     , Leq))
-
-let delta_pos input =
-  List.mapi
-    (fun i _ ->
-      ConstrPoly.(const 0, delta_var i, Leq))
-    input
-
-let range_limit_upper _input = []
-
-let range_limit_lower _input = []
-
-let degree_equal _input _challenge = []
+         (mapi'
+            (fun i ms ->
+               try
+                 let vu  = List.assoc rv ms in
+                 let v,u = ExpPoly.partition (fun (_,m) -> List.exists is_Ridx m) vu in
+                 (add (expPoly_to_constrPoly i v)
+                      (mult (delta_var i) (expPoly_to_constrPoly i u)))
+               with Not_found -> const 0)
+          input_monomials))
+  in
+  List.map (fun rv -> (vdeg_challenge rv, vdeg_input rv, Eq, F.sprintf "degree equal for %s" rv)) rvars
 
 let gen_constrs input challenge =
-    [ mult_limit_constr input]
-  @ delta_pos input
-  @ degree_equal input challenge
-  @ range_limit_lower input
-  @ range_limit_upper input
+    [ constr_mult_limit input]
+  @ constr_delta_pos input
+  @ constr_degree_equal input challenge
+  @ constr_range_limits input
 
-(* let find_model (constrs : constr list) =
-  Some [("l1",4); ("r_1_1", 5)]
- *)
+(*******************************************************************)
+(* Tests *)
 
 let bdhe =
   let mk_re qp f = (LevelFixed 1, mk_rexpr qp f) in
@@ -185,8 +234,11 @@ let bdhe =
     ]
   in
   let challenge = (LevelFixed 2, ("X"^(l1 + (c 1))) @ ("Y"^(c 1))) in
-  F.printf "input: @\n  %a@\n@\n" (pp_list ",@\n  " pp_rexpr_level) input;
-  F.printf "challenge: %a @@ level %a\n" pp_input_monomial (snd challenge) pp_level (fst challenge);
-  F.printf "constrs:\n %a\n" (pp_list "\n" pp_constr) (gen_constrs input challenge)
+  F.printf "input: @\n  %a@\n@\n"
+    (pp_list "@\n  " (fun fmt (i,re) -> Format.fprintf fmt "%i: %a" i pp_rexpr_level re))
+    (mapi' (fun i inp -> (i,inp)) input);
+  F.printf "challenge: %a @@ level %a\n\n" pp_input_monomial (snd challenge) pp_level (fst challenge);
+  F.printf "constrs:\n  %a\n" (pp_list "\n  " pp_constr) (gen_constrs input challenge);
+  print_newline ()
 
 

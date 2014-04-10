@@ -40,7 +40,9 @@ module MakePoly (V : Var) (C : Ring) = struct
     else F.fprintf fmt "%a*%a" C.pp c pp_monom m
 
   let pp fmt f =
-    F.fprintf fmt "%a" (pp_list "+" pp_term) f
+    match f with
+    | [] -> F.fprintf fmt "0"
+    | _  -> F.fprintf fmt "%a" (pp_list "+" pp_term) f
 
   (* internal functions *)
   let norm f =
@@ -81,6 +83,24 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let ladd  = List.fold_left (fun acc f -> add acc f) zero
 
+  let vars f = sorted_nub (List.concat (List.map snd f))
+
+  (* move somewhere else: terms : t -> (coeff, [var]) *)
+  let partition p f =
+    let (t1s, t2s) = List.partition p f in
+    (norm t1s, norm t2s)
+
+(*   let vdeg v f =
+    let vdeg_mon vm =
+      match List.filter (fun xs -> v = List.hd xs) (group (=) vm) with
+      | []   -> 0
+      | [vs] -> List.length vs
+      | _    -> assert false
+
+    in
+    List.fold_left
+      (List.map (fun (_,m) -> vdeg_mon ))
+ *)
   let eval env f =
     let eval_monom m =
       lmult (List.map (fun v -> env v) m)
@@ -89,6 +109,9 @@ module MakePoly (V : Var) (C : Ring) = struct
       mult (const c) (eval_monom m)
     in
     ladd (List.map eval_term f)
+  let to_terms f = f
+
+  let from_terms f = norm f
 end
 
 module IntRing = struct

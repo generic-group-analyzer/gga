@@ -16,3 +16,12 @@ let group pred xs =
   match xs with
   | []    -> []
   | x::xs -> go xs x [x]
+
+let sorted_nub xs =
+  xs |> List.sort compare  |> group (=) |> List.map List.hd
+
+let pp_int fmt i = Format.fprintf fmt "%i" i
+
+let pp_string fmt s = Format.fprintf fmt "%s" s
+
+let mapi' f = List.mapi (fun i x -> f (i+1) x)
