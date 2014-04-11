@@ -42,7 +42,7 @@ module MakePoly (V : Var) (C : Ring) = struct
   let pp fmt f =
     match f with
     | [] -> F.fprintf fmt "0"
-    | _  -> F.fprintf fmt "%a" (pp_list "+" pp_term) f
+    | _  -> F.fprintf fmt "%a" (pp_list " + " pp_term) f
 
   (* internal functions *)
   let norm f =
