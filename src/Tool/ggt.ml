@@ -26,11 +26,11 @@ let bdhe =
     ; mk_re [] [("Y",one)] 
       (* M3 = All r1 in [0,l1]. X^r1 *)
     ; forall 0 1 0 ("X"^r1)
-      (* M4 = All r1 in [0,l1]. X^(l1 + 1 + r1 *)
-    ; forall 0 1 0 ("X" ^ (l1 + (c 2) + r1))
+      (* M4 = All r1 in [0,l1 - 2]. X^(l1 + 2 + r1 *)
+    ; forall 0 1 (-2) ("X" ^ (l1 + (c 2) + r1))
     ]
   in
-  let challenge = (LevelFixed 2, ("Y"^(c 1))) in
+  let challenge = (LevelFixed 2, ("Y"^(c 1)) @ ("X"^(l1 + (c 1)))) in
   (input,challenge)
 
 let test (input,challenge) =
@@ -39,7 +39,7 @@ let test (input,challenge) =
     (pp_list "@\n  " (fun fmt (i,re) -> Format.fprintf fmt "%i: %a" i pp_rexpr_level re))
     (mapi' (fun i inp -> (i,inp)) input);
   F.printf "challenge: %a @@ level %a\n\n" pp_input_monomial (snd challenge) pp_level (fst challenge);
-  F.printf "constrs:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
+  F.printf "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
   print_newline ();
   Z3_Solver.solve constrs
 

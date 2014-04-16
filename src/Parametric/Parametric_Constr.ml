@@ -59,8 +59,8 @@ let constr_mult_limit input =
     ConstrPoly.(
     (ladd (mapi' (fun i (l,_) -> mult (level_to_poly l) (delta_var i)) input)
     , var "k"
-    , Leq
-    , F.sprintf "multiplications bounded by arity"))
+    , Eq
+    , F.sprintf "multiplications bounded by challenge level"))
 
 let constr_delta_pos input =
   mapi' (fun i _ -> ConstrPoly.(const 0, delta_var i, Leq, F.sprintf "delta_%i positive" i)) input
@@ -75,11 +75,15 @@ let constr_range_limits input =
                  [ ( ConstrPoly.(mult (delta_var j) (const c))
                    , ridx_var i j
                    , Leq
-                   , F.sprintf "range variable r_%i in %i. input monomial, lower bound" i j)
+                   , F.sprintf "lower bound for range variable r_%i in input monomial %i" i j)
                  ; ( ridx_var i j
                    , ConstrPoly.(mult (delta_var j) (add (rlimit_var l) (const d)))
                    , Leq
-                   , F.sprintf "range variable r_%i in %i. input monomial, upper bound" i j)
+                   , F.sprintf "upper bound for range variable r_%i in input monomial %i" i j)
+                 ; ( ConstrPoly.const 0
+                   , ConstrPoly.(add (rlimit_var l) (const d))
+                   , Leq
+                   , F.sprintf "upper bound non-negative for range variable r_%i in input monomial %i" i j)
                  ])
               re.re_qprefix))
        input)
@@ -116,3 +120,4 @@ let gen_constrs input challenge =
   @ constr_range_limits input
   @ [ constr_mult_limit input]
   @ constr_degree_equal input challenge
+  @ [ (level_to_poly (LevelOffset 0), level_to_poly (fst challenge), Eq, "assume challenge on highest level") ]

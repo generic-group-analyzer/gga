@@ -43,13 +43,15 @@ let solve constrs =
       let ok = List.assoc "ok" l in
       let res = List.assoc "res" l in
       begin match ok, res with
-      | `Bool true, `Bool true ->
-        F.printf "There is an attack."
-      | `Bool true, `Bool false ->
+      | `Bool true, `String "sat" ->
+        F.printf "There is an attack:\n %s"
+          (match List.assoc "model" l with `String s -> s | _ -> "no model returned")
+      | `Bool true, `String "unsat" ->
         F.printf "The assumption is valid."
+      | `Bool true, `String "unknown" ->
+        F.printf "Z3 returned unknown"
       | _ ->
         F.printf "Error returned by Z3."
-
       end
     | _ -> 
       F.printf "Error communicating with Z3."

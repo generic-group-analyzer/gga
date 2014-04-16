@@ -36,19 +36,30 @@ def _parseJSON(obj):
   return newobj
 
 def translate_monom(vs):
-  res = 1
+  res = None
   for v in vs:
-    res = Int(v) if res == 1 else res * Int(v)
-  return res
+    if res is None:
+      res = Int(v)
+    else:
+      res = res * Int(v)
+  return (1 if res is None else res)
 
 def translate_poly(ts):
-  res = 0
+  res = None
   for t in ts:
     (c,m) = t
     pm = translate_monom(m)
-    pt = pm if c == 1 else c * pm
-    res = pt if res == 0 else res + pt
-  return res
+    pt = (pm if c == 1 else c * pm)
+    #debug("res: " + str(res) + "\tts: " + str(ts) + "\tpm: " + str(pm) + "\tpt: " + str(res + pt))
+    if res is None:
+      res = pt
+    else:
+      #debug("else")
+      res += pt
+    #debug("res after: "+str(res)+"\n")
+
+  #debug("return "+str(res)+"\n")
+  return (0 if res is None else res)
 
 ###############################################################################
 # Interpreter for GGT commands
@@ -64,20 +75,27 @@ def interp(req):
     s = Solver()
 
     for a,b in eqs:
+      #debug("%s = %s"%(str(translate_poly(a)), str(translate_poly(b))))
       s.add(translate_poly(a) == translate_poly(b))
     for a,b in leqs:
+      # debug("%s <= %s"%(str(translate_poly(a)), str(translate_poly(b))))
       s.add(translate_poly(a) <= translate_poly(b))
     #print s.sexpr()
     debug(str(s.sexpr()))
     #print(s.check())
-    try:
-      s.model()
-      # pp(m)
+    res = s.check()
+    debug(str(res))
+    if res == sat:
       return { "ok": True
-             , "res": True }
-    except:
+             , "res": "sat"
+             , "model": str(s.model())}
+    elif res == unsat:
       return { "ok": True
-             , "res": False }
+             , "res": "unsat" }
+    else:
+      return { "ok": True
+             , "res": "unknown" }
+
 
   elif cmd == "exit":
     print "end\n"
