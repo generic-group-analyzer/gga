@@ -49,7 +49,8 @@ let analyze sinput schallenge =
   let constrs = gen_constrs inp chal in
   F.printf "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
   print_newline ();
-  Z3_Solver.solve constrs
+  Z3_Solver.solve constrs;
+  print_newline ()
 
 (*******************************************************************)
 (* Tests *)
