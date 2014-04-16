@@ -1,6 +1,6 @@
 OCAMLBUILD=ocamlbuild
 LIBFLAGS=-lib unix 
-MENHIRFLAGS=-use-menhir -menhir "menhir -v --external-tokens Lexer"
+MENHIRFLAGS=-use-menhir -menhir "menhir -v"
 FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
 

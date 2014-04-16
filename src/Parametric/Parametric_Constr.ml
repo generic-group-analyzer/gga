@@ -38,11 +38,11 @@ let expvar_to_string j v =
   match v with
   | Level    -> "k"
   | Rlimit i -> F.sprintf "l_%i" i
-  | Ridx   i -> F.sprintf "r_%i_%i" i j
+  | Ridx   s -> F.sprintf "%s_%i" s j
 
 let delta_var i = ConstrPoly.var ("d_"^string_of_int i)
 
-let ridx_var i j = ConstrPoly.var (expvar_to_string j (Ridx i))
+let ridx_var s j = ConstrPoly.var (expvar_to_string j (Ridx s))
 
 let rlimit_var i = ConstrPoly.var (expvar_to_string 0 (Rlimit i))
 
@@ -70,20 +70,20 @@ let constr_range_limits input =
     (mapi'
        (fun j (_l,re) ->
           List.concat
-            (mapi'
-              (fun i (c,l,d) ->
+            (List.map
+              (fun (s,(c,l,d)) ->
                  [ ( ConstrPoly.(mult (delta_var j) (const c))
-                   , ridx_var i j
+                   , ridx_var s j
                    , Leq
-                   , F.sprintf "lower bound for range variable r_%i in input monomial %i" i j)
-                 ; ( ridx_var i j
+                   , F.sprintf "lower bound for range variable %s in input monomial %i" s j)
+                 ; ( ridx_var s j
                    , ConstrPoly.(mult (delta_var j) (add (rlimit_var l) (const d)))
                    , Leq
-                   , F.sprintf "upper bound for range variable r_%i in input monomial %i" i j)
+                   , F.sprintf "upper bound for range variable %s in input monomial %i" s j)
                  ; ( ConstrPoly.const 0
                    , ConstrPoly.(add (rlimit_var l) (const d))
                    , Leq
-                   , F.sprintf "upper bound non-negative for range variable r_%i in input monomial %i" i j)
+                   , F.sprintf "upper bound non-negative for range variable %s in input monomial %i" s j)
                  ])
               re.re_qprefix))
        input)

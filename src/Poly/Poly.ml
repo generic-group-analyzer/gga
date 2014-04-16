@@ -90,17 +90,6 @@ module MakePoly (V : Var) (C : Ring) = struct
     let (t1s, t2s) = List.partition p f in
     (norm t1s, norm t2s)
 
-(*   let vdeg v f =
-    let vdeg_mon vm =
-      match List.filter (fun xs -> v = List.hd xs) (group (=) vm) with
-      | []   -> 0
-      | [vs] -> List.length vs
-      | _    -> assert false
-
-    in
-    List.fold_left
-      (List.map (fun (_,m) -> vdeg_mon ))
- *)
   let eval env f =
     let eval_monom m =
       lmult (List.map (fun v -> env v) m)
@@ -109,9 +98,19 @@ module MakePoly (V : Var) (C : Ring) = struct
       mult (const c) (eval_monom m)
     in
     ladd (List.map eval_term f)
+
   let to_terms f = f
 
   let from_terms f = norm f
+
+  let is_const f = match f with
+    | [(_c,[])] -> true
+    | _         -> false
+
+  let is_var f = match f with
+    | [(c,[_x])] when c = C.one -> true
+    | _                         -> false
+
 end
 
 module IntRing = struct

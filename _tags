@@ -1,4 +1,4 @@
 true: -traverse
 true: bin_annot
-<src/Tool> or <src/Poly> or <src/Util> or <src/Parametric> or <src/Solver>: include
+<src/Tool> or <src/Poly> or <src/Util> or <src/Parametric> or <src/Solver> or <src/Parser>: include
 <src/Tool/ggt.native> or <src/Solver/Z3_Solver.ml>: package(yojson)

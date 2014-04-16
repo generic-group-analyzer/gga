@@ -81,10 +81,10 @@ def interp(req):
       # debug("%s <= %s"%(str(translate_poly(a)), str(translate_poly(b))))
       s.add(translate_poly(a) <= translate_poly(b))
     #print s.sexpr()
-    debug(str(s.sexpr()))
+    #debug(str(s.sexpr()))
     #print(s.check())
     res = s.check()
-    debug(str(res))
+    #debug(str(res))
     if res == sat:
       return { "ok": True
              , "res": "sat"
@@ -108,11 +108,11 @@ def interp(req):
 def main():
   try:
     inp = sys.stdin.readline()
-    debug(inp)
+    #debug(inp)
     cmd = json.loads(inp)
     cmd = _parseJSON(cmd)
     res = interp(cmd)
-    debug(str(res))
+    #debug(str(res))
     print(json.dumps(res))
     sys.stdout.flush()
   except Exception:

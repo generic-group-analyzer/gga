@@ -39,6 +39,8 @@ sig
   val partition : ((C.t * V.t list) -> bool) -> t -> (t * t)
   val to_terms : t -> (C.t * V.t list) list
   val from_terms : (C.t * V.t list) list -> t
+  val is_const : t -> bool
+  val is_var : t -> bool
 end
 
 module IntRing : (Ring with type t = int)
