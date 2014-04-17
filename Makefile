@@ -8,4 +8,8 @@ all: native
 
 native:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
-	./ggt.native	
+	./ggt.native examples/dhe.thy
+
+paramtest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/Param_test.native
+	./Param_test.native	

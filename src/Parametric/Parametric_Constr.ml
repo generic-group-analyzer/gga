@@ -36,9 +36,10 @@ let level_to_poly l =
 
 let expvar_to_string j v =
   match v with
-  | Level    -> "k"
-  | Rlimit i -> F.sprintf "l_%i" i
-  | Ridx   s -> F.sprintf "%s_%i" s j
+  | Level                -> "k"
+  | Rlimit i when i = -1 -> F.sprintf "l"
+  | Rlimit i             -> F.sprintf "l_%i" i
+  | Ridx   s             -> F.sprintf "%s_%i" s j
 
 let delta_var i = ConstrPoly.var ("d_"^string_of_int i)
 

@@ -36,53 +36,34 @@ let p_input_line = wrap_error (Parser.inputs_t Lexer.lex)
 
 let p_challenge = wrap_error (Parser.challenge_t Lexer.lex)
 
+let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
+
 (*******************************************************************)
 (* Analyzer *)
 
-let analyze sinput schallenge =
-  let inp = p_input_line sinput in
-  F.printf "input: @\n  %a@\n@\n"
-    (pp_list "@\n  " (fun fmt (i,re) -> Format.fprintf fmt "%i: %a" i pp_rexpr_level re))
-    (mapi' (fun i inp -> (i,inp)) inp);
-  let chal = p_challenge schallenge in
-  F.printf "challenge: %a @@ level %a\n\n" pp_input_monomial (snd chal) pp_level (fst chal);
-  let constrs = gen_constrs inp chal in
+(* FIXME: add well-formedness check for assumption *)
+let analyze assm =
+  let inps = assm.inputs in
+  F.printf "%a" pp_inputs inps;
+  let chal = match assm.challenge with
+    | Some(c) -> c
+    | None    -> failwith "no challenge defined"
+  in
+  F.printf "%a" pp_challenge chal;
+
+  let constrs = gen_constrs inps chal in
   F.printf "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
   print_newline ();
   Z3_Solver.solve constrs;
   print_newline ()
 
 (*******************************************************************)
-(* Tests *)
+(* Main *)
 
-let sinput = "\
-input \
-  [ 1\
-  , Y\
-  , forall i in [0,l1]: X^i\
-  , forall j in [0,l1 - 2]: X^(l1 + 2 + j) ] @ 1."
-
-let schallenge = "challenge Y*X^(l1 + 1) @ 2."
-
-let () =
-  analyze sinput schallenge
-
-(*
-let stheory = "\
-setting symmetric.  (* symmetric (non-leveled) k-linear map *)\
-arity 2.            (* fixes the arity k to 2 *)\
-problem decisional. (* we handle decisional and computational problems *)\
-\
-input\
-  [ 1\
-  , Y\
-  , forall i in [0,l1]: X^i\
-  , forall j in [0,l1 - 2]: X^(l1 + 2 + j) ] @ 1.\
-\
-challenge Y*X^(l1 + 1) @ k."
-*)
-
-
-
-
-
+let main =
+  if Array.length Sys.argv <> 2 then
+    output_string stderr (F.sprintf "usage: %s <inputfile>" Sys.argv.(0))
+  else
+    let scmds = Util.input_file Sys.argv.(1) in
+    let cmds  = p_cmds scmds in
+    analyze (eval_cmds cmds)

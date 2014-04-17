@@ -13,6 +13,16 @@
 %token INPUT
 %token CHALLENGE
 %token IN
+
+%token SETTING
+%token SYMMETRIC
+%token ASYMMETRIC
+%token PROBLEM_TYPE
+%token COMPUTATIONAL
+%token DECISIONAL
+%token ARITY
+
+
 %token LBRACKET
 %token RBRACKET
 %token LPAREN
@@ -41,6 +51,7 @@
 /************************************************************************/
 /* Priority and associativity */
 
+%left STAR
 %left PLUS
 %left MINUS
 
@@ -50,7 +61,7 @@
 
 %start <Parametric_Input.challenge> challenge_t
 
-
+%start <Parametric_Input.cmd list> cmds_t
 %%
 
 poly :
@@ -133,14 +144,63 @@ rexprs :
   { i::is }
 ;
 
-inputs :
-| INPUT; LBRACKET; ims = rexprs; RBRACKET; AT; l = level; DOT
+input_list:
+| LBRACKET; ims = rexprs; RBRACKET; AT; l = level
   { List.map (fun im -> (l,im)) ims }
 ;
+
+input_lists:
+| il = input_list
+  { [il] }
+| il = input_list; COMMA; ils = input_lists
+  { il::ils }
+;
+
+inputs :
+| INPUT; ims = input_lists; DOT
+  { List.concat ims }
+; 
 
 challenge :
 | CHALLENGE; m = monomial; AT; l = level; DOT
   { (l, m) }
+;
+
+/************************************************************************/
+/* commands */
+
+setting :
+| SYMMETRIC
+  { Symmetric } 
+| ASYMMETRIC
+  { Asymmetric }
+;
+
+problem_type :
+| COMPUTATIONAL
+  { Computational }
+| DECISIONAL
+  { Decisional }
+;
+
+cmd :
+| SETTING; s = setting; DOT
+  { Setting s }
+| PROBLEM_TYPE; pt = problem_type; DOT
+  { Problem_Type pt }
+| ARITY; i = NAT; DOT
+  { Arity i }
+| is = inputs
+  { AddInputs is }
+| c = challenge
+  { SetChallenge c }
+;
+
+cmds :
+| 
+  { [] }
+| c = cmd; cs = cmds
+  { c::cs }
 
 /************************************************************************/
 /* Versions that consume all input */
@@ -158,3 +218,8 @@ rexpr_t :
 challenge_t :
 | c = challenge; EOF
   { c }
+;
+
+cmds_t :
+| cs = cmds; EOF
+  { cs }

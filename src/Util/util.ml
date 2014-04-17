@@ -24,4 +24,26 @@ let pp_int fmt i = Format.fprintf fmt "%i" i
 
 let pp_string fmt s = Format.fprintf fmt "%s" s
 
+let pp_option pp_some fmt o = match o with
+  | Some(x) -> pp_some fmt x
+  | None    -> Format.fprintf fmt " - "
+
 let mapi' f = List.mapi (fun i x -> f (i+1) x)
+
+let input_file file_name =
+  let in_channel = open_in file_name in
+  let rec go lines =
+    try
+      let l = input_line in_channel in
+      go (l :: lines)
+    with
+      End_of_file -> lines
+  in
+  let lines = go [] in
+  let _ = close_in_noerr in_channel in
+  String.concat "\n" (List.rev lines)
+
+let output_file file_name content =
+  let out_channel = open_out file_name in
+  output_string out_channel content;
+  close_out_noerr out_channel

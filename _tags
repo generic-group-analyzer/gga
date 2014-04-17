@@ -2,3 +2,4 @@ true: -traverse
 true: bin_annot
 <src/Tool> or <src/Poly> or <src/Util> or <src/Parametric> or <src/Solver> or <src/Parser>: include
 <src/Tool/ggt.native> or <src/Solver/Z3_Solver.ml>: package(yojson)
+<src/Tool/Param_test.native>: package(yojson)

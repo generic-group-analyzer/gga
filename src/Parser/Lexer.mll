@@ -31,9 +31,18 @@ rule lex = parse
   | "challenge" { CHALLENGE }
   | "forall" { FORALL }
   | "input" { INPUT }
-  | "in" { IN }  
+  | "in" { IN }
+  | "setting" { SETTING }
+  | "symmetric" { SYMMETRIC }
+  | "asymmetric" { ASYMMETRIC }
+  | "computational" { COMPUTATIONAL }
+  | "decisional" { DECISIONAL }
+  | "problem_type" {PROBLEM_TYPE}
+  | "arity" { ARITY }
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
+  | ['l']                { RLIMIT(-1) } (* l0 and l refer to the same variable *)
   | ['l']['0'-'9']* as s { RLIMIT(int_of_string(String.sub s 1 (String.length s - 1))) }
+
   | ['a'-'k' 'm'-'z']
     ['a'-'z' 'A'-'Z' '\'' '_' '0'-'9']*
     as s { LID s }
