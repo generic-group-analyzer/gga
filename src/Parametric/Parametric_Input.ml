@@ -87,7 +87,8 @@ let pp_input_monomial fmt f =
     F.fprintf fmt "%a" (pp_list "*" pp_pvar) f
 
 let pp_qprefix fmt (c,l,d) =
-  F.fprintf fmt "[%i,l%i%s]" c l (if d <> 0 then " + "^(string_of_int d) else "")
+  F.fprintf fmt "[%i,%a%s]"
+    c pp_exp_var (Rlimit l) (if d <> 0 then " + "^(string_of_int d) else "")
 
 let pp_range fmt (s,qp) =
   F.fprintf fmt "%s in %a" s pp_qprefix qp
