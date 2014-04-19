@@ -28,4 +28,4 @@ clean:
 doc:
 	ocamlweb doc/prelude.tex $(FILES) doc/close.tex --latex-option "novisiblespaces" \
 	  --header -p "\usepackage{hyperref,framed,amsmath,amsfonts,amsthm}" > doc/tool.tex
-	# cd doc && latexmk -pdf tool.tex
+	cd doc && latexmk -pdf tool.tex
