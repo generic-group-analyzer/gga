@@ -22,19 +22,19 @@ open Util
 (* \ic{ Random variable $X$, $Y$, \ldots.} *)
 type rvar = string
 
-(* \ic{ Limit variable $l$, $l_1$, $l_2$, \ldots.} *)
+(* \ic{ Range limit variable $l$, $l_1$, $l_2$, \ldots.} *)
 type rlimitvar = int
 
-(* \ic{ Index variable $i$, $j$, \ldots.} *)
+(* \ic{ Range index variable $i$, $j$, \ldots.} *)
 type ridxvar = string
 
-(* \ic{
+(* \ic{%
    A [level] is either [LevelFixed(i)] representing the level $i$
    or [LevelOffset(i)] representing the level $k - i$ where $k$
    is the highest level.} *)
 type level = LevelFixed  of int | LevelOffset of int
 
-(* \ic{
+(* \ic{%
    [exp_var] represents variables that occur in exponents.
    [Rlimit(i)] represents a limit variable~$l_i$,
    [Ridx(s)] represents the index variable $s$,
@@ -52,7 +52,7 @@ let pp_exp_var fmt v =
 
 let is_Ridx = function Ridx _ -> true | _ -> false
 
-(* \ic{ [ExpPoly] is used for polynomials in the exponent.} *)
+(* \ic{[EP] is used for polynomials in the exponent.} *)
 module EP = MakePoly(struct
   type t = exp_var
   let pp = pp_exp_var
@@ -60,19 +60,19 @@ end) (IntRing)
 
 type exp_poly = EP.t
 
-(* \ic{ [("X",f)] represents $X^{f}$.} *)
+(* \ic{[("X",f)] represents $X^{f}$.} *)
 type pow_var = (rvar * exp_poly)
 
-(* \ic{ The list represent the product of the [pow_var]s} *)
+(* \ic{The list represent the product of the [pow_var]s} *)
 type input_monomial = pow_var list
 
-(* \ic{ Range index binder $r \in [\alpha, \beta]$ represented by $(r,(\alpha,\beta))$.} *)
+(* \ic{Range index binder $r \in [\alpha, \beta]$ represented by $(r,(\alpha,\beta))$.} *)
 type binder = (ridxvar * (exp_poly * exp_poly))
 
-(* \ic{ A quantifier prefix consists of a list of range index binders.} *)
+(* \ic{A quantifier prefix consists of a list of range index binders.} *)
 type qprefix = binder list
 
-(* \ic{
+(* \ic{%
    A range expression consist of the quantifier prefix and the monomial. 
    As an example, consider $\forall i \in [0,l]: X^i * Y^l$.} *)
 type range_expr =
@@ -80,10 +80,10 @@ type range_expr =
     re_input_monomial : input_monomial
   }
 
-(* \ic{ An input consists of a level and a range expression.} *)
+(* \ic{An input consists of a level and a range expression.} *)
 type input = level * range_expr 
 
-(* \ic{ A challenge consists of a level and an input monomial.} *)
+(* \ic{A challenge consists of a level and an input monomial.} *)
 type challenge = level * input_monomial
 
 (*******************************************************************)
@@ -93,7 +93,7 @@ type setting = Symmetric | Asymmetric
 
 type problem_type = Computational | Decisional
 
-(* \ic{
+(* \ic{%
     An assumption must fix the setting, the problem type, and \emph{can}
     either fix the arity $k$ to a specific value $i$ or consider $k$ as
     a variable.
@@ -118,7 +118,7 @@ let empty_assm =
 (*******************************************************************)
 (* \subsection*{Commands in input file} *)
 
-(* \ic{
+(* \ic{%
    The user defines an assumption by giving a sequence of
    commands that set/extend a partially specified assumption.
    Extension is used with [AddInputs] which allows the user to

@@ -6,7 +6,7 @@ CFLAGS="-w +a-e-9"
 
 MODULES=Util/Util.ml Poly/Poly.ml Poly/Poly.mli Parametric/ParametricInput.ml \
   Parametric/ParametricConstraints.ml Solver/Z3_Solver.ml \
-  Parser/Parser.mly Parser/Lexer.mll Tool/ggt.ml
+  Parser/Parser.mly Parser/Lexer.mll Parametric/ParametricAnalyze.ml Tool/ggt.ml
 
 FILES=$(addprefix src/,$(MODULES))
 
