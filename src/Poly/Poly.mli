@@ -1,3 +1,5 @@
+(*s Module types [Var] and [Ring], [IntRing] implementation of [Ring], and
+    [MakePoly] functor. *)
 
 module type Var = sig
   type t val pp : Format.formatter -> t -> unit
@@ -11,7 +13,10 @@ module type Ring = sig
   val mult : t -> t -> t
   val one : t
   val zero : t
+  val ladd : t list -> t
 end
+
+module IntRing : (Ring with type t = int)
 
 module MakePoly : functor (V : Var) -> functor (C : Ring) ->
 sig
@@ -34,13 +39,14 @@ sig
   val var : var -> t
   val const : coeff -> t
   val eval : (var -> t) -> t -> t
-  (* val vdeg : var -> t -> int *)
   val vars : t -> var list
-  val partition : ((C.t * V.t list) -> bool) -> t -> (t * t)
-  val to_terms : t -> (C.t * V.t list) list
-  val from_terms : (C.t * V.t list) list -> t
+  val partition : ((V.t list * C.t) -> bool) -> t -> (t * t)
+  val to_terms : t -> (V.t list * C.t) list
+  val from_terms : (V.t list * C.t) list -> t
   val is_const : t -> bool
   val is_var : t -> bool
-end
 
-module IntRing : (Ring with type t = int)
+  val ( *@) : t -> t -> t
+  val (+@)  : t -> t -> t
+  val (-@)  : t -> t -> t
+end

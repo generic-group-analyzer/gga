@@ -1,14 +1,17 @@
+(*s Parametric assumption analysis: Main function, analysis, and parsing wrappers. *)
+
+(*i*)
 open Util
-open Parametric_Input
-open Parametric_Constr
+open ParametricInput
+open ParametricConstraints
 
 module S = String
-module F = Format
+(*i*)
 
 (*******************************************************************)
-(* Parsing *)
+(* \subsection*{Parsing} *)
 
-(** Convert lexer and parser errors to ParseError exception *)
+(* \ic{Convert lexer and parser errors to ParseError exception.} *)
 let wrap_error f s0 =
   let s = S.copy s0 in
   let sbuf = Lexing.from_string s0 in
@@ -19,18 +22,19 @@ let wrap_error f s0 =
       raise (failwith (Printf.sprintf "%s%!" msg))
   | Parser.Error ->
       let start = Lexing.lexeme_start sbuf in
-      let err = Printf.sprintf
-                  "Syntax error at offset %d (length %d): parsed ``%s'',\nerror at ``%s''"
-                  start
-                  (S.length s)
-                  (if start >= S.length s then s  else (S.sub s 0 start))
-                  (if start >= S.length s then "" else (S.sub s start (S.length s - start)))
+      let err =
+        Printf.sprintf
+          "Syntax error at offset %d (length %d): parsed ``%s'',\nerror at ``%s''"
+          start
+          (S.length s)
+          (if start >= S.length s then s  else (S.sub s 0 start))
+          (if start >= S.length s then "" else (S.sub s start (S.length s - start)))
       in
       print_endline err;
       failwith err
   | _ -> failwith "Unknown error while lexing/parsing."
 
-let p_rexpr = wrap_error (Parser.rexpr_t Lexer.lex)
+let p_range_expr = wrap_error (Parser.range_expr_t Lexer.lex)
 
 let p_input_line = wrap_error (Parser.inputs_t Lexer.lex)
 
@@ -39,9 +43,9 @@ let p_challenge = wrap_error (Parser.challenge_t Lexer.lex)
 let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
 
 (*******************************************************************)
-(* Analyzer *)
+(* \subsection*{Analyzer} *)
 
-(* FIXME: add well-formedness check for assumption *)
+(* \ic{FIXME: add well-formedness check for assumption} *)
 let analyze assm =
   let inps = assm.inputs in
   F.printf "%a" pp_inputs inps;
@@ -58,7 +62,7 @@ let analyze assm =
   print_newline ()
 
 (*******************************************************************)
-(* Main *)
+(* \subsection*{Main} *)
 
 let main =
   if Array.length Sys.argv <> 2 then

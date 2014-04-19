@@ -1,6 +1,13 @@
-open Parametric_Constr
+(*s Z3 solver for constraints derived from parametric problem.
+    Calls a python script that uses the Python Z3 bindings
+    and communicates using JSON over standard input and output. *)
+
+(*i*)
+open ParametricConstraints
+open Util
 
 module YS = Yojson.Safe
+(*i*)
 
 let call_z3 cmd linenum =
   let (c_in, c_out) = Unix.open_process "/usr/bin/python scripts/ggt_z3.py" in
@@ -20,16 +27,23 @@ let call_z3 cmd linenum =
   in loop [] linenum
 
 let poly_to_json f =
-  let ts = ConstrPoly.to_terms f in
-  `List (List.map (fun (c,m) -> `List [ `Int c; `List (List.map (fun v -> `String v) m) ]) ts)
+  let ts = CP.to_terms f in
+  `List
+     (L.map
+        (fun (m,c) -> `List [ `List (L.map (fun v -> `String v) m); `Int c ])
+        ts)
 
 let solve constrs =
   let trans a b = `List [poly_to_json a; poly_to_json b] in
   let eqs  =
-    List.concat (List.map (function (a,b,Eq,_)  -> [trans a b] | (_,_,Leq,_) -> []) constrs)
+    conc_map
+      (function (a,b,Eq,_)  -> [trans a b] | (_,_,Leq,_) -> [])
+      constrs
   in
   let leqs =
-    List.concat (List.map (function (a,b,Leq,_) -> [trans a b] | (_,_,Eq,_) -> [])  constrs)
+    conc_map
+      (function (a,b,Leq,_) -> [trans a b] | (_,_,Eq,_) -> []) 
+      constrs
   in
   let req = `Assoc [ ("cmd", `String "paramSolve")
                    ; ("eqs", `List eqs)
@@ -40,12 +54,14 @@ let solve constrs =
   | [sres] ->
     begin match YS.from_string sres with
     | `Assoc l -> 
-      let ok = List.assoc "ok" l in
-      let res = List.assoc "res" l in
+      let ok = L.assoc "ok" l in
+      let res = L.assoc "res" l in
       begin match ok, res with
       | `Bool true, `String "sat" ->
         F.printf "There is an attack:\n %s"
-          (match List.assoc "model" l with `String s -> s | _ -> "no model returned")
+          (match L.assoc "model" l with 
+           | `String s -> s
+           | _ -> "no model returned")
       | `Bool true, `String "unsat" ->
         F.printf "The assumption is valid."
       | `Bool true, `String "unknown" ->

@@ -1,0 +1,42 @@
+\begin{proof}
+We prove that for all monomials $D$, the following holds:
+\begin{align*}
+   & D \in I^{\delta} \\
+%
+{}\Leftrightarrow{} &
+  \exists \vec{r}_{1,1..w},\ldots,\vec{r}_{\delta,1..w} \in [\vec{\alpha}, \vec{\beta}]:\,
+    D = \vec{X}^{\vec{f}(k,\vec{l},\vec{r}_{1,1..w}) + \ldots + \vec{f}(k,\vec{l},\vec{r}_{\delta,1..w}) } \\
+%
+{}\Leftrightarrow{} &
+  \exists \vec{r}_{1,1..w},\ldots,\vec{r}_{\delta,1..w} \in [\vec{\alpha}, \vec{\beta}]:\,
+    D = \vec{X}^{ \Sigma_{i=1}^{\delta} (r_{i,1}*\vec{\phi_1}(k,\vec{l}) + \ldots + r_{i,w}*\vec{\phi_w}(k,\vec{l})
+                  + \vec{\psi}(k,\vec{l}))
+                } \\
+{}\Leftrightarrow{} &
+  \exists \vec{r}_{1,1..w},\ldots,\vec{r}_{\delta,1..w} \in [\vec{\alpha}, \vec{\beta}]:\,
+    D = \vec{X}^{   (\Sigma_{i=1}^{\delta} r_{i,1})*\vec{\phi_1}(k,\vec{l}) + \ldots
+                  + (\Sigma_{i=1}^{\delta} r_{i,w})*\vec{\phi_w}(k,\vec{l})
+                  + \delta*\vec{\psi}(k,\vec{l})
+                } \\
+{}\Leftrightarrow{} &
+  \exists \vec{r}_{1..w} \in [\delta * \vec{\alpha}, \delta * \vec{\beta}]:\,
+    D = \vec{X}^{   r_{1}*\vec{\phi_1}(k,\vec{l}) + \ldots
+                  + r_{w}*\vec{\phi_w}(k,\vec{l})
+                  + \delta*\vec{\psi}(k,\vec{l})
+                } \\
+{}\Leftrightarrow{} &
+  D \in \forall r_1 \in \delta[\alpha_1, \beta_1], \ldots, r_w \in \delta[\alpha_w, \beta_w]:\,
+    \vec{X}^{r_{1}*\vec{\phi_1}(k,\vec{l}) + \ldots + r_{w}*\vec{\phi_w}(k,\vec{l}) + \delta*\vec{\psi}(k,\vec{l})}
+%
+\end{align*}
+In the second to last step, we exploit that
+\[
+   \{ \Sigma_{i=1}^{\delta} r_{i,j} | \mid r_{1,j}, \ldots, r_{\delta,j} \in [\alpha_j, \beta_j] \}
+   = [\delta*\alpha_j, \delta*\beta_j]\text{.}
+\]
+Indeed, if $\alpha_j \leq \beta_j$, then the minimum value in the set on the left-hand-side
+  is $\delta*\alpha_j$, the maximim value is $\delta*\beta_j$, and set includes all values
+  in between.
+If $\alpha_j > \beta_j$, then the same argument applies since $[\alpha_j,\beta_j] = [\beta_j,\alpha_j]$
+  as sets.  
+\end{proof}

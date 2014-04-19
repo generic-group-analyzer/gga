@@ -1,37 +1,49 @@
-let rec pp_list sep pp_elt f l =
-  match l with
-  | [] -> ()
-  | [e] -> pp_elt f e 
-  | e::l -> Format.fprintf f "%a%(%)%a" pp_elt e sep (pp_list sep pp_elt) l 
+(*s This module provides some general purpose utility functions. *)
+(*i*)
+module F = Format
+module L = List
+(*i*)
 
-let pp_list_c pe = (pp_list "," pe)
-let pp_list_s = pp_list_c (fun fmt -> Format.fprintf fmt "%s")
+(*******************************************************************)
+(* \subsection*{List functions} *)
 
-let group pred xs =
+(* \ic{
+   [group rel xs] creates a list of lists where successive
+   elements of [xs] that are related with respect to [rel]
+   are grouped together. This function is commonly used
+   together with [L.sort] to compute the equivalence
+   classes of elements in [xs] with respect to [rel].} *)
+let group rel xs =
   let rec go xs y acc = match xs with
-    | []                  -> [ List.rev acc ]
-    | x::xs when pred x y -> go xs y (x::acc)
-    | x::xs               -> (List.rev acc)::go xs x [x] 
+    | []                 -> [ L.rev acc ]
+    | x::xs when rel x y -> go xs y (x::acc)
+    | x::xs              -> (L.rev acc)::go xs x [x] 
   in
   match xs with
   | []    -> []
   | x::xs -> go xs x [x]
 
+(* \ic{
+    [sorted_nub xs] sorts the elements in [xs] and
+    removes duplicate occurences in [xs].} *)
 let sorted_nub xs =
-  xs |> List.sort compare  |> group (=) |> List.map List.hd
+  xs |> L.sort compare  |> group (=) |> L.map L.hd
 
-let pp_int fmt i = Format.fprintf fmt "%i" i
+(* \ic{
+   [mapi' f xs] returns the list where the [i]-th
+   element is computed as [f i xs[i]] using $1$-indexing.} *)
+let mapi' f = L.mapi (fun i x -> f (i+1) x)
 
-let pp_string fmt s = Format.fprintf fmt "%s" s
+(* \ic{Composition of [concat] and [map].} *)
+let conc_map f xs = L.concat (L.map f xs)
 
-let pp_option pp_some fmt o = match o with
-  | Some(x) -> pp_some fmt x
-  | None    -> Format.fprintf fmt " - "
+(*******************************************************************)
+(* \subsection*{File IO} *)
 
-let mapi' f = List.mapi (fun i x -> f (i+1) x)
-
-let input_file file_name =
-  let in_channel = open_in file_name in
+(* \ic{
+   [input_file filename] returns the content of [filename] as a string.} *)
+let input_file filename =
+  let in_channel = open_in filename in
   let rec go lines =
     try
       let l = input_line in_channel in
@@ -41,9 +53,34 @@ let input_file file_name =
   in
   let lines = go [] in
   let _ = close_in_noerr in_channel in
-  String.concat "\n" (List.rev lines)
+  String.concat "\n" (L.rev lines)
 
-let output_file file_name content =
-  let out_channel = open_out file_name in
+(* \ic{
+    [output_file filename content] writes the string [content]
+    to [filename].} *)
+let output_file filename content =
+  let out_channel = open_out filename in
   output_string out_channel content;
   close_out_noerr out_channel
+
+(*i*)
+(*******************************************************************)
+(* \subsection*{Pretty printing} *)
+
+let rec pp_list sep pp_elt f l =
+  match l with
+  | [] -> ()
+  | [e] -> pp_elt f e 
+  | e::l -> Format.fprintf f "%a%(%)%a" pp_elt e sep (pp_list sep pp_elt) l 
+
+let pp_list_c pe = (pp_list "," pe)
+let pp_list_s = pp_list_c (fun fmt -> Format.fprintf fmt "%s")
+
+let pp_int fmt i = Format.fprintf fmt "%i" i
+
+let pp_string fmt s = Format.fprintf fmt "%s" s
+
+let pp_option pp_some fmt o = match o with
+  | Some(x) -> pp_some fmt x
+  | None    -> Format.fprintf fmt " - "
+(*i*)

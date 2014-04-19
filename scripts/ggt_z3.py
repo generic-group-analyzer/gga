@@ -47,7 +47,7 @@ def translate_monom(vs):
 def translate_poly(ts):
   res = None
   for t in ts:
-    (c,m) = t
+    (m,c) = t
     pm = translate_monom(m)
     pt = (pm if c == 1 else c * pm)
     #debug("res: " + str(res) + "\tts: " + str(ts) + "\tpm: " + str(pm) + "\tpt: " + str(res + pt))

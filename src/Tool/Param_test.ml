@@ -1,8 +1,6 @@
+open Util
 open Parametric_Input
 open Ggt
-open Util
-
-module F = Format
 
 (*******************************************************************)
 (* Tests *)

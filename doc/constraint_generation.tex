@@ -1,0 +1,78 @@
+%
+%
+Let the assumption with inputs $I_i$ and challenge $C$ be
+  defined as in Section~\ref{assumption_def}.
+Since we require $\lambda = k$ for decisional problems, the adversary
+  cannot win unless he computes $C$ from $I_1,\ldots,I_n$ for both kinds of problems.
+It is not hard to see that addition is useless to compute a monomial from monomials
+  and we only have to consider multiplications.
+
+More precisely, the adversary can win iff there are $\delta_i \in \mathbb{N}$ for $i \in [n]$
+  such that holds that\footnote{
+    Defining $S_1 * S_2 := \{ s_1 * s_2 \mid s_1 \in S_1 \land s_2 \in S_2\}$
+    and $S^\delta = \{ \Pi_{i=1}^{\delta} s_i \mid s_1 \in S \land \ldots \land s_{\delta} \in S\}$
+    as usual.
+  }
+$
+  C \in (I_1^{\delta_1} * \cdots * I_n^{\delta_n})
+$
+  and the group setting allows for the computation of the product on the right-hand-side, i.e., 
+$
+  \Sigma_{i=1}^n\, \delta_i * \lambda_i = \lambda \text{.}
+$
+%
+It is therefore sufficient to perform the following tasks to analyze such assumptions:
+\begin{enumerate}
+\item Compute a range expression $J$ that characterizes the set $I_1 * I_2$.
+\item Check if $C \in I$ for a a monomial $C$ and a range expression $I$.
+\item Compute a range expression $J$ that characterizes the set $I^\delta$ for a variable $\delta$.
+\end{enumerate}
+We will now describe our approach to handle these tasks.
+
+\paragraph{1.}%
+We can rename all range indices apart and then perform the following computation
+$$
+  (\forall \vec{r} \in \vec{R}:\, \vec{X}^{\vec{f}})
+  *  (\forall \vec{r'} \in \vec{R'}:\, \vec{X}^{\vec{h}})
+=
+    (\forall \vec{r} \in \vec{R}, \vec{r'} \in \vec{R'}:\,
+         \vec{X}^{\vec{f} + \vec{h}}) \text{.}
+$$
+
+\paragraph{2.}%
+Let $C := \vec{X}^{\vec{g}}$ and
+$I := \forall \range{1}, \ldots, \range{w}:\, \vec{X}^{\vec{f}}$.
+We can then define a translation into the following system of polynomial constraints:
+\begin{align}
+ \alpha_i + 1 \leq \beta_i \\
+ 0 \leq{}& \delta_i \\
+ \Sigma_{i=1}^n\, \delta_i * \lambda_i ={}& \lambda \\
+ \alpha_j \leq r_j \leq{}& \beta_j \\
+ f_i ={}& g_i
+\end{align}
+The constraint system is over the integer variables $k$, $\vec{l}$,
+  $r_{i,j}$, and $\delta_i$.
+%Using Z3 we can prove unsatisfiability or find models.
+%Note that there are classes of inputs for which
+%  the satisfiability problem is decidable.
+%\begin{framed}
+%  \noindent {\bf FIXME:} We probably have to allow for user-defined constraints
+%  (such as $k > 2$) in the problem definition. We might also have to check
+%  well-formedness of the problem, e.g., exponents of $X_i$ always positive.
+%\end{framed}
+
+\paragraph{3.}%
+Let $I$ be defined as above.
+If $f$ is linear in $\vec{r}$ (considering $k$ and $\vec{l}$
+  as constants), then we can write $\vec{f}(k,\vec{l},\vec{r})$
+  as $r_1*\phi_1(k,\vec{l}) + \ldots + r_k*\phi_k(k,\vec{l}) + \psi(k,\vec{l})$.
+In this case, $I^{\delta}$ is characterized by the following range expression:
+$$
+    \forall r_1 \in \brack{\delta\alpha_1, \delta\beta_1},
+            \ldots,
+            r_k \in \brack{\delta\alpha_k, \delta\beta_k}:
+            \vec{X}^{r_1*\vec{\phi}_1(k,\vec{l}) + \ldots + r_w*\vec{\phi}_w(k,\vec{l})
+                     + \delta*\vec{\psi}(k,\vec{l})} \text{.}
+$$
+
+\input{range_expr_pow_proof}
