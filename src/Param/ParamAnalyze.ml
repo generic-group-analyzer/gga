@@ -43,9 +43,6 @@ let p_cmds = wrap_error (ParamParser.cmds_t ParamLexer.lex)
 (*******************************************************************)
 (* \newpage\hd{Analyzer} *)
 
-(* \ic{FIXME: Create data type for return value:
-       Error,
-       Ok Info * (attack option)} *)
 let analyze assm =
   let inps = assm.ca_inputs in
   let chal = assm.ca_challenge in

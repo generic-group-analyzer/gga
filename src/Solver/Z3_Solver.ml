@@ -21,7 +21,6 @@ open Util
 module YS = Yojson.Safe
 (*i*)
 
-
 (* \ic{%
    [call_z3 cmd linenum] calls Z3, outputs [cmd] to the standard input of
    Z3, and reads (up to) [linenum] lines which are returned.} *)
@@ -48,6 +47,19 @@ let poly_to_json f =
            `List [ `List (L.map (fun v -> `String v) m); `Int (Big_int.int_of_big_int c) ])
         (CP.to_terms f))
 
+type result =
+  | Attack of string
+  | Valid
+  | Unknown
+  | Error of string
+
+let pp_result fmt res =
+  match res with
+  | Attack s -> F.fprintf fmt "Attack found: %s" s
+  | Error  s -> F.fprintf fmt "Error: %s" s
+  | Valid    -> F.fprintf fmt "Assumption is valid."
+  | Unknown  -> F.fprintf fmt "Z3 returned unknown."
+
 (* \ic{[solve constrs] solves the given list of constraints using Z3.} *)
 let solve constrs =
   let trans a b = `List [poly_to_json a; poly_to_json b] in
@@ -66,6 +78,7 @@ let solve constrs =
          | _ -> raise Not_found
     with Not_found -> k^" not found" 
   in
+  let err_comm = Error "Error communicating with Z3 wrapper." in
   match call_z3 (YS.to_string req^"\n") 1 with
   | [sres] ->
     begin match YS.from_string sres with
@@ -73,14 +86,14 @@ let solve constrs =
       begin match L.assoc "ok" l with
       | `Bool true ->
         begin match L.assoc "res" l with
-        | `String "sat"     -> F.sprintf "There is an attack:\n %s" (get_string l "model")
-        | `String "unsat"   -> F.sprintf "The assumption is valid."
-        | `String "unknown" -> F.sprintf "Z3 returned unknown"
-        | _                 -> F.sprintf "Error communicating with Z3."
+        | `String "sat"     -> Attack (get_string l "model")
+        | `String "unsat"   -> Valid
+        | `String "unknown" -> Unknown
+        | _                 -> err_comm
         end
-      | `Bool false -> F.sprintf "Z3 wrapperreturned an error: %s" (get_string l "error")
-      | _           -> F.sprintf "Error communicating with Z3."
+      | `Bool false -> Error (F.sprintf "Z3 wrapper returned an error: %s" (get_string l "error"))
+      | _           -> err_comm
       end
-    | _ -> F.sprintf "Error communicating with Z3."
+    | _ -> err_comm
     end
-  | _ -> F.sprintf "Expected one line."
+  | _ -> err_comm

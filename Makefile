@@ -1,5 +1,5 @@
 OCAMLBUILD=ocamlbuild
-LIBFLAGS=-lib unix 
+LIBFLAGS=
 MENHIRFLAGS=-use-menhir -menhir "menhir -v"
 FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
@@ -34,7 +34,7 @@ byte:
 
 paramtest:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Param/ParamTest.native
-	./ParamTest.native > test_log
+	./ParamTest.native
 
 clean:
 	$(OCAMLBUILD) -clean
