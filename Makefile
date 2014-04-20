@@ -6,7 +6,7 @@ CFLAGS="-w +a-e-9"
 
 INFRA_MODULES=Util/Util.ml Poly/PolyInterfaces.mli Poly/Poly.mli Poly/Poly.ml
 
-NONPARAM_MODULES= NonParam/NonParamInput.ml
+NONPARAM_MODULES= NonParam/NonParamInput.ml NonParam/NonParamTest.ml
 
 PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
   Param/ParamConstraints.ml Solver/Z3_Solver.ml \
@@ -35,6 +35,10 @@ byte:
 paramtest:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Param/ParamTest.native
 	./ParamTest.native
+
+nonparamtest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/NonParam/NonParamTest.native
+	./NonParamTest.native
 
 clean:
 	$(OCAMLBUILD) -clean

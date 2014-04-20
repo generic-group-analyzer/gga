@@ -76,6 +76,15 @@ let list_compare cmp xs0 ys0 =
   else if d < 0 then -1
   else go xs0 ys0
 
+(* \ic{Set of strings.} *)
+module Ss = Set.Make(struct type t = string let compare = compare end)
+
+(* \ic{Convert list of strings to set of strings.} *)
+let ss_of_list = L.fold_left (fun acc x -> Ss.add x acc) Ss.empty
+
+(* \ic{Map where keys are strings.} *)
+module Ms = Map.Make(struct type t = string let compare = compare end)
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 

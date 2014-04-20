@@ -49,5 +49,4 @@ let analyze_tests =
       (L.map (fun fn -> ("error("^fn^")")  >:: test_error fn)  error_files)
     ]
 
-let () =
-  ignore (run_test_tt_main analyze_tests)
+let () = ignore (run_test_tt_main analyze_tests)

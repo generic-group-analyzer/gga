@@ -4,3 +4,4 @@ true: bin_annot
 <src/NonParam> or <src/Solver>: include
 <src/Tool/ggt.*> or <src/Solver/Z3_Solver.ml>: package(yojson), package(str), package(num)
 <src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(ounit)
+<src/NonParam/NonParamTest.*>: package(num), package(ounit)
