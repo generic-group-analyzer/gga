@@ -71,15 +71,27 @@
 poly :
 | i = NAT                   { EP.const i }
 | i = RLIMIT                { EP.var (Rlimit i) }
-| s = VARL                 { EP.var (Ridx s) }
-| LPAREN; f = poly; RPAREN  { f }
+| s = VARL                  { EP.var (Ridx s) }
 | f = poly; PLUS; g = poly  { EP.add f g }
 | f = poly; STAR; g = poly  { EP.mult f g }
 | f = poly; MINUS; g = poly { EP.minus f g }
 | MINUS; f = poly           { EP.opp f }
+| RPAREN; f = poly; LPAREN  { f }
 ;
 
-exponent : CARET; f = poly { f };
+/* Polynomial expression that can be used in exponent without parentheses.
+   Required because otherwise there is a conflict between [*] in exponent
+   and in monomial. */
+poly_no_paren :
+| i = NAT                    { EP.const i }
+| i = RLIMIT                 { EP.var (Rlimit i) }
+| s = VARL                   { EP.var (Ridx s) }
+;
+
+exponent :
+ | CARET; f = poly_no_paren              { f }
+ | CARET; RPAREN; f = poly; LPAREN { f }
+;
 
 pow_var : s = VARU; f = exponent? { (s,from_opt id EP.one f) };
 
