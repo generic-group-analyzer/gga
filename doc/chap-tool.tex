@@ -1,0 +1,28 @@
+\chapter{Tool}
+
+This chapter covers the implementation of the \verb!ggt! tool.
+The tool provides a common  interface to the different methods.
+%
+For now, only support for parametric assumptions is finished.
+
+You first have to create an input file the defines the assumption.
+We use the following file for the Diffie-Hellman exponent assumption.
+
+\begin{verbatim}
+setting symmetric.          (* symmetric (non-leveled) k-linear map *)
+arity 2.                    (* fixes the arity k to 2 *)
+problem_type decisional.
+
+input
+  [ 1
+  , Y
+  , forall i in [0, l - 1]: X^i
+  , forall j in [l + 1, 2*l]: X^j ] @ 1.
+
+challenge Y*X^l @ 2.\end{verbatim}
+%
+The tool can be used to analyze the assumption as follows.
+\begin{verbatim}
+$ ./ggt.native dhe.thy
+[...]
+The assumption is valid.\end{verbatim}

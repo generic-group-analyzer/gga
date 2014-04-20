@@ -1,7 +1,7 @@
 %
 %
 Let the assumption with inputs $I_i$ and challenge $C$ be
-  defined as in Section~\ref{assumption_def}.
+  defined as in Chapter~\ref{assumption_def}.
 Since we require $\lambda = k$ for decisional problems, the adversary
   cannot win unless he computes $C$ from $I_1,\ldots,I_n$ for both kinds of problems.
 It is not hard to see that addition is useless to compute a monomial from monomials
@@ -48,10 +48,11 @@ We can then define a translation into the following system of polynomial constra
  0 \leq{}& \delta_i \\
  \Sigma_{i=1}^n\, \delta_i * \lambda_i ={}& \lambda \\
  \alpha_j \leq r_j \leq{}& \beta_j \\
- f_i ={}& g_i
+ f_i ={}& g_i \\
+ k >{}& i \quad \text{for all levels $k - i$}
 \end{align}
 The constraint system is over the integer variables $k$, $\vec{l}$,
-  $r_{i,j}$, and $\delta_i$.
+  $r_{j}$, and $\delta_i$.
 %Using Z3 we can prove unsatisfiability or find models.
 %Note that there are classes of inputs for which
 %  the satisfiability problem is decidable.

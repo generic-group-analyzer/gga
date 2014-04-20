@@ -3,23 +3,9 @@
     a polynomial module. We also define [IntRing]. *)
 (*i*)
 open Util
+open PolyInterfaces
 (*i*)
 
-module type Var = sig
-  type t
-  val pp : F.formatter -> t -> unit
-end
-
-module type Ring = sig
-  type t
-  val pp : F.formatter -> t -> unit
-  val add : t -> t -> t
-  val opp : t -> t
-  val mult : t -> t -> t
-  val one : t
-  val zero : t
-  val ladd : t list -> t
-end
 
 module IntRing = struct
   type t = int
@@ -116,15 +102,10 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let vars f = sorted_nub (conc_map (fun (m,_) -> sorted_nub m) f)
 
-  (* \ic{[partition p f] returns a tuple [(t1s,t2s)]
-     where [t1s] consists of the terms of [f] satisfying [p]
-     and [t1s] consists of the terms of [f] not satisfying [p].} *)
   let partition p f =
     let (t1s, t2s) = L.partition p f in
     (norm t1s, norm t2s)
 
-  (* \ic{[eval env f] returns the polynomial [f] evaluated at
-     the points [x := env x].} *)
   let eval env f =
     let eval_monom m = lmult (L.map (fun v -> env v) m) in
     let eval_term (m,c) = mult (const c) (eval_monom m) in

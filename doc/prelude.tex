@@ -1,10 +1,15 @@
+\documentclass[12pt]{book}
+\usepackage[latin1]{inputenc}
+\usepackage[headings]{fullpage}
+\usepackage[novisiblespaces]{ocamlweb}
+\pagestyle{headings}
+\usepackage{hyperref,framed,amsmath,amsfonts,amsthm}
 
-%\definecolor{shadecolor}{named}{lightgrey}
+\begin{document}
 
 \renewcommand{\ocwmodule}[1]{\newpage \section{Module #1}}
 \renewcommand{\ocwyaccmodule}[1]{\newpage \section{Module #1 (Yacc)}}
 \renewcommand{\ocwlexmodule}[1]{\newpage \section{Module #1 (Lex)}}
-
 \renewcommand{\ocwinterface}[1]{\newpage \section{Interface #1}}
 
 \newcommand{\ic}[1]{\vspace{-1.75em}\begin{leftbar}\noindent #1\end{leftbar}\vspace{-0.75em}}
@@ -18,4 +23,9 @@
 \tableofcontents
 \newpage
 
-%\begin{leftbar}
+\section*{Introduction}
+
+This text contains all relevant code from the implementation.
+For clarity, we hide module opens, module abbreviations, and
+all pretty-printing code. Please refer to the source code for
+these.

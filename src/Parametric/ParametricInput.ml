@@ -1,44 +1,32 @@
-(*s Inputs for parametric assumptions.\\ *)
+(*s Inputs for parametric assumptions.
+    See interface for explanation of types. *)
+
 (*i*)
 open Poly
 open Util
 (*i*)
 
-(* For parametric problems, we support all assumptions satisfying
-   the following restrictions:
-   \begin{enumerate}
-   \item The group setting models a symmetric leveled $k$-linear map.
-   \item The problem is a computational problem or a decisional
-     problem. Decisional problems must be real-or-random and
-     the challenge must be in the target group.
-   \item The input given to the adversary must be a monomial
-   \end{enumerate}
-\input{constraint_input} *)
+exception InvalidAssumption of string
 
+let fail_assm s = raise (InvalidAssumption s)
 
 (*******************************************************************)
 (* \subsection*{Range expressions} *)
 
-(* \ic{ Random variable $X$, $Y$, \ldots.} *)
 type rvar = string
 
-(* \ic{ Range limit variable $l$, $l_1$, $l_2$, \ldots.} *)
 type rlimitvar = int
 
-(* \ic{ Range index variable $i$, $j$, \ldots.} *)
 type ridxvar = string
 
-(* \ic{%
-   A [level] is either [LevelFixed(i)] representing the level $i$
-   or [LevelOffset(i)] representing the level $k - i$ where $k$
-   is the highest level.} *)
-type level = LevelFixed  of int | LevelOffset of int
+type level = LevelFixed of int | LevelOffset of int
 
-(* \ic{%
-   [exp_var] represents variables that occur in exponents.
-   [Rlimit(i)] represents a limit variable~$l_i$,
-   [Ridx(s)] represents the index variable $s$,
-   and [Level] represents the variable $k$ for the highest level.} *)
+let mk_LevelFixed i =
+  if i < 1 then fail_assm "Level expression must positive integer" else LevelFixed i
+
+let mk_LevelOffset i =
+  if i < 0 then fail_assm "offset in level expression cannot be < 0" else LevelOffset i
+
 type exp_var = Rlimit of rlimitvar | Ridx of ridxvar | Level
 
 (*i*)
@@ -52,39 +40,61 @@ let pp_exp_var fmt v =
 
 let is_Ridx = function Ridx _ -> true | _ -> false
 
-(* \ic{[EP] is used for polynomials in the exponent.} *)
-module EP = MakePoly(struct
-  type t = exp_var
-  let pp = pp_exp_var
-end) (IntRing)
+module EP = MakePoly(struct type t = exp_var let pp = pp_exp_var end) (IntRing)
 
 type exp_poly = EP.t
 
-(* \ic{[("X",f)] represents $X^{f}$.} *)
 type pow_var = (rvar * exp_poly)
 
-(* \ic{The list represent the product of the [pow_var]s} *)
 type input_monomial = pow_var list
 
-(* \ic{Range index binder $r \in [\alpha, \beta]$ represented by $(r,(\alpha,\beta))$.} *)
 type binder = (ridxvar * (exp_poly * exp_poly))
 
-(* \ic{A quantifier prefix consists of a list of range index binders.} *)
 type qprefix = binder list
 
-(* \ic{%
-   A range expression consist of the quantifier prefix and the monomial. 
-   As an example, consider $\forall i \in [0,l]: X^i * Y^l$.} *)
-type range_expr =
-  { re_qprefix        : qprefix;
-    re_input_monomial : input_monomial
-  }
+type range_expr = {
+  re_qprefix        : qprefix;
+  re_input_monomial : input_monomial
+}
 
-(* \ic{An input consists of a level and a range expression.} *)
+(* \newpage\ic{Smart constructor for [range_expr] that ensures ({\bf WF1}).} *)
+let mk_range_expr qpref im =
+
+  (* \ic{Disallow $\forall i \in R_1, i \in R_2: \ldots$.}*)
+  let bvars = L.map fst qpref in
+  if L.length (sorted_nub bvars) <> L.length bvars then
+    fail_assm "reused range index in input";
+
+  (* \ic{Disallow disallow occurences of $k$ or range indices in $\brack{\alpha,\beta}$.} *)
+  let bound_polys = conc_map (fun (_,(a,b)) -> [ a ;b ]) qpref in
+  let is_not_Rlimit v = is_Ridx v || v = Level in  
+  if L.exists (fun b -> L.exists is_not_Rlimit (EP.vars b)) bound_polys then
+    fail_assm "only range limit allowed in upper/lower bound expressions";
+
+  (* \ic{Disallow occurences of unbound range limits.} *)
+  let used_ridxs =
+    conc_map
+      (fun (_,ep) -> conc_map (function Ridx s -> [s] | _ -> []) (EP.vars ep))
+      im
+  in
+  if L.exists (fun v -> not (L.mem v bvars)) used_ridxs then
+    fail_assm "unbound range index used in input";
+
+  { re_qprefix = qpref; re_input_monomial = im }
+
 type input = level * range_expr 
 
-(* \ic{A challenge consists of a level and an input monomial.} *)
-type challenge = level * input_monomial
+type challenge = {
+  chal_level : level;
+  chal_input_monomial : input_monomial;
+}
+
+let mk_challenge l im =
+  let vars = conc_map (fun (_,ep) -> EP.vars ep) im in
+  if L.exists is_Ridx vars then
+    fail_assm "unbound range indices used in challenge."
+  else
+    { chal_level = l; chal_input_monomial = im }
 
 (*******************************************************************)
 (* \subsection*{Assumption definition} *)
@@ -93,36 +103,33 @@ type setting = Symmetric | Asymmetric
 
 type problem_type = Computational | Decisional
 
-(* \ic{%
-    An assumption must fix the setting, the problem type, and \emph{can}
-    either fix the arity $k$ to a specific value $i$ or consider $k$ as
-    a variable.
-    We use [option] types to support partially and fully specified assumptions
-    with the same type.} *)
-type assumption =
-  { setting      : setting option;
-    problem_type : problem_type option;
-    arity        : int option;
-    inputs       : input list;       
-    challenge    : challenge option;
-  }
+type assumption = {
+  setting      : setting option;
+  problem_type : problem_type option;
+  arity        : int option;
+  inputs       : input list;       
+  challenge    : challenge option;
+}
 
-let empty_assm =
-  { setting      = None;
-    problem_type = None;
-    arity        = None;
-    inputs       = [];
-    challenge    = None;
-  }
+let empty_assm = {
+  setting      = None;
+  problem_type = None;
+  arity        = None;
+  inputs       = [];
+  challenge    = None;
+}
+
+type closed_assumption = {
+  ca_setting      : setting;
+  ca_problem_type : problem_type;
+  ca_arity        : int option;
+  ca_inputs       : input list;       
+  ca_challenge    : challenge;
+}
 
 (*******************************************************************)
 (* \subsection*{Commands in input file} *)
 
-(* \ic{%
-   The user defines an assumption by giving a sequence of
-   commands that set/extend a partially specified assumption.
-   Extension is used with [AddInputs] which allows the user to
-   define the adversary input in multiple steps.} *)
 type cmd =
   | Setting       of setting
   | Problem_Type  of problem_type
@@ -150,6 +157,24 @@ let handle_cmd cmd assm =
 
 let eval_cmds cmds = L.fold_left (fun assm cmd -> handle_cmd cmd assm) empty_assm cmds
 
+(* \ic{Checks for {\bf WF4} and completeness of specification.} *)
+let close_assumption a =
+  match a.setting, a.problem_type, a.challenge with
+  | Some s, Some pt, Some c ->
+    let highest =
+      (LevelOffset 0)::
+      (match a.arity with Some i -> [ LevelFixed i ] | None -> [])
+    in
+    if pt = Decisional && not ( List.mem c.chal_level highest) then
+      fail_assm "challenge must be in target group k for decisional case.";
+    { ca_setting = s; 
+      ca_problem_type = pt;
+      ca_arity = a.arity;
+      ca_inputs = a.inputs;
+      ca_challenge = c
+    }
+  | _ -> failwith "Cannot close assumption, not fully specified."
+
 (*i*)
 (* \begin{pretty} *)
 (*******************************************************************)
@@ -157,8 +182,9 @@ let eval_cmds cmds = L.fold_left (fun assm cmd -> handle_cmd cmd assm) empty_ass
 
 let pp_level fmt l =
   match l with 
-  | LevelFixed i  -> F.fprintf fmt "%i" i
-  | LevelOffset i -> F.fprintf fmt "k - %i" i
+  | LevelFixed i             -> F.fprintf fmt "%i" i
+  | LevelOffset i when i = 0 -> F.fprintf fmt "k"
+  | LevelOffset i            -> F.fprintf fmt "k - %i" i
 
 let pp_pvar fmt (v,f) =
   if f = EP.one then
@@ -212,7 +238,7 @@ let pp_inputs fmt inp =
 
 let pp_challenge fmt chal =
   F.fprintf fmt "challenge: %a @@ level %a\n\n"
-    pp_input_monomial (snd chal) pp_level (fst chal)
+    pp_input_monomial chal.chal_input_monomial pp_level chal.chal_level
 
 let pp_assumption fmt assm =
   F.fprintf fmt "assumption: @\n";
@@ -221,6 +247,14 @@ let pp_assumption fmt assm =
   F.fprintf fmt "  %a@\n" (pp_option pp_problem_type) assm.problem_type;
   F.fprintf fmt "  @[%a@]\n" pp_inputs assm.inputs;
   F.fprintf fmt "  @[%a@]\n" (pp_option pp_challenge) assm.challenge
+
+let pp_closed_assumption fmt assm =
+  F.fprintf fmt "assumption: @\n";
+  F.fprintf fmt "  %a@\n" pp_setting assm.ca_setting;
+  F.fprintf fmt "  arity: %a@\n" (pp_option pp_int) assm.ca_arity;
+  F.fprintf fmt "  %a@\n" pp_problem_type assm.ca_problem_type;
+  F.fprintf fmt "  @[%a@]\n" pp_inputs assm.ca_inputs;
+  F.fprintf fmt "  @[%a@]\n" pp_challenge assm.ca_challenge
 
 let pp_cmd fmt cmd =
   match cmd with

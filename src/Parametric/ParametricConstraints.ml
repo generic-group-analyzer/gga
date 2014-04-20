@@ -66,32 +66,29 @@ let level_to_cp l =
 (*******************************************************************)
 (* \newpage\subsection*{Constraint generation implementation} *)
 
-(* \ic{%
-   Instead of computing $(I_1^{\delta_1} * \ldots * I_b^{\delta_n})$
+(* Instead of computing $(I_1^{\delta_1} * \ldots * I_b^{\delta_n})$
    explicitly, we compute the polynomials $f_i$ in $(4)$
    on the fly and make the range indices $I_j$ distinct from range indices
-   in other inputs by appending~$j$.}
-*)
+   in other inputs by appending~$j$. *)
 
-(* \ic{Create the constraints $0 \leq \delta_i$. \quad $(2)$} *)
+(* \ic{Create the constraints $0 \leq \delta_i$. \quad $(2.2)$} *)
 let constr_delta_pos input =
   mapi'
     (fun i _ -> CP.(const 0, delta_var i, Leq, F.sprintf "delta_%i positive" i))
     input
 
 (* \ic{Create the constraint
-       $\Sigma_{i=1}^n \, \delta_i * \lambda_i = \lambda$.\quad $(3)$} *)
-let constr_mult_limit input (chal_level, _) =
-    CP.(
-    (ladd (mapi' (fun i (l,_) -> level_to_cp l *@ delta_var i) input)
-    , level_to_cp chal_level
-    , Eq
-    , F.sprintf "multiplications bounded by challenge level"))
+       $\Sigma_{i=1}^n \, \delta_i * \lambda_i = \lambda$.\quad $(2.3)$} *)
+let constr_mult_limit input chal_level =
+  [ CP.( ladd (mapi' (fun i (l,_) -> level_to_cp l *@ delta_var i) input)
+       , level_to_cp chal_level
+       , Eq
+       , F.sprintf "multiplications bounded by challenge level") ]
 
 
 (* \ic{Create the constraints $\delta_i * \alpha_{i,j} \leq r$,
        $r \leq \delta_i * \beta_{i,j}$, and $\alpha_j+1 \leq \beta_j$.
-       \quad $(4)$ and $(1)$} *)
+       \quad $(2.4)$ and $(2.1)$} *)
 let constr_range_limits input =
   let gen_constr j (s,(a,b)) =
     CP.(
@@ -113,12 +110,13 @@ let constr_range_limits input =
     (mapi' (fun j (_l,re) -> conc_map (gen_constr j) re.re_qprefix) input)
 
 (* \ic{%
-   Create the constraints $f_i = g_i$. \quad $(4)$ \\
+   Create the constraints $f_i = g_i$. \quad $(2.5)$ \\
    We compute $f_i$ as $\Sigma_{j=1}^n (\xi_{i,j} + \delta_j * \psi_{i,j})$
-   where $\xi_{i,j}$ consists of all terms of $f_{j,i}$ (used in the input $I_j$)
-   that contain some variable in $\vec{r}_j$ and $\psi_{i,j}$ of all terms that do not.
+   where $\xi_{i,j}$ is the sum of all terms of $f_{j,i}$
+   (exponent of $X_i$ in input $I_j$) that contain a range index and
+   $\psi_{i,j}$ is the sum of all terms that do not.
    } *)
-let constr_degree_equal input (_,c_monomial) =
+let constr_degree_equal input c_monomial =
   let input_monomials = L.map (fun (_,re) -> re.re_input_monomial) input in
   let rvars = sorted_nub (L.map fst c_monomial @ conc_map (L.map fst) input_monomials) in
   let vdeg_challenge rv =
@@ -140,12 +138,33 @@ let constr_degree_equal input (_,c_monomial) =
     (fun rv -> (vdeg_challenge rv, vdeg_input rv, Eq, F.sprintf "degree equal for %s" rv))
     rvars
 
-(* \ic{Compute constraints $(1)$--$(4)$.} *)   
-let gen_constrs input challenge =
+
+(* \ic{Generate constraint $1 \leq k - i$ for all such levels in assumption. \quad $(2.6)$.} *)
+let constr_levels input chal_level =
+  let constr_of_level l =
+    match l with 
+    | LevelOffset i -> [CP.(const (1 + i), var "k", Leq, "All levels must be >= 1")]
+    | LevelFixed  _ -> []
+  in
+  chal_level::(L.map fst input)
+    |> conc_map constr_of_level
+    |> sorted_nub
+      
+let constr_arity arity =
+  match arity with
+  | Some i ->
+    [ (CP.const i, CP.var "k", Eq, "Arity fixed in assumption") ]
+  | None ->
+    []
+
+(* \ic{Compute constraints $(2.1)$--$(2.5)$ and constraint for arity} *)   
+let gen_constrs input challenge arity =
     constr_delta_pos input
-  @ [ constr_mult_limit input challenge ]
+  @ constr_mult_limit input challenge.chal_level
   @ constr_range_limits input
-  @ constr_degree_equal input challenge
+  @ constr_degree_equal input challenge.chal_input_monomial
+  @ constr_levels input challenge.chal_level
+  @ constr_arity arity
 
 (*i*)
 (*******************************************************************)

@@ -1,4 +1,5 @@
 (*s This module provides some general purpose utility functions. *)
+
 (*i*)
 module F = Format
 module L = List
@@ -7,7 +8,7 @@ module L = List
 (*******************************************************************)
 (* \subsection*{List functions} *)
 
-(* \ic{
+(* \ic{%
    [group rel xs] creates a list of lists where successive
    elements of [xs] that are related with respect to [rel]
    are grouped together. This function is commonly used
@@ -23,13 +24,13 @@ let group rel xs =
   | []    -> []
   | x::xs -> go xs x [x]
 
-(* \ic{
+(* \ic{%
     [sorted_nub xs] sorts the elements in [xs] and
     removes duplicate occurences in [xs].} *)
 let sorted_nub xs =
   xs |> L.sort compare  |> group (=) |> L.map L.hd
 
-(* \ic{
+(* \ic{%
    [mapi' f xs] returns the list where the [i]-th
    element is computed as [f i xs[i]] using $1$-indexing.} *)
 let mapi' f = L.mapi (fun i x -> f (i+1) x)
@@ -40,7 +41,7 @@ let conc_map f xs = L.concat (L.map f xs)
 (*******************************************************************)
 (* \subsection*{File IO} *)
 
-(* \ic{
+(* \ic{%
    [input_file filename] returns the content of [filename] as a string.} *)
 let input_file filename =
   let in_channel = open_in filename in
@@ -55,7 +56,7 @@ let input_file filename =
   let _ = close_in_noerr in_channel in
   String.concat "\n" (L.rev lines)
 
-(* \ic{
+(* \ic{%
     [output_file filename content] writes the string [content]
     to [filename].} *)
 let output_file filename content =

@@ -1,0 +1,12 @@
+Use 'make native' to compile 'ggt.native'.
+
+We use a Z3 wrapper written in Python. You need the Z3 Python bindings
+for this to work (see [1]).
+
+See examples/ for input files.
+
+Use 'make doc' to create a PDF of the source-code. You need Latex,
+latexmk, and ocamlweb [2] for this.
+
+[1] http://rise4fun.com/z3py/tutorial - Using Z3Py Locally
+[2] opam install ocamlweb

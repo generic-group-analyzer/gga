@@ -54,18 +54,12 @@
 /************************************************************************/
 /* \ic{Priority and associativity} */
 
+/* \ic{Multiplication has the highest precedence.} */
+%left PLUS MINUS
 %left STAR
-%left PLUS
-%left MINUS
 
 /************************************************************************/
 /* \ic{Start symbols} */
-
-%start <ParametricInput.range_expr> range_expr_t
-
-%start  <ParametricInput.input list> inputs_t
-
-%start <ParametricInput.challenge> challenge_t
 
 %start <ParametricInput.cmd list> cmds_t
 %%
@@ -104,22 +98,31 @@ quants :
 ;
 
 monomial :
-| i = NAT                          { if i = 1 then [] else failwith "FIXME" }
+| i = NAT                          { if i = 1 then [] else failwith (string_of_int i^" is not a monomial") }
 | p = pow_var                      { [p] }
-| p = pow_var; STAR; ps = monomial { p:: ps }
+| p = pow_var; STAR; ps = monomial {  p:: ps }
 ;  
 
 range_expr :
 | FORALL; qps = quants; COLON; pvs = monomial
-  { {re_qprefix = qps; re_input_monomial = pvs } }
+  { mk_range_expr qps pvs }
 | pvs = monomial
-  { {re_qprefix = []; re_input_monomial = pvs } }
+  { mk_range_expr [] pvs }
 ;
 
+offset :
+| MINUS; i = NAT { i }
+
 level :
- | i = NAT { LevelFixed i }
- | s = LID { if s = "k" then LevelOffset 0 else failwith "FIXME" }
- (* FIXME: add support for offset *)
+ | i = NAT { mk_LevelFixed i }
+ | s = LID; o = offset?
+   { if s = "k" then 
+       match o with
+       | None              -> mk_LevelOffset 0
+       | Some i when i > 0 -> mk_LevelOffset i
+       | _                 -> failwith "invalid level"
+     else
+       failwith "invalid level" }
 ;
 
 range_exprs :
@@ -142,7 +145,7 @@ inputs :
 ; 
 
 challenge :
-| CHALLENGE; m = monomial; AT; l = level; DOT { (l, m) }
+| CHALLENGE; m = monomial; AT; l = level; DOT { mk_challenge l m }
 ;
 
 /************************************************************************/
@@ -173,18 +176,6 @@ cmds :
 
 /************************************************************************/
 /* \ic{Versions that consume all input} */
-
-inputs_t :
-| i = inputs; EOF { i }
-;
-
-range_expr_t :
-| re = range_expr; EOF { re }
-;
-
-challenge_t :
-| c = challenge; EOF { c }
-;
 
 cmds_t :
 | cs = cmds; EOF { cs }

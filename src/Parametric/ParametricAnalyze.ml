@@ -24,7 +24,8 @@ let wrap_error f s0 =
       let start = Lexing.lexeme_start sbuf in
       let err =
         Printf.sprintf
-          "Syntax error at offset %d (length %d): parsed ``%s'',\nerror at ``%s''"
+          "Syntax error at offset %d (length %d): \
+           parsed ``%s'',\nerror at ``%s''"
           start
           (S.length s)
           (if start >= S.length s then s  else (S.sub s 0 start))
@@ -32,30 +33,21 @@ let wrap_error f s0 =
       in
       print_endline err;
       failwith err
+  | InvalidAssumption s -> failwith ("Invalid assumption: "^s)
   | _ -> failwith "Unknown error while lexing/parsing."
-
-let p_range_expr = wrap_error (Parser.range_expr_t Lexer.lex)
-
-let p_input_line = wrap_error (Parser.inputs_t Lexer.lex)
-
-let p_challenge = wrap_error (Parser.challenge_t Lexer.lex)
 
 let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
 
 (*******************************************************************)
-(* \subsection*{Analyzer} *)
+(* \newpage\subsection*{Analyzer} *)
 
-(* \ic{FIXME: add well-formedness check for assumption} *)
 let analyze assm =
-  let inps = assm.inputs in
+  let inps = assm.ca_inputs in
   F.printf "%a" pp_inputs inps;
-  let chal = match assm.challenge with
-    | Some(c) -> c
-    | None    -> failwith "no challenge defined"
-  in
+  let chal = assm.ca_challenge in
   F.printf "%a" pp_challenge chal;
 
-  let constrs = gen_constrs inps chal in
+  let constrs = gen_constrs inps chal assm.ca_arity in
   F.printf "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
   print_newline ();
   Z3_Solver.solve constrs;
@@ -63,4 +55,4 @@ let analyze assm =
 
 let analyze_from_string scmds =
   let cmds  = p_cmds scmds in
-  analyze (eval_cmds cmds)
+  analyze (close_assumption (eval_cmds cmds))

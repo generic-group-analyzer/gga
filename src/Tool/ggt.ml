@@ -1,6 +1,8 @@
 (*s Main function of the ggt tool. *)
 
+(*i*)
 open Util
+(*i*)
 
 (*******************************************************************)
 (* \subsection*{Main} *)
