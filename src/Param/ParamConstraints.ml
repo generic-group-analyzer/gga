@@ -2,7 +2,7 @@
 (*i*)
 open Poly
 open Util
-open ParametricInput
+open ParamInput
 (*i*)
 
 
@@ -10,7 +10,13 @@ open ParametricInput
 (* \hd{Constraints} *)
 
 (* \ic{We use strings as variables for constraint polyomials.} *)
-module CP = MakePoly(struct type t = string let pp = pp_string end) (IntRing)
+module CP = MakePoly(
+  struct
+    type t = string
+    let pp = pp_string
+    let equal = (=)
+    let compare = compare
+  end) (IntRing)
 
 (* \ic{A constraint either represents $a = b$ or $a \leq b$.} *)
 type constr_type = Eq | Leq
@@ -51,7 +57,7 @@ let delta_var j = CP.var ("d_"^string_of_int j)
 
 (* \ic{We translate levels to constraint polynomials in the expected way.} *)
 let l_to_cp l =
-  CP.(match l with LevelFixed j -> const j | LevelOffset j -> var "k" -@ const j)
+  CP.(match l with LevelFixed j -> from_int j | LevelOffset j -> var "k" -@ from_int j)
 
 (*******************************************************************)
 (* \hd{Constraint generation} *)
@@ -59,9 +65,10 @@ let l_to_cp l =
 (* \input{constraint_generation} *)
 
 (*******************************************************************)
-(* \hd{Constraint generation implementation} *)
+(* \newpage\hd{Constraint generation implementation} *)
 
-(* Instead of computing $(I_1^{\delta_1} * \ldots * I_b^{\delta_n})$
+(* \\
+   Instead of computing $(I_1^{\delta_1} * \ldots * I_b^{\delta_n})$
    explicitly, we compute the polynomials $f_i$ in $(4)$
    on the fly and make the range indices $I_j$ distinct from range indices
    in other inputs by appending~$j$. *)
@@ -69,7 +76,7 @@ let l_to_cp l =
 (* \ic{Create the constraints $0 \leq \delta_i$. \quad $(2.2)$} *)
 let constr_delta_pos input =
   mapi'
-    (fun i _ -> CP.(const 0, Leq, delta_var i, F.sprintf "delta_%i positive" i))
+    (fun i _ -> CP.(from_int 0 , Leq, delta_var i, F.sprintf "delta_%i positive" i))
     input
 
 (* \ic{Create the constraint
@@ -88,7 +95,7 @@ let constr_range_limits input =
         , F.sprintf "lower bound for range variable %s in input %i" s j)
       ; ( ridx_var j s, Leq, delta_var j *@ ep_to_cp b
         , F.sprintf "upper bound for range variable %s in input %i" s j)
-      ; ( ep_to_cp a +@ const 1, Leq, ep_to_cp b
+      ; ( ep_to_cp a +@ from_int 1, Leq, ep_to_cp b
         , F.sprintf "range for variable %s in input %i increasing and non-empty" s j)
       ])
   in
@@ -97,12 +104,14 @@ let constr_range_limits input =
 
 (* \ic{Create constraints $i < k$ for all such levels in assumption. \quad $(2.5)$.} *)
 let constr_levels input chal_level =
-  let constr_of_level l =
-    match l with 
-    | LevelOffset i -> [CP.(const (i + 1), Leq, var "k", "All levels must be >= 1")]
-    | LevelFixed  _ -> []
+  let offset_of_level = function LevelOffset i -> [i] | LevelFixed  _ -> [] in
+  let constr_of_offset i =
+    CP.(from_int (i + 1), Leq, var "k", "All levels must be >= 1")
   in
-  chal_level::(L.map fst input) |> conc_map constr_of_level |> sorted_nub
+  chal_level::(L.map fst input)
+    |> conc_map offset_of_level
+    |> sorted_nub compare
+    |> L.map constr_of_offset
 
 (* \newpage\ic{%
    Create the constraints $f_i = g_i$. \quad $(2.6)$ \\
@@ -113,9 +122,12 @@ let constr_levels input chal_level =
    } *)
 let constr_degree_equal input c_monomial =
   let input_monomials = L.map (fun (_,re) -> re.re_input_monomial) input in
-  let rvars = sorted_nub (L.map fst c_monomial @ conc_map (L.map fst) input_monomials) in
+  let rvars =
+    sorted_nub compare
+      (L.map fst c_monomial @ conc_map (L.map fst) input_monomials)
+  in
   let vdeg_challenge rv =
-    try ep_to_cp (L.assoc rv c_monomial) with Not_found -> CP.const 0
+    try ep_to_cp (L.assoc rv c_monomial) with Not_found -> CP.from_int 0
   in
   let vdeg_input rv =
     CP.
@@ -126,7 +138,7 @@ let constr_degree_equal input c_monomial =
                  let xi_psi  = L.assoc rv ms in
                  let xi,psi = EP.partition (fun (m,_) -> L.exists is_Ridx m) xi_psi in
                  (ep_to_cp ~inum:j xi +@ (delta_var j *@ ep_to_cp ~inum:j psi))
-               with Not_found -> const 0)
+               with Not_found -> from_int 0)
             input_monomials))
   in
   L.map
@@ -136,7 +148,7 @@ let constr_degree_equal input c_monomial =
 (* \ic{Create arity constraint if specified.} *)
 let constr_arity arity =
   match arity with
-  | Some i -> [ (CP.const i, Eq, CP.var "k", "Arity fixed in assumption") ]
+  | Some i -> [ CP.(from_int i, Eq, var "k", "Arity fixed in assumption") ]
   | None   -> []
 
 (* \ic{Create constraints $(2.1)$--$(2.5)$ and constraint for arity} *)   

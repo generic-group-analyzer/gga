@@ -15,7 +15,7 @@
 *)
 
 (*i*)
-open ParametricConstraints
+open ParamConstraints
 open Util
 
 module YS = Yojson.Safe
@@ -44,7 +44,8 @@ let call_z3 cmd linenum =
 let poly_to_json f =
   `List
      (L.map
-        (fun (m,c) -> `List [ `List (L.map (fun v -> `String v) m); `Int c ])
+        (fun (m,c) ->
+           `List [ `List (L.map (fun v -> `String v) m); `Int (Big_int.int_of_big_int c) ])
         (CP.to_terms f))
 
 (* \ic{[solve constrs] solves the given list of constraints using Z3.} *)
@@ -72,14 +73,14 @@ let solve constrs =
       begin match L.assoc "ok" l with
       | `Bool true ->
         begin match L.assoc "res" l with
-        | `String "sat"     -> F.printf "There is an attack:\n %s" (get_string l "model")
-        | `String "unsat"   -> F.printf "The assumption is valid."
-        | `String "unknown" -> F.printf "Z3 returned unknown"
-        | _                 -> F.printf "Error communicating with Z3."
+        | `String "sat"     -> F.sprintf "There is an attack:\n %s" (get_string l "model")
+        | `String "unsat"   -> F.sprintf "The assumption is valid."
+        | `String "unknown" -> F.sprintf "Z3 returned unknown"
+        | _                 -> F.sprintf "Error communicating with Z3."
         end
-      | `Bool false -> F.printf "Z3 wrapperreturned an error: %s" (get_string l "error")
-      | _           -> F.printf "Error communicating with Z3."
+      | `Bool false -> F.sprintf "Z3 wrapperreturned an error: %s" (get_string l "error")
+      | _           -> F.sprintf "Error communicating with Z3."
       end
-    | _ -> F.printf "Error communicating with Z3."
+    | _ -> F.sprintf "Error communicating with Z3."
     end
-  | _ -> F.printf "Expected one line."
+  | _ -> F.sprintf "Expected one line."

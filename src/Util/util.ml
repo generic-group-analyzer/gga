@@ -27,8 +27,8 @@ let group rel xs =
 (* \ic{%
     [sorted_nub xs] sorts the elements in [xs] and
     removes duplicate occurences in [xs].} *)
-let sorted_nub xs =
-  xs |> L.sort compare  |> group (=) |> L.map L.hd
+let sorted_nub cmp xs =
+  xs |> L.sort cmp |> group (fun a b -> cmp a b = 0) |> L.map L.hd
 
 (* \ic{%
    [mapi' f xs] returns the list where the [i]-th
@@ -47,6 +47,34 @@ let from_opt f def ox =
 
 (* \ic{[id] is the identity function} *)
 let id x = x
+
+(* \ic{[list_equal e_equal l1 l2] returns true if the two lists are
+       equal with respect to [e_equal].} *)
+let list_equal eq xs0 ys0 =
+  let rec go xs ys = 
+    match xs,ys with
+    | [], []       -> true
+    | x::xs, y::ys -> eq x y && go xs ys
+    | _            -> assert false
+  in
+  (L.length xs0 = L.length ys0) && go xs0 ys0
+
+(* \ic{[list_compare e_compare l1 l2] compares the two lists
+        with respect to length and [e_compare].} *)
+let list_compare cmp xs0 ys0 =
+  let rec go xs ys =
+    match xs, ys with
+    | [], []       -> 0
+    | x::xs, y::ys ->
+      let d = cmp x y in
+      if d <> 0 then d
+      else go xs ys
+    | _            -> assert false
+  in
+  let d = L.length xs0 - L.length ys0 in
+  if d > 0 then 1
+  else if d < 0 then -1
+  else go xs0 ys0
 
 (*******************************************************************)
 (* \newpage\hd{File IO} *)

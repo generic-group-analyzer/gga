@@ -34,7 +34,7 @@ val mk_LevelOffset : int -> level
 type exp_var = Rlimit of rlimitvar | Ridx of ridxvar | Level
 
 (* \ic{[EP] is used for polynomials in the exponent.} *)
-module EP : PolyInterfaces.Poly with type var = exp_var and type coeff = int
+module EP : PolyInterfaces.Poly with type var = exp_var and type coeff = Big_int.big_int
 
 type exp_poly = EP.t
 

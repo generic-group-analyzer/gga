@@ -1,7 +1,7 @@
 (*s Lexer for parametric assumptions. *)
 {
   (*i*)
-  open Parser
+  open ParamParser
 
   module S = String
   (*i*)

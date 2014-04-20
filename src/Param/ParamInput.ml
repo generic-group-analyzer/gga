@@ -40,7 +40,12 @@ let pp_exp_var fmt v =
 
 let is_Ridx = function Ridx _ -> true | _ -> false
 
-module EP = MakePoly(struct type t = exp_var let pp = pp_exp_var end) (IntRing)
+module EP = MakePoly(struct
+  type t = exp_var
+  let pp = pp_exp_var
+  let equal = (=)
+  let compare = compare
+end) (IntRing)
 
 type exp_poly = EP.t
 
@@ -62,7 +67,7 @@ let mk_range_expr qpref im =
 
   (* \ic{Disallow $\forall i \in R_1, i \in R_2: \ldots$.}*)
   let bvars = L.map fst qpref in
-  if L.length (sorted_nub bvars) <> L.length bvars then
+  if L.length (sorted_nub compare bvars) <> L.length bvars then
     fail_assm "reused range index in input";
 
   (* \ic{Disallow disallow occurences of $k$ or range indices in $\brack{\alpha,\beta}$.} *)
@@ -141,7 +146,7 @@ let handle_cmd cmd assm =
   let ensure_none o v s =
      match o with
      | None -> v
-     | Some _ -> failwith ("cannot set '"^s^"', alreay set for assumption")
+     | Some _ -> fail_assm ("cannot set '"^s^"', alreay set for assumption")
   in
   match cmd with
   | Setting s       ->
@@ -173,7 +178,7 @@ let close_assumption a =
       ca_inputs = a.inputs;
       ca_challenge = c
     }
-  | _ -> failwith "Cannot close assumption, not fully specified."
+  | _ -> fail_assm "assumption not fully specified."
 
 (*i*)
 (*******************************************************************)
@@ -186,7 +191,7 @@ let pp_level fmt l =
   | LevelOffset i            -> F.fprintf fmt "k - %i" i
 
 let pp_pvar fmt (v,f) =
-  if f = EP.one then
+  if EP.equal f EP.one then
     F.fprintf fmt "%s" v
   else if EP.is_var f || EP.is_const f then
     F.fprintf fmt "%s^%a" v EP.pp f  

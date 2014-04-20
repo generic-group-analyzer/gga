@@ -1,9 +1,9 @@
 (*s Parametric assumption analysis: parsing wrappers and analysis. *)
 
 (*i*)
+open ParamInput
+open ParamConstraints
 open Util
-open ParametricInput
-open ParametricConstraints
 
 module S = String
 (*i*)
@@ -11,14 +11,14 @@ module S = String
 (*******************************************************************)
 (* \hd{Parsing} *)
 
-(* \ic{Convert lexer and parser errors to ParseError exception.} *)
+(* \ic{Convert lexer and parser errors to error with meaningful message.} *)
 let wrap_error f s0 =
   let s = S.copy s0 in
   let sbuf = Lexing.from_string s0 in
   try
     f sbuf
   with
-  | Parser.Error ->
+  | ParamParser.Error ->
     let start = Lexing.lexeme_start sbuf in
     let err =
       Printf.sprintf
@@ -31,29 +31,35 @@ let wrap_error f s0 =
     in
     print_endline err;
     failwith err
-  | Lexer.Error msg ->
+  | ParamLexer.Error msg ->
     raise (failwith (Printf.sprintf "%s" msg))
-  | InvalidAssumption s ->
-    failwith ("Invalid assumption: "^s)
+  | InvalidAssumption _ as e->
+    raise e
   | _ ->
     failwith "Unknown error while lexing/parsing."
 
-let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
+let p_cmds = wrap_error (ParamParser.cmds_t ParamLexer.lex)
 
 (*******************************************************************)
 (* \newpage\hd{Analyzer} *)
 
+(* \ic{FIXME: Create data type for return value:
+       Error,
+       Ok Info * (attack option)} *)
 let analyze assm =
   let inps = assm.ca_inputs in
-  F.printf "%a" pp_inputs inps;
   let chal = assm.ca_challenge in
-  F.printf "%a" pp_challenge chal;
-
   let constrs = gen_constrs inps chal assm.ca_arity in
-  F.printf "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
-  print_newline ();
-  Z3_Solver.solve constrs;
-  print_newline ()
+
+  let fmt = Format.str_formatter in
+  ignore (Format.flush_str_formatter ());
+  F.fprintf fmt "%a" pp_inputs inps;
+  F.fprintf fmt "%a" pp_challenge chal;
+  F.fprintf fmt "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
+  let info = Format.flush_str_formatter () in
+
+  let res = Z3_Solver.solve constrs in
+  (res,info)
 
 let analyze_from_string scmds =
   let cmds  = p_cmds scmds in

@@ -1,0 +1,7 @@
+setting symmetric.
+arity 3.
+problem_type decisional.
+
+input [ 1 ] @ 1.
+
+challenge X @ 2.

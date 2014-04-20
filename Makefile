@@ -8,9 +8,10 @@ INFRA_MODULES=Util/Util.ml Poly/PolyInterfaces.mli Poly/Poly.mli Poly/Poly.ml
 
 NONPARAM_MODULES= NonParam/NonParamInput.ml
 
-PARAM_MODULES=Parametric/ParametricInput.mli Parametric/ParametricInput.ml \
-  Parametric/ParametricConstraints.ml Solver/Z3_Solver.ml \
-  Parser/Parser.mly Parser/Lexer.mll Parametric/ParametricAnalyze.ml
+PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
+  Param/ParamConstraints.ml Solver/Z3_Solver.ml \
+  Param/ParamParser.mly Param/ParamLexer.mll Param/ParamAnalyze.ml \
+  Param/ParamTest.ml
 
 TOOL_MODULES = Tool/ggt.ml
 
@@ -26,11 +27,14 @@ all: native
 
 native:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
-	./ggt.native examples/dhe.thy
+
+byte:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.byte
+	OCAMLRUNPARAM="-b" ./ggt.byte examples/dhe.ggt
 
 paramtest:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/Param_test.native
-	./Param_test.native
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Param/ParamTest.native
+	./ParamTest.native > test_log
 
 clean:
 	$(OCAMLBUILD) -clean

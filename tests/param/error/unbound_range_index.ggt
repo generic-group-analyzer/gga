@@ -1,0 +1,8 @@
+setting symmetric.
+problem_type decisional.
+
+input
+  [ 1
+  , forall j in [0,l]: X^i ] @ 1.
+
+challenge Y @ k.

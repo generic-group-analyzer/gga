@@ -1,7 +1,7 @@
 %{
   (*i*)
   open Util
-  open ParametricInput
+  open ParamInput
   (*i*)
 %}
 
@@ -62,35 +62,38 @@
 /************************************************************************/
 /* \hd{Start symbols} */
 
-%start <ParametricInput.cmd list> cmds_t
+%type  <ParamInput.cmd list> cmds_t
+
+%start cmds_t
 %%
 
 /************************************************************************/
 /* \hd{Inputs and Challenges} */
 
 poly :
-| i = NAT                   { EP.const i }
+| i = NAT                   { EP.from_int i }
 | i = RLIMIT                { EP.var (Rlimit i) }
 | s = VARL                  { EP.var (Ridx s) }
 | f = poly; PLUS; g = poly  { EP.add f g }
 | f = poly; STAR; g = poly  { EP.mult f g }
 | f = poly; MINUS; g = poly { EP.minus f g }
 | MINUS; f = poly           { EP.opp f }
-| RPAREN; f = poly; LPAREN  { f }
+| LPAREN; f = poly; RPAREN  { f }
 ;
 
-/* Polynomial expression that can be used in exponent without parentheses.
-   Required because otherwise there is a conflict between [*] in exponent
-   and in monomial. */
+/* \ic{%
+   Polynomial expression that can be used in exponent without parentheses.
+   Required because otherwise there is a conflict between $*$ in exponent
+   and in monomial.} */
 poly_no_paren :
-| i = NAT                    { EP.const i }
+| i = NAT                    { EP.from_int i }
 | i = RLIMIT                 { EP.var (Rlimit i) }
 | s = VARL                   { EP.var (Ridx s) }
 ;
 
 exponent :
  | CARET; f = poly_no_paren              { f }
- | CARET; RPAREN; f = poly; LPAREN { f }
+ | CARET; LPAREN; f = poly; RPAREN { f }
 ;
 
 pow_var : s = VARU; f = exponent? { (s,from_opt id EP.one f) };

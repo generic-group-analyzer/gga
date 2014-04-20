@@ -2,7 +2,10 @@
     shared between [Poly.ml] and [Poly.mli]. *)
 
 module type Var = sig
-  type t val pp : Format.formatter -> t -> unit
+  type t
+  val pp : Format.formatter -> t -> unit
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 end
 
 module type Ring = sig
@@ -14,6 +17,9 @@ module type Ring = sig
   val one : t
   val zero : t
   val ladd : t list -> t
+  val from_int : int -> t
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 end
 
 module type Poly = sig
@@ -35,6 +41,7 @@ module type Poly = sig
   val ladd : t list -> t
   val var : var -> t
   val const : coeff -> t
+  val from_int : int -> t
 
   (* \ic{[eval env f] returns the polynomial [f] evaluated at
          the points [x := env x].} *)
@@ -53,4 +60,6 @@ module type Poly = sig
   val ( *@) : t -> t -> t
   val (+@)  : t -> t -> t
   val (-@)  : t -> t -> t
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 end

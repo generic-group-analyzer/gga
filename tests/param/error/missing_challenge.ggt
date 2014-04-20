@@ -1,0 +1,5 @@
+setting symmetric.
+problem_type decisional.
+
+input [ 1 ] @ 1.
+
