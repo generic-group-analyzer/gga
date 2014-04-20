@@ -6,7 +6,7 @@ module L = List
 (*i*)
 
 (*******************************************************************)
-(* \hd{List functions} *)
+(* \hd{List functions, option functions, \ldots } *)
 
 (* \ic{%
    [group rel xs] creates a list of lists where successive
@@ -37,6 +37,16 @@ let mapi' f = L.mapi (fun i x -> f (i+1) x)
 
 (* \ic{Composition of [concat] and [map].} *)
 let conc_map f xs = L.concat (L.map f xs)
+
+(* \ic{[from_opt f def ox] takes an option value [ox] and
+       applies [f] if possible, otherwise def is returned.} *)
+let from_opt f def ox =
+  match ox with
+  | None   -> def
+  | Some x -> f x
+
+(* \ic{[id] is the identity function} *)
+let id x = x
 
 (*******************************************************************)
 (* \newpage\hd{File IO} *)

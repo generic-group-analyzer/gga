@@ -1,0 +1,38 @@
+\chapter{Non-parametric Assumptions}
+
+This chapter covers the implementation of our approach for
+analyzing non-parametric assumptions.
+In the following, we identify elements $[f]P_i \in \mathbb{G}_i$ with
+  their exponent-polynomials~$f$.
+
+An assumption is defined by giving the group setting and
+  specifying if the problem is decisional or computational.
+In the decisional case, the user specifies a right-list and a left-list of
+  adversary inputs.
+If these lists differ only in the last element, we call the problem
+  a \emph{real-or-random} problem.
+In the computational case, the user specifies a list of adversary inputs
+  and the challenge.
+
+\begin{verbatim}
+class Grouptype:
+  def __init__(self,gt):
+    self.isoms    = [ (a['fst'], a['snd']) for a in gt['isoms']]
+    self.maps     = [ (sorted(a['fst']), a['snd']) for a in gt['maps']]
+    self.leveled_groupnames = infer_levels( gt['groupnames']
+                                          , self.isoms
+                                          , self.maps)
+\end{verbatim}
+
+\begin{verbatim}
+class Problem:
+  def __init__(self, prob):
+    self.grouptype           = Grouptype(prob['grouptype'])
+    self.is_decisional       = prob['isDecisional']
+    self.decisional_left     = prob['decisional_left']
+    self.decisional_right    = prob['decisional_right']
+    self.computational_input = prob['computational_input']
+    if prob['computational_compute'] is not None:
+      self.computational_compute_group = prob['computational_compute']['fst']
+      self.computational_compute_poly  = prob['computational_compute']['snd']
+\end{verbatim}
