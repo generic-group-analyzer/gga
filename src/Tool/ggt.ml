@@ -4,9 +4,6 @@
 open Util
 (*i*)
 
-(*******************************************************************)
-(* \subsection*{Main} *)
-
 let main =
   if Array.length Sys.argv <> 2 then
     output_string stderr (F.sprintf "usage: %s <inputfile>" Sys.argv.(0))

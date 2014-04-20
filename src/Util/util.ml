@@ -6,7 +6,7 @@ module L = List
 (*i*)
 
 (*******************************************************************)
-(* \subsection*{List functions} *)
+(* \hd{List functions} *)
 
 (* \ic{%
    [group rel xs] creates a list of lists where successive
@@ -39,7 +39,7 @@ let mapi' f = L.mapi (fun i x -> f (i+1) x)
 let conc_map f xs = L.concat (L.map f xs)
 
 (*******************************************************************)
-(* \subsection*{File IO} *)
+(* \newpage\hd{File IO} *)
 
 (* \ic{%
    [input_file filename] returns the content of [filename] as a string.} *)
@@ -66,7 +66,7 @@ let output_file filename content =
 
 (*i*)
 (*******************************************************************)
-(* \subsection*{Pretty printing} *)
+(* \hd{Pretty printing} *)
 
 let rec pp_list sep pp_elt f l =
   match l with

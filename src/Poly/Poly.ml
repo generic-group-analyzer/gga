@@ -1,11 +1,13 @@
-(*s This module provides module types [Var] for variables and [Ring] for
-    rings. These types are used to define the [MakePoly] functor that defines
-    a polynomial module. We also define [IntRing]. *)
+(*s Use [Var] and [Ring] types to define [MakePoly] functor.
+    Also define [IntRing]. *)
 (*i*)
 open Util
 open PolyInterfaces
 (*i*)
 
+(* \hd{[Ring] instance for [int]} *)
+
+(* \ic{FIXME: use bigints} *)
 
 module IntRing = struct
   type t = int
@@ -19,14 +21,15 @@ module IntRing = struct
   let ladd cs = L.fold_left (fun acc c -> c + acc) zero cs
 end
 
-(* \ic{
-   We assume that polymorphic equality and comparison
-   makes sense for V.t and C.t.} *)
+(*********************************************************************)
+(* \hd{Functor for Polynomials} *)
+(* \ic{We assume that polymorphic equality and comparison
+       makes sense for V.t and C.t.} *)
 module MakePoly (V : Var) (C : Ring) = struct
   type coeff = C.t
   type var   = V.t
 
-  (* \ic{
+  (* \ic{%
      We represent polynomials as assoc lists from
      monomials to coefficents. See [norm] for invariants
      that we maintain.} *)

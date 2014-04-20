@@ -11,7 +11,7 @@ exception InvalidAssumption of string
 let fail_assm s = raise (InvalidAssumption s)
 
 (*******************************************************************)
-(* \subsection*{Range expressions} *)
+(* \hd{Range expressions, inputs, and challenges} *)
 
 type rvar = string
 
@@ -57,7 +57,7 @@ type range_expr = {
   re_input_monomial : input_monomial
 }
 
-(* \newpage\ic{Smart constructor for [range_expr] that ensures ({\bf WF1}).} *)
+(* \ic{Smart constructor for [range_expr] that ensures ({\bf WF1}).} *)
 let mk_range_expr qpref im =
 
   (* \ic{Disallow $\forall i \in R_1, i \in R_2: \ldots$.}*)
@@ -97,7 +97,7 @@ let mk_challenge l im =
     { chal_level = l; chal_input_monomial = im }
 
 (*******************************************************************)
-(* \subsection*{Assumption definition} *)
+(* \hd{Assumption definition} *)
 
 type setting = Symmetric | Asymmetric
 
@@ -128,7 +128,7 @@ type closed_assumption = {
 }
 
 (*******************************************************************)
-(* \subsection*{Commands in input file} *)
+(* \hd{Commands in input file} *)
 
 type cmd =
   | Setting       of setting
@@ -176,9 +176,8 @@ let close_assumption a =
   | _ -> failwith "Cannot close assumption, not fully specified."
 
 (*i*)
-(* \begin{pretty} *)
 (*******************************************************************)
-(* \subsection*{Pretty printing} *)
+(* \hd{Pretty printing} *)
 
 let pp_level fmt l =
   match l with 

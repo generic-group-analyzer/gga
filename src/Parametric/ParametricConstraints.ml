@@ -7,13 +7,10 @@ open ParametricInput
 
 
 (*******************************************************************)
-(* \subsection*{Constraints} *)
+(* \hd{Constraints} *)
 
 (* \ic{We use strings as variables for constraint polyomials.} *)
-module CP = MakePoly(struct
-  type t = string
-  let pp fmt v = F.fprintf fmt "%s" v
-end) (IntRing)
+module CP = MakePoly(struct type t = string let pp = pp_string end) (IntRing)
 
 (* \ic{A constraint either represents $a = b$ or $a \leq b$.} *)
 type constr_type = Eq | Leq
@@ -22,7 +19,7 @@ type constr_type = Eq | Leq
 type constr = CP.t * constr_type * CP.t * string
 
 (*******************************************************************)
-(* \subsection*{Constraint helper functions} *)
+(* \hd{Constraint helper functions} *)
 
 (* \ic{[ev_to_cv j ev] translates the exponent variable [ev] into a
    constraint variable. It uses [j] to make range indices used in
@@ -57,12 +54,12 @@ let l_to_cp l =
   CP.(match l with LevelFixed j -> const j | LevelOffset j -> var "k" -@ const j)
 
 (*******************************************************************)
-(* \subsection*{Constraint generation} *)
+(* \hd{Constraint generation} *)
 
 (* \input{constraint_generation} *)
 
 (*******************************************************************)
-(* \newpage\subsection*{Constraint generation implementation} *)
+(* \hd{Constraint generation implementation} *)
 
 (* Instead of computing $(I_1^{\delta_1} * \ldots * I_b^{\delta_n})$
    explicitly, we compute the polynomials $f_i$ in $(4)$
@@ -153,7 +150,7 @@ let gen_constrs input challenge arity =
 
 (*i*)
 (*******************************************************************)
-(* \subsection*{Pretty printing} *)
+(* \hd{Pretty printing} *)
 
 let pp_eq_type fmt eqt =
   match eqt with

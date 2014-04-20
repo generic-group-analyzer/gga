@@ -1,5 +1,5 @@
-(*s Module types for variables, ring, and polynomial
-    shared between Poly.ml and Poly.mli *)
+(*s Module types for variables, ring, and polynomials
+    shared between [Poly.ml] and [Poly.mli]. *)
 
 module type Var = sig
   type t val pp : Format.formatter -> t -> unit

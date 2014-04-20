@@ -9,7 +9,7 @@ module S = String
 (*i*)
 
 (*******************************************************************)
-(* \subsection*{Parsing} *)
+(* \hd{Parsing} *)
 
 (* \ic{Convert lexer and parser errors to ParseError exception.} *)
 let wrap_error f s0 =
@@ -41,7 +41,7 @@ let wrap_error f s0 =
 let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
 
 (*******************************************************************)
-(* \newpage\subsection*{Analyzer} *)
+(* \newpage\hd{Analyzer} *)
 
 let analyze assm =
   let inps = assm.ca_inputs in

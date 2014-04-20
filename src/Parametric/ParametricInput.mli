@@ -3,7 +3,7 @@
 exception InvalidAssumption of string
 
 (*******************************************************************)
-(* \subsection*{Range expressions} *)
+(* \hd{Range expressions, inputs, and challenges} *)
 
 (* \ic{ Random variable $X$, $Y$, \ldots.} *)
 type rvar = string
@@ -74,7 +74,7 @@ type challenge = private {
 val mk_challenge : level -> input_monomial -> challenge
 
 (*******************************************************************)
-(* \subsection*{Assumption definition} *)
+(* \hd{Assumption definition} *)
 
 type setting = Symmetric | Asymmetric
 
@@ -103,7 +103,7 @@ type closed_assumption = private {
 }
 
 (*******************************************************************)
-(* \subsection*{Commands in input file} *)
+(* \hd{Commands in input file} *)
 
 (* \ic{%
    The user defines an assumption by giving a sequence of
@@ -127,7 +127,7 @@ val close_assumption : assumption -> closed_assumption
 
 (*i*)
 (*********************************************************************)
-(* \ic{\bf Pretty printing} *)
+(* \hd{Pretty printing} *)
 
 val pp_exp_var :           Util.F.formatter -> exp_var                   -> unit
 val pp_level :             Util.F.formatter -> level                     -> unit
