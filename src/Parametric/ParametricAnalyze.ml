@@ -18,23 +18,25 @@ let wrap_error f s0 =
   try
     f sbuf
   with
-  | Lexer.Error msg ->
-      raise (failwith (Printf.sprintf "%s%!" msg))
   | Parser.Error ->
-      let start = Lexing.lexeme_start sbuf in
-      let err =
-        Printf.sprintf
-          "Syntax error at offset %d (length %d): \
-           parsed ``%s'',\nerror at ``%s''"
-          start
-          (S.length s)
-          (if start >= S.length s then s  else (S.sub s 0 start))
-          (if start >= S.length s then "" else (S.sub s start (S.length s - start)))
-      in
-      print_endline err;
-      failwith err
-  | InvalidAssumption s -> failwith ("Invalid assumption: "^s)
-  | _ -> failwith "Unknown error while lexing/parsing."
+    let start = Lexing.lexeme_start sbuf in
+    let err =
+      Printf.sprintf
+        "Syntax error at offset %d (length %d): \
+         parsed ``%s'',\nerror at ``%s''"
+        start
+        (S.length s)
+        (if start >= S.length s then s  else (S.sub s 0 start))
+        (if start >= S.length s then "" else (S.sub s start (S.length s - start)))
+    in
+    print_endline err;
+    failwith err
+  | Lexer.Error msg ->
+    raise (failwith (Printf.sprintf "%s" msg))
+  | InvalidAssumption s ->
+    failwith ("Invalid assumption: "^s)
+  | _ ->
+    failwith "Unknown error while lexing/parsing."
 
 let p_cmds = wrap_error (Parser.cmds_t Lexer.lex)
 

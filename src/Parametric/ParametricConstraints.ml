@@ -19,7 +19,7 @@ end) (IntRing)
 type constr_type = Eq | Leq
 
 (* \ic{We associate an information string with a constraint.} *)
-type constr = CP.t * CP.t * constr_type * string
+type constr = CP.t * constr_type * CP.t * string
 
 (*******************************************************************)
 (* \subsection*{Constraint helper functions} *)
@@ -37,7 +37,7 @@ let ev_to_cv j v =
 (* \ic{[ep_to_cp j ep] translates the exponent polyomial [ep] occuring in the
    into a constraint polynomial. It uses [j] to make range indices used in
    the different inputs distinct.} *)
-let ep_to_cp j f =
+let ep_to_cp ?inum:(j=0) f =
   f
   |> EP.to_terms
   |> L.map (fun (m,c) -> (L.map (ev_to_cv j) m, c))
@@ -53,10 +53,8 @@ let rlimit_var i = CP.var (ev_to_cv 0 (Rlimit i))
 let delta_var j = CP.var ("d_"^string_of_int j)
 
 (* \ic{We translate levels to constraint polynomials in the expected way.} *)
-let level_to_cp l =
-  CP.(match l with
-      | LevelFixed j  -> const j
-      | LevelOffset j -> (var "k") -@ (const j))
+let l_to_cp l =
+  CP.(match l with LevelFixed j -> const j | LevelOffset j -> var "k" -@ const j)
 
 (*******************************************************************)
 (* \subsection*{Constraint generation} *)
@@ -74,17 +72,14 @@ let level_to_cp l =
 (* \ic{Create the constraints $0 \leq \delta_i$. \quad $(2.2)$} *)
 let constr_delta_pos input =
   mapi'
-    (fun i _ -> CP.(const 0, delta_var i, Leq, F.sprintf "delta_%i positive" i))
+    (fun i _ -> CP.(const 0, Leq, delta_var i, F.sprintf "delta_%i positive" i))
     input
 
 (* \ic{Create the constraint
        $\Sigma_{i=1}^n \, \delta_i * \lambda_i = \lambda$.\quad $(2.3)$} *)
-let constr_mult_limit input chal_level =
-  [ CP.( ladd (mapi' (fun i (l,_) -> level_to_cp l *@ delta_var i) input)
-       , level_to_cp chal_level
-       , Eq
+let constr_mult_limit input chal_l =
+  [ CP.( ladd (mapi' (fun i (l,_) -> l_to_cp l *@ delta_var i) input), Eq, l_to_cp chal_l
        , F.sprintf "multiplications bounded by challenge level") ]
-
 
 (* \ic{Create the constraints $\delta_i * \alpha_{i,j} \leq r$,
        $r \leq \delta_i * \beta_{i,j}$, and $\alpha_j+1 \leq \beta_j$.
@@ -92,25 +87,28 @@ let constr_mult_limit input chal_level =
 let constr_range_limits input =
   let gen_constr j (s,(a,b)) =
     CP.(
-      [ ( delta_var j *@ ep_to_cp 0 a
-        , ridx_var j s
-        , Leq
+      [ ( delta_var j *@ ep_to_cp a, Leq, ridx_var j s
         , F.sprintf "lower bound for range variable %s in input %i" s j)
-      ; ( ridx_var j s
-        , delta_var j *@ ep_to_cp 0 b
-        , Leq
+      ; ( ridx_var j s, Leq, delta_var j *@ ep_to_cp b
         , F.sprintf "upper bound for range variable %s in input %i" s j)
-      ; ( ep_to_cp 0 a +@ const 1
-        , ep_to_cp 0 b
-        , Leq
+      ; ( ep_to_cp a +@ const 1, Leq, ep_to_cp b
         , F.sprintf "range for variable %s in input %i increasing and non-empty" s j)
       ])
   in
   L.concat
     (mapi' (fun j (_l,re) -> conc_map (gen_constr j) re.re_qprefix) input)
 
-(* \ic{%
-   Create the constraints $f_i = g_i$. \quad $(2.5)$ \\
+(* \ic{Create constraints $i < k$ for all such levels in assumption. \quad $(2.5)$.} *)
+let constr_levels input chal_level =
+  let constr_of_level l =
+    match l with 
+    | LevelOffset i -> [CP.(const (i + 1), Leq, var "k", "All levels must be >= 1")]
+    | LevelFixed  _ -> []
+  in
+  chal_level::(L.map fst input) |> conc_map constr_of_level |> sorted_nub
+
+(* \newpage\ic{%
+   Create the constraints $f_i = g_i$. \quad $(2.6)$ \\
    We compute $f_i$ as $\Sigma_{j=1}^n (\xi_{i,j} + \delta_j * \psi_{i,j})$
    where $\xi_{i,j}$ is the sum of all terms of $f_{j,i}$
    (exponent of $X_i$ in input $I_j$) that contain a range index and
@@ -120,7 +118,7 @@ let constr_degree_equal input c_monomial =
   let input_monomials = L.map (fun (_,re) -> re.re_input_monomial) input in
   let rvars = sorted_nub (L.map fst c_monomial @ conc_map (L.map fst) input_monomials) in
   let vdeg_challenge rv =
-    try ep_to_cp 0 (L.assoc rv c_monomial) with Not_found -> CP.const 0
+    try ep_to_cp (L.assoc rv c_monomial) with Not_found -> CP.const 0
   in
   let vdeg_input rv =
     CP.
@@ -130,34 +128,21 @@ let constr_degree_equal input c_monomial =
                try
                  let xi_psi  = L.assoc rv ms in
                  let xi,psi = EP.partition (fun (m,_) -> L.exists is_Ridx m) xi_psi in
-                 (ep_to_cp j xi +@ (delta_var j *@ ep_to_cp j psi))
+                 (ep_to_cp ~inum:j xi +@ (delta_var j *@ ep_to_cp ~inum:j psi))
                with Not_found -> const 0)
             input_monomials))
   in
   L.map
-    (fun rv -> (vdeg_challenge rv, vdeg_input rv, Eq, F.sprintf "degree equal for %s" rv))
+    (fun rv -> (vdeg_challenge rv, Eq, vdeg_input rv, F.sprintf "degree equal for %s" rv))
     rvars
 
-
-(* \ic{Generate constraint $1 \leq k - i$ for all such levels in assumption. \quad $(2.6)$.} *)
-let constr_levels input chal_level =
-  let constr_of_level l =
-    match l with 
-    | LevelOffset i -> [CP.(const (1 + i), var "k", Leq, "All levels must be >= 1")]
-    | LevelFixed  _ -> []
-  in
-  chal_level::(L.map fst input)
-    |> conc_map constr_of_level
-    |> sorted_nub
-      
+(* \ic{Create arity constraint if specified.} *)
 let constr_arity arity =
   match arity with
-  | Some i ->
-    [ (CP.const i, CP.var "k", Eq, "Arity fixed in assumption") ]
-  | None ->
-    []
+  | Some i -> [ (CP.const i, Eq, CP.var "k", "Arity fixed in assumption") ]
+  | None   -> []
 
-(* \ic{Compute constraints $(2.1)$--$(2.5)$ and constraint for arity} *)   
+(* \ic{Create constraints $(2.1)$--$(2.5)$ and constraint for arity} *)   
 let gen_constrs input challenge arity =
     constr_delta_pos input
   @ constr_mult_limit input challenge.chal_level
@@ -175,7 +160,7 @@ let pp_eq_type fmt eqt =
   | Eq  -> F.fprintf fmt "="
   | Leq -> F.fprintf fmt "<="
 
-let pp_constr fmt (p1,p2,eqt,comment) =
+let pp_constr fmt (p1,eqt,p2,comment) =
   F.fprintf fmt "%a %a %a \t// %s" CP.pp p1 pp_eq_type eqt CP.pp p2 comment
 
 (*i*)

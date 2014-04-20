@@ -51,10 +51,10 @@ let poly_to_json f =
 let solve constrs =
   let trans a b = `List [poly_to_json a; poly_to_json b] in
   let eqs  =
-    conc_map (function (a,b,Eq,_)  -> [trans a b] | (_,_,Leq,_) -> []) constrs
+    conc_map (function (a,Eq,b,_)  -> [trans a b] | (_,Leq,_,_) -> []) constrs
   in
   let leqs =
-    conc_map (function (a,b,Leq,_) -> [trans a b] | (_,_,Eq,_) -> []) constrs
+    conc_map (function (a,Leq,b,_) -> [trans a b] | (_,Eq,_,_) -> []) constrs
   in
   let req =
     `Assoc [ ("cmd", `String "paramSolve"); ("eqs", `List eqs); ("leqs", `List leqs) ]

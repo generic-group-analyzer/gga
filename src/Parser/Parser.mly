@@ -7,7 +7,7 @@
 /*s Parser for parametric problems.\\ */
 
 /************************************************************************/
-/* \ic{ General tokens} */
+/* \ic{\bf General tokens} */
 
 %token EOF
 %token DOT
@@ -21,7 +21,7 @@
 %token RPAREN
 
 /************************************************************************/
-/* \ic{Tokens for Commands} */
+/* \ic{\bf Tokens for Commands} */
 
 %token INPUT
 %token CHALLENGE
@@ -34,7 +34,7 @@
 %token ARITY
 
 /************************************************************************/
-/* \ic{Tokens for Input} */
+/* \ic{\bf Tokens for Input} */
 
 %token IN
 %token FORALL
@@ -52,20 +52,20 @@
 %token <int> NAT
 
 /************************************************************************/
-/* \ic{Priority and associativity} */
+/* \ic{\bf Priority and associativity} */
 
 /* \ic{Multiplication has the highest precedence.} */
 %left PLUS MINUS
 %left STAR
 
 /************************************************************************/
-/* \ic{Start symbols} */
+/* \ic{\bf Start symbols} */
 
 %start <ParametricInput.cmd list> cmds_t
 %%
 
 /************************************************************************/
-/* \ic{Inputs and Challenges} */
+/* \ic{\bf Inputs and Challenges} */
 
 poly :
 | i = NAT                   { EP.const i }
@@ -149,7 +149,7 @@ challenge :
 ;
 
 /************************************************************************/
-/* \ic{Commands} */
+/* \ic{\bf Commands} */
 
 setting :
 | SYMMETRIC  { Symmetric } 
@@ -175,7 +175,7 @@ cmds :
 ;
 
 /************************************************************************/
-/* \ic{Versions that consume all input} */
+/* \ic{\bf Versions that consume all input} */
 
 cmds_t :
 | cs = cmds; EOF { cs }
