@@ -3,16 +3,12 @@
 (*i*)
 open OUnit
 open NonParamInput
+open NonParamCompletion
 (*i*)
 
 
 (*********************************************************************)
 (* \hd{Tests} *)
-
-let gs1 = {
-  gs_isos = [{ iso_dom = "1"; iso_codom = "2"}];
-  gs_emaps = [{ em_dom = ["1";"2"]; em_codom = "1:2"}];
-}
 
 let gs2 = {
   gs_isos = [ { iso_dom = "1"; iso_codom = "2"}
@@ -28,7 +24,10 @@ let test_cyclic s gs cyclic () =
 let tests =
   TestList
     [ "Non-parametric"  >:::
-      [ "acyclic" >:: (test_cyclic "gs1" gs1 false)
+      [ "acyclic" >:: (test_cyclic "gs_bilinear_sym" gs_bilinear_sym false)
+      ; "acyclic" >:: (test_cyclic "gs_bilinear_asym" gs_bilinear_asym false)
       ; "cyclic " >:: (test_cyclic "gs2" gs2 true) ] ]
 
-let () = ignore (run_test_tt_main tests)
+let () =
+  ignore (check ());
+  ignore (run_test_tt_main tests)

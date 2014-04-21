@@ -57,8 +57,8 @@ type group_elem = {
    A non-parametric \emph{decisional assumption} consists of the group setting,
    the left adversary input, and the right adversary input.} *)
 type assumption =
-  | Computational of group_setting * rpoly list * rpoly
-  | Decisional    of group_setting * rpoly list * rpoly list
+  | Computational of group_setting * group_elem list * rpoly
+  | Decisional    of group_setting * group_elem list * rpoly list
 
 (*******************************************************************)
 (* \hd{Cyclicity of group settings} *)
@@ -76,24 +76,15 @@ let gs_group_ids gs =
     gids
     gs.gs_emaps
 
-(* \ic{[add_edge src tgt m] adds the edge $src \mapsto tgt$ to the map $m$
-       by extending the set of targets for key $src$ in $m$ with $tgt$.} *)
-let add_edge src tgt m =
-  let old_tgts =
-    try  Ms.find src m
-    with Not_found -> Ss.empty
-  in
-  Ms.add src (Ss.add tgt old_tgts) m
-
 (* \ic{[gs_iso_edges gs] returns the edges induced by the isomorphisms in [gs].} *)
 let gs_iso_edges gs =
-  L.fold_left (fun m i -> add_edge i.iso_dom i.iso_codom m) Ms.empty gs.gs_isos
+  L.fold_left (fun m i -> ss_add_set i.iso_dom i.iso_codom m) Ms.empty gs.gs_isos
 
 
 (* \ic{[gs_emap_edges gs] returns the edges induced by the multilinear maps in [gs].} *)
 let gs_emap_edges gs =
   L.fold_left
-    (fun m e -> L.fold_left (fun m src -> add_edge src e.em_codom m) m e.em_dom)
+    (fun m e -> L.fold_left (fun m src -> ss_add_set src e.em_codom m) m e.em_dom)
     Ms.empty
     gs.gs_emaps
 
@@ -129,6 +120,19 @@ let gs_is_cyclic gs =
     false
   with
     Cyclic _ -> true
+
+(*******************************************************************)
+(* \hd{Predefined group settings} *)
+
+let gs_bilinear_asym = {
+  gs_isos = [{ iso_dom = "1"; iso_codom = "2"}];
+  gs_emaps = [{ em_dom = ["1";"2"]; em_codom = "1:2"}];
+}
+
+let gs_bilinear_sym = {
+  gs_isos = [];
+  gs_emaps = [{ em_dom = ["1";"1"]; em_codom = "2"}];
+}
 
 (*i*)
 (*******************************************************************)

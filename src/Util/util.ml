@@ -85,6 +85,16 @@ let ss_of_list = L.fold_left (fun acc x -> Ss.add x acc) Ss.empty
 (* \ic{Map where keys are strings.} *)
 module Ms = Map.Make(struct type t = string let compare = compare end)
 
+(* \ic{[add_set k v m] adds the value [val] to [m] for the key [key].} *)
+let add_set empty add k v m =
+  let old_vs =
+    try  Ms.find k m
+    with Not_found -> empty
+  in
+  Ms.add k (add v old_vs) m
+
+let ss_add_set = add_set Ss.empty Ss.add
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 
