@@ -2,9 +2,8 @@
 
 (*i*)
 open Util
+open Z3_Solver
 (*i*)
-
-let () = NonParamInput.init ()
 
 let main =
   if Array.length Sys.argv <> 2 then
@@ -13,7 +12,7 @@ let main =
     let scmds = Util.input_file Sys.argv.(1) in
     try
       let (res, info) = ParamAnalyze.analyze_from_string scmds in
-      F.printf "%s\n\n%s" info res
+      F.printf "%s\n\n%a\n" info pp_result res
     with
       ParamInput.InvalidAssumption err ->
         F.printf "Invalid assumption: %s" err
