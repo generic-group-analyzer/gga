@@ -76,6 +76,16 @@ let list_compare cmp xs0 ys0 =
   else if d < 0 then -1
   else go xs0 ys0
 
+(* \ic{Returns the cartesian product of a list of lists.} *)
+let cart_prod xss0 =
+  let rec go acc xss =
+    match xss with
+    | []      -> acc
+    | xs::xss ->
+      let acc = conc_map (fun x -> L.map (fun ys -> x::ys) acc) xs in
+      go acc xss
+  in go [[]] (L.rev xss0)
+
 (* \ic{Set of strings.} *)
 module Ss = Set.Make(struct type t = string let compare = compare end)
 

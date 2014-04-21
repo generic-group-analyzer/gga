@@ -138,11 +138,18 @@ let gs_bilinear_sym = {
 (*******************************************************************)
 (* \hd{Pretty printing} *)
 
-let pp_iso fmt i =
-  F.fprintf fmt "phi : %s -> %s" i.iso_dom i.iso_codom
+let pp_iso fmt i = F.fprintf fmt "phi : %s -> %s" i.iso_dom i.iso_codom
 
 let pp_emap fmt e =
   F.fprintf fmt "e : %a -> %s" (pp_list " x " pp_string) e.em_dom e.em_codom
+
+let pp_iso_s fmt i = F.fprintf fmt "phi_%s,%s" i.iso_dom i.iso_codom
+
+let pp_emap_s fmt e =
+  F.fprintf fmt "e_%s" e.em_codom
+
+let pp_group_elem fmt ge =
+  F.fprintf fmt "%a @@ %s" RP.pp ge.ge_rpoly ge.ge_group
 
 let pp_gs fmt gs =
   F.fprintf fmt "group setting:\n  %a\n  %a\n"
