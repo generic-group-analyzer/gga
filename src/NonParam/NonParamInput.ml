@@ -24,9 +24,8 @@ type emap = {
 }
 
 (* \ic{%
-   A group setting consists of isomorphisms,
-   and multilinear maps. We keep the group ids
-   implicit.} *)
+   A group setting consists of isomorphisms and multilinear maps.
+   We keep the group ids implicit.} *)
 type group_setting = {
   gs_isos     : iso list;
   gs_emaps     : emap list
@@ -44,6 +43,10 @@ module RP = MakePoly(struct
 end) (IntRing)
 
 type rpoly = RP.t
+
+(* \ic{[rp_to_vector mon_basis f] converts [f] to a coefficient vector with respect to the
+   monomial basis [mon_basis]. We do not check if [f] contains monomials not in [mon_basis].} *)
+let rp_to_vector mon_basis f = L.map (fun m -> RP.coeff f m) mon_basis
 
 (* \ic{We model a group element as a random polynomial and a group identifier.} *)
 type group_elem = {

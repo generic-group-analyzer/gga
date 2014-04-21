@@ -1,6 +1,8 @@
+(*i*)
 open Util
 open Poly
 open NonParamInput
+(*i*)
 
 (*******************************************************************)
 (* \hd{Recipes and recipe polynomials} *)
@@ -35,9 +37,9 @@ end) (IntRing)
 (* \ic{Operations required for completion.} *)
 type completion_ops = (group_id * recipe)
 
-(* \ic{Apply completion ops to a list of inputs.
-   Not that the cops also includes recipes for all elements
-   of inputs.} *)
+(* \ic{%
+   [apply_completion_ops inputs cops] applies completion ops [cops] to [inputs].
+   We assume that [cops] also includes recipes for all elements of inputs.} *)
 let apply_completion_ops inputs cops =
   let compute_group_elem (gid,recip) =
     {ge_rpoly = apply_recipe recip inputs; ge_group = gid }
@@ -66,6 +68,14 @@ end)
 
 (*******************************************************************)
 (* \hd{Computation of completion operations} *)
+
+  (* \ic{FIXME: Decide how to handle $1$. Should we assume that the
+     adversary is implicitly given access to $1$. This would allow
+     us to special case it here to remove some redundancies.
+
+     FIXME: Can we find any examples of redundancies if we treat
+     $1$ entries in both lists like a variable.} *)
+
 
 (* \ic{[completion_ops gs inp_type] computes a
    sufficient set of isomorphism and multilinear map
@@ -101,8 +111,8 @@ let completion_ops gs inp_gids =
     (fun (i,gid) -> add (ReP.var i) (Param i) gid)
     (L.mapi (fun i gid -> (i,gid)) inp_gids);
 
-  (* \ic{We then use the following loop.} *)
-  let rec loop () =
+  (* \ic{We then use the following loop for completion:} *)
+  let rec complete () =
     changed := false;
 
     (* \ic{We loop over all $\phi: i \to i'$, for all
@@ -137,12 +147,12 @@ let completion_ops gs inp_gids =
     (* \ic{If nothing changed, we return a list of recipes and group ids.
        Otherwise, we loop again.} *)
     
-    if !changed then loop ()
+    if !changed then complete ()
     else conc_map
            (fun (gid,rps) -> L.map (fun rp -> (gid, find_recipe gid rp)) (Srep.elements rps))
            (Ms.bindings !m_known)
   in
-  loop ()
+  complete ()
 
 (*i*)
 (*******************************************************************)
@@ -156,6 +166,7 @@ let rec pp_recipe fmt c =
 
 (*i*)
 
+(* \ic{This is just a function for testing the incomplete code.} *)
 let check () =
   let inputs =
     [ { ge_rpoly = RP.var "X"; ge_group = "1" }
@@ -169,6 +180,19 @@ let check () =
   F.printf "completion_ops:\n%a\n"
     (pp_list "\n" (fun fmt (gid,r)-> F.fprintf fmt "%a @@ %s" pp_recipe r gid))
     cops;
+
+  (* \ic{FIXME: Write function a that computes the target group(s)
+     from a given group setting and then remove non-target group
+     elements from [cops].
+     For now, we can fail if there is more than one target group.} *)
+
   let known = apply_completion_ops inputs cops in
-  F.printf "\ncompletion:\n%a" (pp_list "\n" pp_group_elem) known;
+  F.printf "\ncompletion:\n%a\n" (pp_list "\n" pp_group_elem) known;
+
+  let mon_basis =
+    sorted_nub compare (List.map (fun ge -> RP.monomials ge.ge_rpoly) known)
+  in
+  F.printf "\nmonomials:\n%a\n" (pp_list "\n" (pp_list "*" pp_string)) mon_basis;
+  let known_vecs = L.map (fun ge -> rp_to_vector mon_basis ge.ge_rpoly) known in
+  F.printf "\nmonomials:\n%a\n" (pp_list "\n" (pp_list "; " IntRing.pp)) known_vecs;
   exit 0
