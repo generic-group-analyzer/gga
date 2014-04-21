@@ -141,6 +141,9 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let is_var = function [([_x],c)] when C.equal c C.one -> true | _ -> false
 
+  let monomials (f : t) = sorted_nub V.compare (conc_map fst f)
+  let coeff f m = try L.assoc m f with Not_found -> C.zero
+
   let ( *@) = mult
   let ( +@) = add
   let ( -@) = minus
