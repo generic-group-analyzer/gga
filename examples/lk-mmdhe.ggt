@@ -1,3 +1,5 @@
+(* In a computational problem anything above the challenge level is useless.
+   Therefore, we shift the k in all exponents up by 1 *)
 setting symmetric.
 problem_type computational.
 
