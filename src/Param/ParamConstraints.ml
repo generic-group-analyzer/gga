@@ -113,7 +113,7 @@ let constr_levels input chal_level =
     |> sorted_nub compare
     |> L.map constr_of_offset
 
-(* \newpage\ic{%
+(* \ic{%
    Create the constraints $f_i = g_i$. \quad $(2.6)$ \\
    We compute $f_i$ as $\Sigma_{j=1}^n (\xi_{i,j} + \delta_j * \psi_{i,j})$
    where $\xi_{i,j}$ is the sum of all terms of $f_{j,i}$
