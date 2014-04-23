@@ -142,7 +142,7 @@ challenge : m = monomial; AT; l = level; DOT { mk_challenge l m };
 
 setting :
 | SYMMETRIC  { Symmetric } 
-| ASYMMETRIC { Asymmetric }
+| ASYMMETRIC { fail_assm "Asymmetric assumptions not supported in parametric case." }
 ;
 
 problem_type :

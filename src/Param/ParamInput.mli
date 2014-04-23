@@ -126,6 +126,8 @@ val eval_cmds : cmd list -> assumption
 val close_assumption : assumption -> closed_assumption
 
 (*i*)
+val fail_assm : string -> 'a
+
 (*********************************************************************)
 (* \hd{Pretty printing} *)
 
