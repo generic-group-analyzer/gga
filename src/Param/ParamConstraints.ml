@@ -86,7 +86,7 @@ let constr_mult_limit input chal_l =
        , F.sprintf "multiplications bounded by challenge level") ]
 
 (* \ic{Create the constraints $\delta_i * \alpha_{i,j} \leq r$,
-       $r \leq \delta_i * \beta_{i,j}$, and $\alpha_j+1 \leq \beta_j$.
+       $r \leq \delta_i * \beta_{i,j}$, and $\alpha_j \leq \beta_j$.
        \quad $(2.4)$ and $(2.1)$} *)
 let constr_range_limits input =
   let gen_constr j (s,(a,b)) =
@@ -95,7 +95,7 @@ let constr_range_limits input =
         , F.sprintf "lower bound for range variable %s in input %i" s j)
       ; ( ridx_var j s, Leq, delta_var j *@ ep_to_cp b
         , F.sprintf "upper bound for range variable %s in input %i" s j)
-      ; ( ep_to_cp a +@ from_int 1, Leq, ep_to_cp b
+      ; ( ep_to_cp a, Leq, ep_to_cp b
         , F.sprintf "range for variable %s in input %i increasing and non-empty" s j)
       ])
   in
