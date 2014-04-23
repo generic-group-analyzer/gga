@@ -43,7 +43,7 @@
 %token <string> VARU /* uppercase identifier */
 %token <string> VARL /* lowercase identifier */
 %token <int> RLIMIT /* range limit */
-
+%token VARLEVEL /* the highest level l */
 
 %token STAR
 %token PLUS
@@ -74,6 +74,7 @@ poly :
 | i = NAT                   { EP.from_int i }
 | i = RLIMIT                { EP.var (Rlimit i) }
 | s = VARL                  { EP.var (Ridx s) }
+| VARLEVEL                  { EP.var (Level) }
 | f = poly; PLUS; g = poly  { EP.add f g }
 | f = poly; STAR; g = poly  { EP.mult f g }
 | f = poly; MINUS; g = poly { EP.minus f g }
@@ -89,6 +90,7 @@ poly_no_paren :
 | i = NAT                    { EP.from_int i }
 | i = RLIMIT                 { EP.var (Rlimit i) }
 | s = VARL                   { EP.var (Ridx s) }
+| VARLEVEL                   { EP.var (Level) }
 ;
 
 exponent :
@@ -118,14 +120,12 @@ offset : MINUS; i = NAT { i };
 
 level :
  | i = NAT { mk_LevelFixed i }
- | s = VARL; o = offset?
-   { if s = "k" then
-        match o with
-        | None              -> mk_LevelOffset 0
-        | Some i when i > 0 -> mk_LevelOffset i
-        | _                 -> failwith "invalid level"
-     else
-       failwith "invalid level" }
+ | VARLEVEL; o = offset?
+   { match o with
+     | None              -> mk_LevelOffset 0
+     | Some i when i > 0 -> mk_LevelOffset i
+     | _                 -> failwith "invalid level"
+   }
 ;
 
 input_list:

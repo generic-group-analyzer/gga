@@ -52,7 +52,8 @@ rule lex = parse
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
   | ['l']                    { RLIMIT(-1) }
   | ['l']['0'-'9']* as s     { RLIMIT(int_of_string(S.sub s 1 (S.length s - 1))) }
-  | ['a'-'k' 'm'-'z']idchars* as s { VARL s }
+  | ['a'-'j' 'm'-'z']idchars* as s { VARL s }
+  | ['k']                          { VARLEVEL }
   | ['A'-'Z']idchars*         as s { VARU s }
 
 and comment = parse
