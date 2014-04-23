@@ -1,0 +1,14 @@
+(* the assumption but challenge at level k instead of k-1 *)
+setting symmetric.
+problem_type computational.
+
+input
+  [ 1
+  , Z
+  , forall a in [1,l]: X^a*Y ] @ 1.
+
+input
+  [ forall b in [1,l-1]: X^b*Y^(k-1)
+  , forall c in [1,l]: X^(c+l)*Y^(k-1) ] @ k-2.
+
+challenge X^l*Y^k*Z @ k.
