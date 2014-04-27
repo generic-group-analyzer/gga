@@ -1,5 +1,5 @@
 setting symmetric.
-arity 3.
+levels 3.
 problem_type decisional.
 
 input [ 1 ] @ 1.

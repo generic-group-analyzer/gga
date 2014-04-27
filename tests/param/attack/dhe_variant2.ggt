@@ -1,5 +1,5 @@
-setting symmetric.          (* symmetric (non-leveled) k-linear map *)
-arity 3.                    (* fixes the arity k to 3 *)
+setting symmetric.
+levels 3.
 problem_type decisional.
 
 input

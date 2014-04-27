@@ -3,7 +3,6 @@
 (*i*)
 open OUnit
 open NonParamInput
-open NonParamCompletion
 (*i*)
 
 
@@ -19,15 +18,13 @@ let gs2 = {
 
 let test_cyclic s gs cyclic () =
   (*i*) (* F.printf "%a" pp_gs gs; *) (*i*)
-  assert_equal ~msg:("cyclic check for "^s) (gs_is_cyclic gs) cyclic
+  assert_equal ~msg:("cyclic check for "^s) (NonParamInput.Internals.gs_is_cyclic gs) cyclic
 
 let tests =
   TestList
     [ "Non-parametric"  >:::
-      [ "acyclic" >:: (test_cyclic "gs_bilinear_sym" gs_bilinear_sym false)
-      ; "acyclic" >:: (test_cyclic "gs_bilinear_asym" gs_bilinear_asym false)
-      ; "cyclic " >:: (test_cyclic "gs2" gs2 true) ] ]
+      [ "cyclic " >:: (test_cyclic "gs2" gs2 true) ] ]
 
 let () =
-  ignore (check ());
+  ignore (NonParamAnalyze.test ());
   ignore (run_test_tt_main tests)

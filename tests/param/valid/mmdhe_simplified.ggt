@@ -1,0 +1,18 @@
+(* Full Domain Hash from (Leveled) Multilinear Maps and Identity-Based Aggregate Signatures
+   - Hohenberger, Sahai, Waters
+   Assumption D.3 - (l,k)-Modified Multilinear Computational Diffie-Hellman Exponent *)
+
+setting symmetric.
+problem_type computational.
+
+input
+  [ 1
+  , B
+  , forall i in [1,l]: A^i*C ] @ 1.
+
+input
+  [ forall i in [1,l-1]:   A^i*C^k
+  , forall i in [l+1,2*l]: A^i*C^k
+  ] @ k-1.
+
+challenge A^l*C^k*B @ k.

@@ -138,7 +138,7 @@ type closed_assumption = {
 type cmd =
   | Setting       of setting
   | Problem_Type  of problem_type
-  | Arity         of int
+  | Levels        of int
   | AddInputs     of input list
   | SetChallenge  of challenge
 
@@ -153,8 +153,8 @@ let handle_cmd cmd assm =
     ensure_none assm.setting { assm with setting = Some(s) } "setting"
   | Problem_Type pt ->
     ensure_none assm.problem_type { assm with problem_type = Some(pt) } "problem_type"
-  | Arity a         ->
-    ensure_none assm.arity { assm with  arity = Some(a) } "arity"
+  | Levels a         ->
+    ensure_none assm.arity { assm with  arity = Some(a) } "levels"
   | SetChallenge c  ->
     ensure_none assm.challenge { assm with  challenge = Some(c) } "challenge"
   | AddInputs is    ->
@@ -264,7 +264,7 @@ let pp_cmd fmt cmd =
   match cmd with
   | Setting s       -> F.fprintf fmt "setting %a" pp_setting s
   | Problem_Type pt -> F.fprintf fmt "problem_type %a" pp_problem_type pt
-  | Arity a         -> F.fprintf fmt "arity %i" a
+  | Levels a        -> F.fprintf fmt "levels %i" a
   | AddInputs is    -> F.fprintf fmt "addInputs %a" pp_inputs is
   | SetChallenge c  -> F.fprintf fmt "setChallenge %a" pp_challenge c
 (*i*)

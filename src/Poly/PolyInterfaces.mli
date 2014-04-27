@@ -57,8 +57,8 @@ module type Poly = sig
   val is_const : t -> bool
   val is_var : t -> bool
 
-  val monomials : t -> var list
-  val coeff : t -> var list -> coeff
+  val mons : t -> monom list
+  val coeff : t -> monom -> coeff
 
   val ( *@) : t -> t -> t
   val (+@)  : t -> t -> t

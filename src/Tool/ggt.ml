@@ -11,9 +11,8 @@ let main =
   else
     let scmds = Util.input_file Sys.argv.(1) in
     try
-      let (res, info) = ParamAnalyze.analyze_from_string scmds in
-      F.printf "%s\n\n%a\n" info pp_result res
+      let res = ParamAnalyze.analyze_from_string F.err_formatter scmds in
+      F.printf "%a\n" pp_result res
     with
       ParamInput.InvalidAssumption err ->
         F.printf "Invalid assumption: %s" err
-

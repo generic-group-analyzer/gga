@@ -76,14 +76,20 @@ let l_to_cp l =
 (* \ic{Create the constraints $0 \leq \delta_i$. \quad $(2.2)$} *)
 let constr_delta_pos input =
   mapi'
-    (fun i _ -> CP.(from_int 0 , Leq, delta_var i, F.sprintf "delta_%i positive" i))
+    (fun i _ -> CP.(from_int 0 , Leq, delta_var i, F.sprintf "delta_%i non-negative" i))
     input
 
 (* \ic{Create the constraint
        $\Sigma_{i=1}^n \, \delta_i * \lambda_i = \lambda$.\quad $(2.3)$} *)
 let constr_mult_limit input chal_l =
-  [ CP.( ladd (mapi' (fun i (l,_) -> l_to_cp l *@ delta_var i) input), Eq, l_to_cp chal_l
-       , F.sprintf "multiplications bounded by challenge level") ]
+  let msg = "multiplications yield result on challenge level" in
+  let sum = CP.(ladd (mapi' (fun i (l,_) -> l_to_cp l *@ delta_var i) input)) in
+  match chal_l with
+  | LevelFixed j  -> [ CP.( sum , Eq, from_int j, msg) ]
+
+  (* \ic{Z3 prefers an Equation of the form e - i = k to e = k - i} *)
+  | LevelOffset j -> [ CP.( sum +@ from_int j, Eq, var "k", msg) ]
+
 
 (* \ic{Create the constraints $\delta_i * \alpha_{i,j} \leq r$,
        $r \leq \delta_i * \beta_{i,j}$, and $\alpha_j \leq \beta_j$.
@@ -152,7 +158,7 @@ let constr_arity arity =
   | None   -> []
 
 (* \ic{Create constraints $(2.1)$--$(2.5)$ and constraint for arity} *)   
-let gen_constrs input challenge arity =
+let gen_constrs _problem_type input challenge arity =
     constr_delta_pos input
   @ constr_mult_limit input challenge.chal_level
   @ constr_range_limits input

@@ -32,7 +32,7 @@
 %token PROBLEM_TYPE
 %token COMPUTATIONAL
 %token DECISIONAL
-%token ARITY
+%token LEVELS
 
 /************************************************************************/
 /* \hd{Tokens for Input} */
@@ -153,7 +153,7 @@ problem_type :
 cmd :
 | SETTING; s = setting; DOT            { Setting s }
 | PROBLEM_TYPE; pt = problem_type; DOT { Problem_Type pt }
-| ARITY; i = NAT; DOT                  { Arity i }
+| LEVELS; i = NAT; DOT                 { Levels i }
 | INPUT; is = inputs                   { AddInputs is }
 | CHALLENGE; c = challenge             { SetChallenge c }
 ;

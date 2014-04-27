@@ -61,7 +61,9 @@ module MakePoly (V : Var) (C : Ring) = struct
   (* \ic{\bf Pretty printing} *)
 
   let pp_monom fmt m =
-    F.fprintf fmt "%a" (pp_list "*" V.pp) m
+    match m with
+    | [] -> F.fprintf fmt "1"
+    | _  -> F.fprintf fmt "%a" (pp_list "*" V.pp) m
 
   let pp_term fmt (m,c) =
     if m = [] then F.fprintf fmt "%a" C.pp c
@@ -141,7 +143,7 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let is_var = function [([_x],c)] when C.equal c C.one -> true | _ -> false
 
-  let monomials (f : t) = sorted_nub V.compare (conc_map fst f)
+  let mons (f : t) = sorted_nub (list_compare V.compare) (L.map fst f)
   let coeff f m = try L.assoc m f with Not_found -> C.zero
 
   let ( *@) = mult

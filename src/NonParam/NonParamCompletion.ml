@@ -17,7 +17,7 @@ type recipe =
   | Emap  of emap * recipe list
 
 (* \ic{Apply a recipe to a list of inputs.} *)
-let apply_recipe recip0 inputs =
+let apply_recipe inputs recip0 =
   let rec go recip =
     match recip with
     | Param i        -> (L.nth inputs i).ge_rpoly
@@ -26,7 +26,8 @@ let apply_recipe recip0 inputs =
   in
   go recip0
 
-(* \ic{Recipe polyomials such as $W_1*W_2 + W_3$.} *)
+(* \ic{Recipe polynomials such as $W_1*W_2 + W_3$, Different recipes can correspond
+   to the same recipe polynomial.} *)
 module ReP = MakePoly(struct
   type t = int
   let pp = pp_int
@@ -34,28 +35,13 @@ module ReP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
-(* \ic{Operations required for completion.} *)
-type completion_ops = (group_id * recipe)
+(* \ic{[apply_completion_ops cops gid inputs] applies completion ops [cops] to [inputs].} *)
+let apply_completion_ops cops inputs = L.map (apply_recipe inputs) cops
 
-(* \ic{%
-   [apply_completion_ops inputs cops] applies completion ops [cops] to [inputs].
-   We assume that [cops] also includes recipes for all elements of inputs.} *)
-let apply_completion_ops inputs cops =
-  let compute_group_elem (gid,recip) =
-    {ge_rpoly = apply_recipe recip inputs; ge_group = gid }
-  in
-  L.map compute_group_elem cops
+(* \ic{Sets of recipe polynomials. } *)
+module Srep = Set.Make(struct type t = ReP.t let compare = ReP.compare end)
 
-(* \ic{Sets of recipe polynomials. Different recipes can correspond to the
-   same recipe polynomial.} *)
-module Srep = Set.Make(struct
-  type t = ReP.t
-  let compare = ReP.compare
-end)
-
-(* \ic{Convert list of recipe polynomials to set of recipe polynomials.} *)
-let srep_of_list = L.fold_left (fun acc x -> Srep.add x acc) Srep.empty
-
+(* \ic{[srep_add_set k v m] adds [v] to the set stored under key [k] in [m].} *) 
 let srep_add_set = add_set Srep.empty Srep.add
 
 (* \ic{Map with pairs of group ids and recipe polynomials as keys.} *)
@@ -69,32 +55,25 @@ end)
 (*******************************************************************)
 (* \hd{Computation of completion operations} *)
 
-  (* \ic{FIXME: Decide how to handle $1$. Should we assume that the
-     adversary is implicitly given access to $1$. This would allow
-     us to special case it here to remove some redundancies.
-
-     FIXME: Can we find any examples of redundancies if we treat
-     $1$ entries in both lists like a variable.} *)
-
-
-(* \ic{[completion_ops gs inp_type] computes a
+(* \ic{[completion_ops gs cgid inp_type] computes a
    sufficient set of isomorphism and multilinear map
    applications with respect to the group setting [gs]
-   and an input list with group ids [inp_gids].} *)
-let completion_ops gs inp_gids =
+   and an input list with group ids [inp_gids]
+   such that all computable elements in [cgid]
+   can be computed by first applying these operations
+   followed only by [add] and [neg].} *)
+let completion_ops cgs cgid inp_gids =
 
   (* \ic{We keep a map from group ids to known recipe polynomials.} *)
   let m_known = ref Ms.empty in
   let find_known gid = try Ms.find gid !m_known with Not_found -> Srep.empty in
 
   (* \ic{We keep a map from known recipe polynomials to their recipes.} *)
-
   let m_recipes = ref Mrep.empty in
   let find_recipe gid rp = Mrep.find (gid,rp) !m_recipes in
 
   (* \ic{The [add] function adds a recipe polynomial if it is new.
      It uses the [changed] variable to track changes to [m_known].} *)
-
   let changed = ref false in
   let add (rp : ReP.t) (recipe : recipe) (gid : string) =
     let known = find_known gid in
@@ -106,9 +85,11 @@ let completion_ops gs inp_gids =
     )
   in
 
-  (* \ic{ We first add all inputs polynomial $W_i$ with recipe $W_i$. } *)
-  List.iter
-    (fun (i,gid) -> add (ReP.var i) (Param i) gid)
+  (* \ic{ We first add all input polynomials $W_i$ with recipe $W_i$.
+     For the first entries corresponding to $1$, we use the input polynomial $1$.} *)
+  let first_non_one = Ss.cardinal cgs.cgs_gids in
+  L.iter
+    (fun (i,gid) -> add (if i < first_non_one then ReP.one else ReP.var i) (Param i) gid)
     (L.mapi (fun i gid -> (i,gid)) inp_gids);
 
   (* \ic{We then use the following loop for completion:} *)
@@ -118,41 +99,42 @@ let completion_ops gs inp_gids =
     (* \ic{We loop over all $\phi: i \to i'$, for all
        $g \in$ [m_known[i]] with recipe $\zeta$, we add $g$ to
        [m_known[i']] with recipe $\phi(\zeta)$.} *)
-
-    List.iter
+    L.iter
       (fun i ->
          let gid, gid' = i.iso_dom, i.iso_codom in
          Srep.iter
            (fun rp -> add rp (Iso(i,find_recipe gid rp)) gid')
            (find_known gid))
-      gs.gs_isos;
+      cgs.cgs_isos;
 
     (* \ic{We loop over all $e: i_1 \times \ldots \times i_k \to i'$,
        for all
        $(g_1,\ldots,g_k) \in$ [m_known[i_1]] $\times \ldots \times$ [m_known[i_k]]
        with recipe $(\zeta_1,\ldots,\zeta_k)$, we add $g_1 * \ldots * g_k$ to
        [m_known[i']] with recipe $e(\zeta_1,\ldots,\zeta_k)$.} *)
-
-    List.iter
+    L.iter
       (fun e ->
          let gids, gid' = e.em_dom, e.em_codom in
          let known_rps = L.map (fun gid -> Srep.elements (find_known gid)) gids in
-         List.iter
+         L.iter
            (fun rps ->
               let recips = L.map2 (fun gid rp -> find_recipe gid rp) gids rps in
               add (ReP.lmult rps) (Emap(e,recips)) gid')
            (cart_prod known_rps))
-      gs.gs_emaps;
+      cgs.cgs_emaps;
   
     (* \ic{If nothing changed, we return a list of recipes and group ids.
        Otherwise, we loop again.} *)
-    
     if !changed then complete ()
-    else conc_map
-           (fun (gid,rps) -> L.map (fun rp -> (gid, find_recipe gid rp)) (Srep.elements rps))
-           (Ms.bindings !m_known)
+    else L.map
+           (fun rp -> find_recipe cgid rp)
+           (Srep.elements (Ms.find cgid !m_known))
   in
   complete ()
+
+let completion_for_group gs cgid inputss =
+  let cops = completion_ops gs cgid (shape (List.hd inputss)) in
+  (L.map (apply_completion_ops cops) inputss, cops)
 
 (*i*)
 (*******************************************************************)
@@ -160,39 +142,8 @@ let completion_ops gs inp_gids =
 
 let rec pp_recipe fmt c =
   match c with
-  | Param(i)  -> F.fprintf fmt "W_%i" i
+  | Param(i)     -> F.fprintf fmt "h_%i" i
   | Iso(iso, c)  -> F.fprintf fmt "%a(%a)" pp_iso_s iso pp_recipe c
   | Emap(em, cs) -> F.fprintf fmt "%a(%a)" pp_emap_s em (pp_list "," pp_recipe) cs
 
 (*i*)
-
-(* \ic{This is just a function for testing the incomplete code.} *)
-let check () =
-  let inputs =
-    [ { ge_rpoly = RP.var "X"; ge_group = "1" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "1" }
-    ; { ge_rpoly = RP.var "Z"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "U"; ge_group = "1:2" }
-    ]
-  in
-  let input_groups = L.map (fun ge -> ge.ge_group) inputs in
-  let cops = completion_ops gs_bilinear_asym input_groups in
-  F.printf "completion_ops:\n%a\n"
-    (pp_list "\n" (fun fmt (gid,r)-> F.fprintf fmt "%a @@ %s" pp_recipe r gid))
-    cops;
-
-  (* \ic{FIXME: Write function a that computes the target group(s)
-     from a given group setting and then remove non-target group
-     elements from [cops].
-     For now, we can fail if there is more than one target group.} *)
-
-  let known = apply_completion_ops inputs cops in
-  F.printf "\ncompletion:\n%a\n" (pp_list "\n" pp_group_elem) known;
-
-  let mon_basis =
-    sorted_nub compare (List.map (fun ge -> RP.monomials ge.ge_rpoly) known)
-  in
-  F.printf "\nmonomials:\n%a\n" (pp_list "\n" (pp_list "*" pp_string)) mon_basis;
-  let known_vecs = L.map (fun ge -> rp_to_vector mon_basis ge.ge_rpoly) known in
-  F.printf "\nmonomials:\n%a\n" (pp_list "\n" (pp_list "; " IntRing.pp)) known_vecs;
-  exit 0

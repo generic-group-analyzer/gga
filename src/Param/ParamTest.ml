@@ -10,7 +10,7 @@ let testdir = "tests/param"
 (*********************************************************************)
 (* \hd{Test files} *)
 
-let ggt_re = Str.regexp_string ""
+let ggt_re = Str.regexp ".*ggt$"
 
 let list_files dir =
   Array.to_list (Sys.readdir dir)
@@ -24,7 +24,9 @@ let error_files  = list_files (testdir^"/error")
 (*********************************************************************)
 (* \hd{Tests} *)
 
-let analyze_file fn = fn |> input_file |> analyze_from_string |> fst
+let analyze_file fn =
+  let fmt = F.str_formatter in
+  fn |> input_file |> analyze_from_string fmt
 
 let test_valid fn () =
   assert_equal ~msg:("valid "^fn) (analyze_file fn) Valid

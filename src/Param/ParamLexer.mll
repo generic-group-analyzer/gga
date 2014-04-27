@@ -46,8 +46,8 @@ rule lex = parse
   | "asymmetric"    { ASYMMETRIC }
   | "computational" { COMPUTATIONAL }
   | "decisional"    { DECISIONAL }
-  | "problem_type"  {PROBLEM_TYPE}
-  | "arity"         { ARITY }
+  | "problem_type"  { PROBLEM_TYPE }
+  | "levels"        { LEVELS }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
   | ['l']                    { RLIMIT(-1) }

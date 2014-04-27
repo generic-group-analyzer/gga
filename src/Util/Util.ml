@@ -105,6 +105,16 @@ let add_set empty add k v m =
 
 let ss_add_set = add_set Ss.empty Ss.add
 
+let maximum xs0 =
+  let rec go m xs =
+    match xs with
+    | []    -> Some m
+    | x::xs -> go (max x m) xs
+  in
+  match xs0 with
+  | []    -> None
+  | x::xs -> go x xs
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 
@@ -131,6 +141,24 @@ let output_file filename content =
   output_string out_channel content;
   close_out_noerr out_channel
 
+(* \ic{%
+   [call_external script cmd linenum] calls script, outputs [cmd] to the standard input of
+   script, and reads (up to) [linenum] lines which are returned.} *)
+let call_external script cmd linenum =
+  let (c_in, c_out) = Unix.open_process script in
+  output_string c_out cmd;
+  flush c_out;
+  let rec loop o linenum =
+    if linenum = 0 then o
+    else (
+      try
+        let l = input_line c_in in
+        loop (o @ [l]) (linenum - 1)
+      with End_of_file ->
+        ignore (Unix.close_process (c_in,c_out));
+        o)
+  in loop [] linenum
+
 (*i*)
 (*******************************************************************)
 (* \hd{Pretty printing} *)
@@ -151,4 +179,8 @@ let pp_string fmt s = Format.fprintf fmt "%s" s
 let pp_option pp_some fmt o = match o with
   | Some(x) -> pp_some fmt x
   | None    -> Format.fprintf fmt " - "
+
+let fsprintf fm = Format.fprintf Format.str_formatter fm
+
+let fsget _ = Format.flush_str_formatter ()
 (*i*)

@@ -113,7 +113,7 @@ type closed_assumption = private {
 type cmd =
   | Setting of setting
   | Problem_Type of problem_type
-  | Arity of int
+  | Levels of int
   | AddInputs of input list
   | SetChallenge of challenge
 

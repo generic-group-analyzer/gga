@@ -43,21 +43,17 @@ let p_cmds = wrap_error (ParamParser.cmds_t ParamLexer.lex)
 (*******************************************************************)
 (* \newpage\hd{Analyzer} *)
 
-let analyze assm =
+let analyze fmt assm =
   let inps = assm.ca_inputs in
   let chal = assm.ca_challenge in
-  let constrs = gen_constrs inps chal assm.ca_arity in
+  let constrs = gen_constrs assm.ca_problem_type inps chal assm.ca_arity in
 
-  let fmt = Format.str_formatter in
-  ignore (Format.flush_str_formatter ());
   F.fprintf fmt "%a" pp_inputs inps;
   F.fprintf fmt "%a" pp_challenge chal;
-  F.fprintf fmt "constraints:\n  %a\n" (pp_list "\n  " pp_constr) constrs;
-  let info = Format.flush_str_formatter () in
+  F.fprintf fmt "constraints:\n  %a\n%!" (pp_list "\n  " pp_constr) constrs;
 
-  let res = Z3_Solver.solve constrs in
-  (res,info)
+  Z3_Solver.solve constrs
 
-let analyze_from_string scmds =
+let analyze_from_string fmt scmds =
   let cmds  = p_cmds scmds in
-  analyze (close_assumption (eval_cmds cmds))
+  analyze fmt (close_assumption (eval_cmds cmds))
