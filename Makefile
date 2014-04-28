@@ -9,8 +9,8 @@ INFRA_MODULES=Util/Util.ml Poly/PolyInterfaces.mli Poly/Poly.mli Poly/Poly.ml
 NONPARAM_MODULES= NonParam/NonParamInput.mli NonParam/NonParamInput.ml \
   NonParam/NonParamCompletion.ml NonParam/NonParamCompletion.mli \
   Solver/Sage_Solver.ml \
+  NonParam/NonParamParser.mly NonParam/NonParamLexer.mll \
   NonParam/NonParamAnalyze.ml \
-  NonParam/NonParamAnalyzeFile.ml \
   NonParam/NonParamTest.ml
 
 PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
@@ -47,6 +47,9 @@ nonparamtest:
 
 clean:
 	$(OCAMLBUILD) -clean
+
+loc:
+	find src -name \*.ml\* | xargs wc -l
 
 doc:
 	ocamlweb doc/prelude.tex \

@@ -5,7 +5,6 @@ open Util
 open OUnit
 open NonParamInput
 open NonParamAnalyze
-open NonParamAnalyzeFile
 (*i*)
 
 let testdir = "tests/nonparam"

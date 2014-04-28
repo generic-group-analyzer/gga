@@ -22,24 +22,24 @@ rule lex = parse
   | newline { Lexing.new_line lexbuf; lex lexbuf }
   | eof     { EOF }
   | "."     { DOT }
-  | "("     { LPAREN }
-  | ")"     { RPAREN }
+  | "("     { LPAR }
+  | ")"     { RPAR }
   | "+"     { PLUS }
   | "->"    { TO }
   | "-"     { MINUS }
   | "*"     { STAR }
-  | "["     { LBRACKET }
-  | "]"     { RBRACKET }
+  | "["     { LBRACK }
+  | "]"     { RBRACK }
   | ","     { COMMA }
 
   | "maps"          { EMAPS }
   | "isos"          { ISOS }
   | "map"           { EMAPS }
   | "iso"           { ISOS }
-  | "input"         { INPUT }
-  | "input_left"    { INPUT_LEFT }
-  | "input_right"   { INPUT_RIGHT }
-  | "challenge"     { CHALLENGE }
+  | "input"         { INP }
+  | "input_left"    { INP_L }
+  | "input_right"   { INP_R }
+  | "challenge"     { CHAL }
   | "in"            { IN }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }

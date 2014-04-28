@@ -4,6 +4,7 @@
   open NonParamInput
   (*i*)
 %}
+
 /*s Parser for non-parametric assumptions */
 
 /************************************************************************/
@@ -15,20 +16,20 @@
 %token IN
 %token TO
 
-%token LBRACKET
-%token RBRACKET
-%token LPAREN
-%token RPAREN
+%token LBRACK
+%token RBRACK
+%token LPAR
+%token RPAR
 
 /************************************************************************/
 /* \hd{Tokens for Commands} */
 
 %token EMAPS
 %token ISOS
-%token INPUT_LEFT
-%token INPUT_RIGHT
-%token INPUT
-%token CHALLENGE
+%token INP_L
+%token INP_R
+%token INP
+%token CHAL
 
 /************************************************************************/
 /* \hd{Tokens for Input} */
@@ -68,7 +69,7 @@ poly :
 | f = poly; STAR; g = poly  { RP.mult f g }
 | f = poly; MINUS; g = poly { RP.minus f g }
 | MINUS; f = poly           { RP.opp f }
-| LPAREN; f = poly; RPAREN  { f }
+| LPAR; f = poly; RPAR      { f }
 ;
 
 iso :
@@ -86,13 +87,13 @@ cmd :
   { AddMaps emaps }
 | ISOS; isos = separated_nonempty_list(COMMA,iso); DOT
   { AddIsos isos }
-| INPUT_LEFT; LBRACKET; ps = separated_nonempty_list(COMMA,poly); RBRACKET; IN; gid = GID; DOT
+| INP_L; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; gid = GID; DOT
   { AddInputLeft(L.map (fun p -> { ge_rpoly = p; ge_group = gid }) ps) }
-| INPUT_RIGHT; LBRACKET; ps = separated_nonempty_list(COMMA,poly); RBRACKET; IN; gid = GID; DOT
+| INP_R; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; gid = GID; DOT
   { AddInputRight(L.map (fun p -> { ge_rpoly = p; ge_group = gid }) ps) }
-| INPUT; LBRACKET; ps = separated_nonempty_list(COMMA,poly); RBRACKET; IN; gid = GID; DOT
+| INP; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; gid = GID; DOT
   { AddInput(L.map (fun p -> { ge_rpoly = p; ge_group = gid }) ps) }
-| CHALLENGE; p = poly; IN; gid = GID; DOT
+| CHAL; p = poly; IN; gid = GID; DOT
   { SetChallenge({ ge_rpoly = p; ge_group = gid }) }
 
 ;
