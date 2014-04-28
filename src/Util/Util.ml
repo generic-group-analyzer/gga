@@ -3,6 +3,7 @@
 (*i*)
 module F = Format
 module L = List
+module YS = Yojson.Safe
 (*i*)
 
 (*******************************************************************)
@@ -115,6 +116,8 @@ let maximum xs0 =
   | []    -> None
   | x::xs -> go x xs
 
+type ('a,'b) either = Left of 'a | Right of 'b
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 
@@ -158,6 +161,56 @@ let call_external script cmd linenum =
         ignore (Unix.close_process (c_in,c_out));
         o)
   in loop [] linenum
+
+(*******************************************************************)
+(* \hd{JSON parsing} *)
+
+exception JsonError of string
+
+let fail_json js s = raise (JsonError (s^YS.to_string js))
+
+let get_assoc k js =
+  match js with
+  | `Assoc l ->
+    begin try
+      L.assoc k l
+    with
+      Not_found -> fail_json js ("get_assoc: key "^k^" not found in ")
+    end
+  | _  -> fail_json js "get_assoc: assoc expected, got "
+
+let get_string js =
+  match js with
+  | `String s -> s
+  | _         -> fail_json js "get_string: string expected, got "
+
+let get_bool js =
+  match js with
+  | `Bool b -> b
+  | _       -> fail_json js "get_bool: bool expected, got "
+
+let get_vec js =
+  match js with
+  | `List is ->
+    L.map (function `Int i -> i | js -> fail_json js "get_vec: expected int, got ") is
+  | _        -> fail_json js "get_vec: expected list, got "
+
+let get_int js =
+  match js with
+  | `Int b -> b
+  | _       -> fail_json js "get_int: int expected, got "
+
+let get_pair f1 f2 js =
+  match js with
+  | `List [ js1; js2 ] -> (f1 js1, f2 js2)
+  | _                  -> fail_json js "get_pair: two element list expected, got "
+
+let get_list f js =
+  match js with
+  | `List xs -> L.map f xs
+  | _        -> fail_json js "get_list: expected list, got "
+
+let get_matrix = get_list (get_list get_int)
 
 (*i*)
 (*******************************************************************)

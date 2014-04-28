@@ -17,6 +17,7 @@
 (*i*)
 open ParamConstraints
 open Util
+open Big_int
 
 module YS = Yojson.Safe
 (*i*)
@@ -24,14 +25,14 @@ module YS = Yojson.Safe
 (* \ic{%
    [call_z3 cmd] calls Z3, outputs [cmd] to the standard input of
    Z3, and reads (up to) one line which is returned.} *)
-let call_z3 cmd = call_external "/usr/bin/python scripts/ggt_z3.py" cmd 1
+let call_z3 cmd = call_external "/usr/bin/python scripts/ggt_z3.py" cmd 1 |> L.hd
 
 (* \ic{[poly_to_json f] creates a JSON representation of the polynomial [f].} *)
 let poly_to_json f =
   `List
      (L.map
         (fun (m,c) ->
-           `List [ `List (L.map (fun v -> `String v) m); `Int (Big_int.int_of_big_int c) ])
+           `List [ `List (L.map (fun v -> `String v) m); `Int (int_of_big_int c) ])
         (CP.to_terms f))
 
 type result =
@@ -59,28 +60,15 @@ let solve constrs =
   let req =
     `Assoc [ ("cmd", `String "paramSolve"); ("eqs", `List eqs); ("leqs", `List leqs) ]
   in
-  let get_string l k =
-    try  match L.assoc k l with 
-         | `String s -> s
-         | _ -> raise Not_found
-    with Not_found -> k^" not found" 
-  in
-  let err_comm = Error "Error communicating with Z3 wrapper." in
-  match call_z3 (YS.to_string req^"\n") with
-  | [sres] ->
-    begin match YS.from_string sres with
-    | `Assoc l -> 
-      begin match L.assoc "ok" l with
-      | `Bool true ->
-        begin match L.assoc "res" l with
-        | `String "sat"     -> Attack (get_string l "model")
-        | `String "unsat"   -> Valid
-        | `String "unknown" -> Unknown
-        | _                 -> err_comm
-        end
-      | `Bool false -> Error (F.sprintf "Z3 wrapper returned an error: %s" (get_string l "error"))
-      | _           -> err_comm
-      end
-    | _ -> err_comm
+  let sres = call_z3 (YS.to_string req^"\n") in
+  let mres = YS.from_string sres in
+  if get_assoc "ok" mres |> get_bool
+  then
+    begin match get_assoc "res" mres |> get_string with
+    | "sat"     -> Attack (get_assoc "model" mres |> get_string)
+    | "unsat"   -> Valid
+    | "unknown" -> Unknown
+    | _         -> Error "Error communicating with Z3 wrapper, expected sat/unsat/unknown."
     end
-  | _ -> err_comm
+  else
+    Error ("Z3 wrapper returned an error:"^(get_assoc "error" mres |> get_string))
