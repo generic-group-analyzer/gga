@@ -1,0 +1,5 @@
+(* CDH in a generic group *)
+
+input  [ X, Y ] in G1.
+
+challenge X * Y in G1.

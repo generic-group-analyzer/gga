@@ -132,9 +132,16 @@ let completion_ops cgs cgid inp_gids =
   in
   complete ()
 
-let completion_for_group gs cgid inputss =
-  let cops = completion_ops gs cgid (shape (List.hd inputss)) in
-  (L.map (apply_completion_ops cops) inputss, cops)
+let completion_for_group gs cgid inputs =
+  let cops = completion_ops gs cgid (shape inputs) in
+  (apply_completion_ops cops inputs, cops)
+
+let completions_for_group gs cgid linputs rinputs =
+  assert (shape linputs = shape rinputs);
+  let cops = completion_ops gs cgid (shape linputs) in
+  ( apply_completion_ops cops linputs
+  , apply_completion_ops cops rinputs
+  , cops)
 
 (*i*)
 (*******************************************************************)

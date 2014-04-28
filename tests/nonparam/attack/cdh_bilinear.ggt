@@ -1,0 +1,7 @@
+(* CDH from source to target in bilinear group *)
+
+maps G1 * G1 -> G2.
+
+input  [ X, Y ] in G1.
+
+challenge X * Y in G2.

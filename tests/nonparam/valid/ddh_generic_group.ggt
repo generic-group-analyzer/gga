@@ -1,0 +1,5 @@
+(* DDH in a generic group *)
+
+input_left  [ X, Y, X*Y ] in G1.
+
+input_right [ X, Y, Z ] in G1.

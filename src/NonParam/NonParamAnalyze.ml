@@ -1,121 +1,155 @@
 (*s Analyze non-parametric problem *)
 (*i*)
 open Util
-open Poly
 open NonParamInput
 open NonParamCompletion
+open Poly
+open Big_int
 (*i*)
 
-(*i*)
-let cdh_asym1 =
-  let inputs =
-    [ 
-      { ge_rpoly = RP.var "X"; ge_group = "1" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "U"; ge_group = "1:2" }
-    ]
-  in
-  let chal = { ge_rpoly = RP.add
-                            (RP.var "U")
-                            (RP.mult (RP.var "X") (RP.var "Y"));
-               ge_group = "1:2" }
-  in
-  mk_computational
-    NonParamPredefined.gs_bilinear_asym
-    inputs
-    chal
+(*******************************************************************)
+(* \hd{Types for analysis} *)
 
-let cdh_asym2 =
-  let inputs =
-    [ { ge_rpoly = RP.var "X"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "U"; ge_group = "1:2" }
-    ]
-  in
-  let chal = { ge_rpoly = RP.add
-                            (RP.var "U")
-                            (RP.mult (RP.var "X") (RP.var "Y"));
-               ge_group = "1:2" }
-  in
-  mk_computational
-    NonParamPredefined.gs_bilinear_asym
-    inputs
-    chal
+(* \ic{Info for analysis of decisional problem.} *)
+type dec_info = {
+  di_gs         : closed_group_setting;
+  di_inputs     : group_elem list * group_elem list;
+  di_recipes    : recipe list;
+  di_comp       : RP.t list * RP.t list;
+  di_mbasis     : RP.monom list * RP.monom list;
+  di_vcomp      : big_int list list * big_int list list;
+  di_ker        : int list list *  int list list;
+  di_attack     : (bool * int list) option;
+}
 
-let cdh_asym3 =
-  let inputs =
-    [ { ge_rpoly = RP.var "X"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "U"; ge_group = "1:2" }
-    ]
-  in
-  let chal = { ge_rpoly = RP.add
-                            (RP.var "U")
-                            (RP.mult (RP.var "X") (RP.var "Y"));
-               ge_group = "1:2" }
-  in
-  mk_computational
-    NonParamPredefined.gs_bilinear_asym
-    inputs
-    chal
+(* \ic{Info for analysis of computational problem.} *)
+type comp_info = {
+  ci_gs         : closed_group_setting;
+  ci_inputs     : group_elem list;
+  ci_chal       : group_elem;
+  ci_comp       : RP.t list;
+  ci_recipes    : recipe list;
+  ci_mbasis     : RP.monom list;
+  ci_vcomp      : big_int list list;
+  ci_mmon_vchal : (RP.monom, big_int list) either;
+  ci_attack     : (int list) option;
+}
 
-let dassm =
-  let linputs =
-    [ { ge_rpoly = RP.var "X"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "2" }
-    ; { ge_rpoly = RP.mult (RP.var "X") (RP.var "Y"); ge_group = "1:2" }
-    ]
-  in
-  let rinputs =
-    [ { ge_rpoly = RP.var "X"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "Y"; ge_group = "2" }
-    ; { ge_rpoly = RP.var "U"; ge_group = "1:2" }
-    ]
-  in
-  mk_decisional
-    NonParamPredefined.gs_bilinear_asym
-    linputs
-    rinputs
-(*i*)
+(* \ic{Analysis information.} *)
+type info =
+  | CompInfo of comp_info
+  | DecInfo  of dec_info
 
-type trace = string
-type attack_info = string
+(* \ic{Convenience constructor function.} *)
+let mk_comp_info gs inputs chal comp recipes mbasis vcomp mv att = CompInfo {
+  ci_gs         = gs;
+  ci_inputs     = inputs;
+  ci_chal       = chal;
+  ci_comp       = comp;
+  ci_recipes    = recipes;
+  ci_mbasis     = mbasis;
+  ci_vcomp      = vcomp;
+  ci_mmon_vchal = mv;
+  ci_attack     = att;
+}
 
+(* \ic{Convenience constructor function.} *)
+let mk_dec_info gs inputs recipes comp mbasis vcomp ker att = DecInfo {
+  di_gs      = gs;
+  di_inputs  = inputs;
+  di_recipes = recipes;
+  di_comp    = comp;
+  di_mbasis  = mbasis;
+  di_vcomp   = vcomp;
+  di_ker     = ker;
+  di_attack  = att;
+}
+
+(* \ic{Result of analyzing an assumption} *)
 type res =
-  | Attack of trace * attack_info
-  | Valid  of trace * int
+  | Attack of info
+  | Valid  of info * int
 
-let pp_result fmt res =
-  let sep = "**********************************************************************" in
-  match res with
-  | Valid(info,i) ->
-    F.fprintf fmt "%s" sep;
-    F.fprintf fmt "%s\n" info;
-    F.fprintf fmt  "%s\n" sep;
-    F.fprintf fmt "The assumption is valid for all primes%s.\n"
-      (if i = 1 then "" else " > "^string_of_int i)
-  | Attack(info,ainfo) ->
-    F.fprintf fmt "%s" sep;
-    F.fprintf fmt "%s\n" info;
-    F.fprintf fmt  "%s\n" sep;
-    F.fprintf fmt "There is an attack: %s\n" ainfo
+(*******************************************************************)
+(* \hd{Analysis functions} *)
 
-let get_vcomp comp =
-  let mbasis = sorted_nub compare (conc_map RP.mons comp) in
-  let vcomp = L.map (rp_to_vector mbasis) comp in
-  (mbasis,vcomp)
+(* \ic{[get_vector_repr ps] returns the list of vector representations of
+    of the polynomials [ps] with respect to the set of monomials occuring in [ps].
+    It also returns the computed monomial basis.} *)
+let get_vector_repr ps =
+  let mbasis = sorted_nub compare (conc_map RP.mons ps) in
+  let vps = L.map (rp_to_vector mbasis) ps in
+  (mbasis,vps)
 
-let compl_info name inputs comp recipes mbasis vcomp cgid =
-  let fmt = Format.str_formatter in
-  F.fprintf fmt "\ninput %s:\n  %a\n" name (pp_list "\n  " pp_group_elem) inputs;
-  F.fprintf fmt "\ncompletion %s (for group %a):\n" name pp_group_id cgid;
-  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) mbasis;
-  List.iter
-    (fun (v,(f,r)) ->
-        F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v
-          RP.pp f pp_recipe r)
-    (L.combine vcomp (L.combine comp recipes));
-  Format.flush_str_formatter ()
+(* \ic{Analyze computational assumption by performning the following steps:
+   \begin{enumerate}
+   \item Compute completion of inputs for challenge group,
+         compute monomial basis of completion, and
+         compute vector representation of completion for
+         this monomial basis.
+   \item Check if the challenge contains monomials that are missing from the completion.
+     If yes, the problem is hard unless the corresponding monomial vanishes modulo $p$.
+   \item If no, we check if the corresponding linear system can be solved using Sage.
+     Here, existence of a solution means that there is an attack.
+     If there is no solution, then the problem is hard.
+     {\bf FIXME:} For now, we don't track the bad primes in this case.\end{enumerate}} *)
+let analyze_computational gs inputs chal =
+  let (comp,recipes) = completion_for_group gs chal.ge_group inputs in
+  let (mbasis,vcomp) = get_vector_repr comp in
+  let missing_mons =
+    conc_map
+      (fun m -> if List.mem m mbasis then [] else [(m,RP.coeff chal.ge_rpoly m) ])
+      (RP.mons chal.ge_rpoly)
+  in
+  let mk_info = mk_comp_info gs inputs chal comp recipes mbasis vcomp in
+  match missing_mons with
+  | (m,c)::_ -> Valid(mk_info (Left m) None, int_of_big_int c)
+  | [] ->
+    let vchal = rp_to_vector mbasis chal.ge_rpoly in
+    let mk_info = mk_info (Right vchal) in
+    begin match Sage_Solver.lin_solve vcomp vchal with
+    | None      -> Valid(mk_info None, 1)
+    | Some v    -> Attack(mk_info (Some v))
+    end
+
+(* \ic{Analyze decisional assumption by performning the following steps:
+   \begin{enumerate}
+   \item Compute completion of left and right inputs for target group,
+         compute monomial basis of left and right completion, and
+         compute vector representation of left and right completion for
+         corresponding monomial basis.
+   \item Build matrix (each row corresponds to polynomial) of left and right
+     vector representation and compare the kernels using Sage.
+   \item Result is either
+       {\bf (a)} Kernels define the same subspace or
+       {\bf (b)} there is element in left and not in right or vice versa.
+       For the first case, we also give an upper bound on the primes $p$ for
+       which the assumption might be invalid (e.g., because some term of
+       the challenge or input polynomials vanishes modulo $p$).
+       For the second case, we consider it sufficient that for each attack, there
+       \emph{exists} a lower bound $b$ such that the attack is valid for all $p > b$.
+   \end{enumerate}} *)
+let analyze_decisional gs linp rinp =
+  let (lcomp, rcomp,recipes) = completions_for_group gs gs.cgs_target linp rinp in
+  let (lmb,lvcomp) = get_vector_repr lcomp in
+  let (rmb,rvcomp) = get_vector_repr rcomp in
+  let lk,rk,exc_ub,attacks = Sage_Solver.compare_kernel lvcomp rvcomp in
+  let mk_info =
+    mk_dec_info gs (linp,rinp) recipes (lcomp,rcomp) (lmb,rmb) (lvcomp,rvcomp) (lk,rk)
+  in
+  match (attacks : (bool * int list) list) with
+  | []     -> Valid(mk_info None,exc_ub)
+  | att::_ -> Attack(mk_info (Some(att)))
+
+(* \ic{Analyze assumption.} *)
+let analyze assm =
+  match assm with
+  | Computational(gs,inputs,chal)  -> analyze_computational gs inputs chal
+  | Decisional(gs,linputs,rinputs) -> analyze_decisional gs linputs rinputs
+
+(*i*)
+(*******************************************************************)
+(* \hd{Pretty printing} *)
 
 let string_of_attack v recipes =
   let arecipe =
@@ -127,98 +161,75 @@ let string_of_attack v recipes =
                v)
   in String.concat " + " arecipe
 
-let check_computational gs inputs chal =
+let pp_matrix fmt comp vcomp recipes =
+  L.iter
+    (fun (v,(f,r)) ->
+        F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v RP.pp f pp_recipe r)
+    (L.combine vcomp (L.combine comp recipes))
 
-  (* \ic{%
-     Compute completion of inputs in challenge group, monomial basis of
-     completion, and vector representation of completion in monomial basis.} *)
-  let (comps,recipes) = completion_for_group gs chal.ge_group [ inputs ] in
-  let comp = L.hd comps in
-  let (mbasis,vcomp) = get_vcomp comp in
-  let info = compl_info "" inputs comp recipes mbasis vcomp chal.ge_group in
+let pp_ci fmt ci =
+  F.fprintf fmt "\ninput:\n  %a\n" (pp_list "\n  " pp_group_elem) ci.ci_inputs;
+  F.fprintf fmt "\ncompletion (for group %a):\n" pp_group_id ci.ci_chal.ge_group;
+  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) ci.ci_mbasis;
+  pp_matrix fmt ci.ci_comp ci.ci_vcomp ci.ci_recipes;
+  match ci.ci_mmon_vchal with
+  | Left m ->
+    F.fprintf fmt "\nMonomial %a occurs only in challenge and not in completion\n" RP.pp_monom m
+  | Right vchal ->
+    F.fprintf fmt "\nchallenge vector:\n";
+    F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) ci.ci_mbasis;
+    F.fprintf fmt "%a \t(%a)\n" (pp_list "  \t" IntRing.pp) vchal RP.pp ci.ci_chal.ge_rpoly
 
-  (* \ic{Check if completion is missing any monomials occuring in challenge.} *)
-  match L.filter (fun m -> not (List.mem m mbasis)) (RP.mons chal.ge_rpoly) with
-  | m::_ ->
-    let info =
-      fsprintf
-        ("%s\nThe monomial %a is included in the challenge, but not in the completion")
-        info
-        RP.pp_monom m
-      |> fsget
-    in
 
-    (* \ic{FIXME: Bad prime is coefficient of monomial.} *)
-    Valid(info,1)
-  | [] ->
-    let vchal = rp_to_vector mbasis chal.ge_rpoly in
-    let info = 
-      fsprintf "%s\nchallenge vector:\n%a \t(monomial basis)\n%a \t(%a)\n"
-        info
-        (pp_list "\t" RP.pp_monom) mbasis
-        (pp_list " \t" IntRing.pp) vchal
-        pp_group_elem chal
-      |> fsget
-    in
-    begin match Sage_Solver.lin_solve vcomp vchal with
-    | None   ->
+let pp_di fmt di =
+  F.fprintf fmt "\ninput left:\n  %a\n" (pp_list "\n  " pp_group_elem)  (fst di.di_inputs);
+  F.fprintf fmt "\ninput right:\n  %a\n" (pp_list "\n  " pp_group_elem) (snd di.di_inputs);
 
-      (* \ic{FIXME: think about bad primes here.} *)
-      Valid(info,1)
-    | Some sol ->
-      let ainfo = "the challenge can be computed using "^(string_of_attack sol recipes) in
-      Attack(info,ainfo)
-    end
+  F.fprintf fmt "\ncompletion left (for group %a):\n" pp_group_id di.di_gs.cgs_target;
+  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (fst di.di_mbasis);
+  pp_matrix fmt (fst di.di_comp) (fst di.di_vcomp) di.di_recipes;
 
-type side = Left | Right
+  F.fprintf fmt "\ncompletion right (for group %a):\n" pp_group_id di.di_gs.cgs_target;
+  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (snd di.di_mbasis);
+  pp_matrix fmt (snd di.di_comp) (snd di.di_vcomp) di.di_recipes;
 
-let other_side = function Left -> Right | Right -> Left
+  if fst di.di_ker = [] && fst di.di_ker = [] then F.fprintf fmt "No equalities on left or right";
+  if fst di.di_ker <> [] then
+    F.fprintf fmt "\nbasis for equalities left:\n%a\n"  (pp_list "\n" (pp_list "  \t" pp_int)) (fst di.di_ker);
+  if snd di.di_ker <> [] then
+    F.fprintf fmt "\nbasis for equalities right:\n%a\n" (pp_list "\n" (pp_list "  \t" pp_int)) (snd di.di_ker)
 
-let pp_side fmt s =
-  F.fprintf fmt "%s" (match s with Left -> "left" | Right -> "right")
+let pp_info fmt info =
+  match info with
+  | CompInfo ci -> pp_ci fmt ci
+  | DecInfo di  -> pp_di fmt di
 
-let check_decisional gs linputs rinputs =
+let pp_result_info fmt res =
+  match res with
+  | Valid(info,_) | Attack(info) -> pp_info fmt info
 
-  (* \ic{%
-     Compute completion of inputs, monomial basis of completion, and vector
-     representation of completion in monomial basis for right and left.} *)
-  let (comps,recipes) = completion_for_group gs gs.cgs_target [ linputs; rinputs] in
-  let lcomp, rcomp = match comps with [lc; rc] -> lc, rc | _ -> assert false in
-  let (lmbasis,lvcomp) = get_vcomp lcomp in
-  let (rmbasis,rvcomp) = get_vcomp rcomp in
-
-  let linfo = compl_info "left" linputs lcomp recipes lmbasis lvcomp gs.cgs_target in
-  let rinfo = compl_info "right" rinputs rcomp recipes rmbasis rvcomp gs.cgs_target in
-
-  (* \ic{FIXME: Add left and right kernels to info.} *)
-  let _lk,_rk,lonly,ronly,bp = Sage_Solver.compare_kernel lvcomp rvcomp in
-
-  let attacks = (L.map (fun v -> (Left,v)) lonly)@(L.map (fun v -> (Left,v)) ronly) in
-  match attacks with
-  | [] ->
-    Valid(linfo^rinfo, match maximum bp with None -> 1 | Some i -> i)
-  | (s,v)::_ ->
-    let ainfo =
-      fsprintf
-        ("the equality check for %s = 0 returns true in the %a game, "^^
-         "but false in the %a game.")
-        (string_of_attack v recipes)
-        pp_side s
-        pp_side (other_side s)
-      |> fsget
-    in
-    Attack(linfo^rinfo,ainfo)
-
-(* \ic{Check assumption.} *)
-let check assm =
-  match assm with
-  | Computational(gs,inputs,chal) ->
-    check_computational gs inputs chal
-  | Decisional(gs,linputs,rinputs) ->
-    check_decisional gs linputs rinputs
-
-let test () =
-  F.printf "Result 1:\n%a" pp_result (check cdh_asym1);
-  F.printf "\nResult 2:\n%a" pp_result (check cdh_asym2);
-  F.printf "\nResult 3:\n%a" pp_result (check dassm);
-  exit 0
+let pp_result fmt res =
+  match res with
+  | Valid(_,eub) ->
+    F.fprintf fmt "The assumption is valid for all primes%s."
+      (if eub = 1 then "" else " > "^string_of_int eub)
+  | Attack(info) ->
+    F.fprintf fmt "There is an attack: ";
+    (match info with
+     | DecInfo di ->
+         begin match di.di_attack with
+         | None            -> assert false
+         | Some(is_left,v) ->
+           F.fprintf fmt "The equality '%s = 0' holds on the %s, but not on the %s."
+             (string_of_attack v di.di_recipes)
+             (if is_left then "left"  else "right")
+             (if is_left then "right" else "left")
+         end
+     | CompInfo ci ->
+       begin match ci.ci_attack with
+       | None    -> assert false
+       | Some(v) ->
+         F.fprintf fmt "The challenge can be computed using %s."
+             (string_of_attack v ci.ci_recipes)
+       end)
+(*i*)

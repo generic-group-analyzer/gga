@@ -60,7 +60,7 @@ type assumption = private
 (* \hd{Smart constructors for group settings and assumptions} *)
 
 (* \ic{The given assumption is invalid.} *)
-exception InvalidAssm of string
+exception InvalidAssumption of string
 
 (* \ic{Fail because assumption is invalid.} *)
 val fail_assm : string -> 'a
@@ -77,6 +77,32 @@ val mk_computational : closed_group_setting -> group_elem list -> group_elem -> 
 (* \ic{Create decisional assumption.} *)
 val mk_decisional : closed_group_setting -> group_elem list -> group_elem list -> assumption
 
+(*******************************************************************)
+(* \hd{Commands for building assumptions} *)
+
+type cmd =
+  | AddIsos of iso list
+  | AddMaps of emap list
+  | AddInputLeft of group_elem list
+  | AddInputRight of group_elem list
+  | AddInput of group_elem list
+  | SetChallenge of group_elem
+
+type incomp_assm = {
+  ia_gs            : group_setting;
+  ia_is_decisional : bool option;
+  ia_input_left    : group_elem list;
+  ia_input_right   : group_elem list;
+  ia_input         : group_elem list;
+  ia_challenge     : group_elem option;
+}
+
+val empty_ias : incomp_assm
+
+val handle_cmd : cmd -> incomp_assm -> incomp_assm
+
+val eval_cmds : cmd list -> assumption
+
 (*i*)
 val pp_iso        : F.formatter -> iso           -> unit
 val pp_emap       : F.formatter -> emap          -> unit
@@ -85,6 +111,7 @@ val pp_emap_s     : F.formatter -> emap          -> unit
 val pp_group_id   : F.formatter -> group_id      -> unit
 val pp_group_elem : F.formatter -> group_elem    -> unit
 val pp_gs         : F.formatter -> group_setting -> unit
+val pp_cmd        : F.formatter -> cmd           -> unit
 (*i*)
 
 (*i*)

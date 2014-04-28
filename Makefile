@@ -8,9 +8,9 @@ INFRA_MODULES=Util/Util.ml Poly/PolyInterfaces.mli Poly/Poly.mli Poly/Poly.ml
 
 NONPARAM_MODULES= NonParam/NonParamInput.mli NonParam/NonParamInput.ml \
   NonParam/NonParamCompletion.ml NonParam/NonParamCompletion.mli \
-  NonParam/NonParamPredefined.ml \
   Solver/Sage_Solver.ml \
   NonParam/NonParamAnalyze.ml \
+  NonParam/NonParamAnalyzeFile.ml \
   NonParam/NonParamTest.ml
 
 PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \

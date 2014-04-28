@@ -1,0 +1,17 @@
+(* DDH in G2 of asymmetric bilinear group *)
+
+iso G1 -> G2.
+
+map G1 * G2 -> GT.
+
+input_left [ X ] in G1.
+
+input_left [ Y ] in G2.
+
+input_left [ X*Y ] in GT.
+
+input_right [ X ] in G1.
+
+input_right [ Y ] in G2.
+
+input_right [ Z ] in GT.

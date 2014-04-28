@@ -55,13 +55,15 @@ def kernelGenerating(S,U):
 
 def leftmostNonzeroEntries(M):
   """Returns the leftmost nonzero entries of M."""
-  return [ M[l][M.nonzero_positions_in_row(l)[0]]
+  return [ abs(M[l][M.nonzero_positions_in_row(l)[0]])
            for l in range(0,M.dimensions()[0])
            if M.nonzero_positions_in_row(l) != [] ]
 
-def factorsOfList(l):
-  """Returns the set of factors of integers in the given list"""
-  return list(set([ ps[0] for k in l for ps in factor (k) if ps[ 0 ] != 1 ]))
+def vecToInt(v):
+  return [ int(x) for x in v ]
+
+def matrixToInt(M):
+  return [ vecToInt(v) for v in M ]
 
 ###############################################################################
 # Interpreter for GGT commands
@@ -80,7 +82,7 @@ def interp(req):
       debug(str(s))
       return { "ok": True
              , "res": "sol"
-             , "sol" : [ int(x) for x in s[0] ] }
+             , "sol" : vecToInt(s[0]) }
     except ValueError,_:
       return { "ok": True
              , "res": "nosol" }
@@ -101,30 +103,24 @@ def interp(req):
     LK = span(LK,base_ring=ZZ).basis()
     RK = span(RK,base_ring=ZZ).basis()
 
-    bad_primes = leftmostNonzeroEntries(LS) + leftmostNonzeroEntries(RS)
+    exception_if_zero = leftmostNonzeroEntries(LS) + leftmostNonzeroEntries(RS)
 
-    lonly = []
+    attacks = []
     for v in LK:
       c = v * RM
-      if not c.is_zero():
-        bad_primes += filter(lambda x: not (x == 0 or x == 1), list(c))
-        lonly += [v]
+      if not c.is_zero(): attacks += [(True,vecToInt(v))]
 
-    ronly = []
     for v in RK:
       c = v * LM
-      if not c.is_zero():
-        bad_primes += filter(lambda x: not (x == 0 or x == 1), list(c))
-        ronly += [v]
+      if not c.is_zero(): attacks += [(False,vecToInt(v))]
 
-    bad_primes = factorsOfList(bad_primes)
+    exc_ub = max([1]+exception_if_zero)
 
     return { "ok": True
-           , "lonly": [ [int(x) for x in v] for v in lonly ]
-           , "ronly": [ [int(x) for x in v] for v in ronly ]
-           , "LK": [ [int(x) for x in v] for v in LK ]
-           , "RK": [ [int(x) for x in v] for v in RK ]
-           , "bad_primes": [ int(p) for p in bad_primes ] }
+           , "attacks": attacks
+           , "LK": matrixToInt(LK)
+           , "RK": matrixToInt(RK)
+           , "exc_ub" : exc_ub }
 
   elif cmd == "exit":
     print "end\n"

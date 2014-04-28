@@ -1,0 +1,6 @@
+(* DDH in target group of symmetric bilinear group *)
+maps G1 * G1 -> GT.
+
+input_left  [ X, Y, X*Y ] in GT.
+
+input_right [ X, Y, Z ] in GT.

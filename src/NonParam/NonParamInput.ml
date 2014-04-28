@@ -167,14 +167,14 @@ let gs_find_target gs =
 (*******************************************************************)
 (* \hd{Smart constructors for group settings and assumptions} *)
 
-exception InvalidAssm of string
+exception InvalidAssumption of string
 
-let fail_assm s = raise (InvalidAssm s)
+let fail_assm s = raise (InvalidAssumption s)
 
 let closed_generic_group gid =
-  { cgs_isos  = [];
-    cgs_emaps = [];
-    cgs_gids  = Ss.singleton gid;
+  { cgs_isos   = [];
+    cgs_emaps  = [];
+    cgs_gids   = Ss.singleton gid;
     cgs_target = gid }
 
 let close_group_setting gs =
@@ -219,6 +219,98 @@ let mk_decisional cgs inputs_left inputs_right =
   ensure_equal_shape inputs_left inputs_right;
   Decisional(cgs,inputs_left,inputs_right)
 
+(*******************************************************************)
+(* \hd{Commands in input language} *)
+
+type cmd =
+  | AddIsos of iso list
+  | AddMaps of emap list
+  | AddInputLeft of group_elem list
+  | AddInputRight of group_elem list
+  | AddInput of group_elem list
+  | SetChallenge of group_elem
+
+type incomp_assm = {
+  ia_gs            : group_setting;
+  ia_is_decisional : bool option;
+  ia_input_left    : group_elem list;
+  ia_input_right   : group_elem list;
+  ia_input         : group_elem list;
+  ia_challenge     : group_elem option;
+}
+
+let empty_ias = {
+  ia_gs = { gs_isos = []; gs_emaps = [] };
+  ia_is_decisional = None;
+  ia_input_left = [];
+  ia_input_right = [];
+  ia_input = [];
+  ia_challenge = None;
+}
+
+let handle_cmd cmd ias =
+  let set_is_decisional b ias =
+    match ias.ia_is_decisional with
+    | None ->
+      { ias with ia_is_decisional = Some b }
+    | Some b' when b <> b' ->
+      fail_assm "Assumption cannot be both computational and decisional."
+    | Some _  ->
+      ias
+  in
+  match cmd with
+  | AddIsos isos ->
+    { ias with
+      ia_gs = { ias.ia_gs with
+                gs_isos = ias.ia_gs.gs_isos @ isos } }
+  | AddMaps emaps ->
+    { ias with
+      ia_gs = { ias.ia_gs with
+                gs_emaps = ias.ia_gs.gs_emaps @ emaps } }
+  | AddInputLeft ges  ->
+    let ias = set_is_decisional true ias in
+    { ias with ia_input_left = ias.ia_input_left @ ges }
+  | AddInputRight ges ->
+    let ias = set_is_decisional true ias in
+    { ias with ia_input_right = ias.ia_input_right @ ges }
+  | AddInput ges ->
+    let ias = set_is_decisional false ias in
+    { ias with ia_input = ias.ia_input @ ges }
+  | SetChallenge ge   ->
+    let ias = set_is_decisional false ias in
+    begin match ias.ia_challenge with
+    | Some _ -> fail_assm "Challenge already set."
+    | None   -> { ias with ia_challenge = Some ge }
+    end
+
+let eval_cmds cmds =
+  let ias = L.fold_left (fun ia cmd -> handle_cmd cmd ia) empty_ias cmds in
+  match ias.ia_is_decisional with
+  | None -> fail_assm "Assumption incomplete"
+  | Some true ->
+    begin match ias.ia_input_left with
+    | [] -> fail_assm "empty inputs left"
+    | c::_->
+      let gs = ias.ia_gs in
+      let cgs =
+        if gs.gs_isos = [] && gs.gs_emaps = []
+        then closed_generic_group c.ge_group
+        else close_group_setting gs
+      in
+      mk_decisional cgs ias.ia_input_left ias.ia_input_right
+    end
+  | Some false ->
+    begin match ias.ia_challenge with
+    | None   -> fail_assm "challenge not defined"
+    | Some c ->
+      let gs = ias.ia_gs in
+      let cgs =
+        if gs.gs_isos = [] && gs.gs_emaps = []
+        then closed_generic_group c.ge_group
+        else close_group_setting gs
+      in
+      mk_computational cgs ias.ia_input c
+    end
 (*i*)
 (*******************************************************************)
 (* \hd{Pretty printing} *)
@@ -226,7 +318,7 @@ let mk_decisional cgs inputs_left inputs_right =
 let pp_iso fmt i = F.fprintf fmt "phi : %s -> %s" i.iso_dom i.iso_codom
 
 let pp_emap fmt e =
-  F.fprintf fmt "e : %a -> %s" (pp_list " x " pp_string) e.em_dom e.em_codom
+  F.fprintf fmt "e : %a -> %s" (pp_list " * " pp_string) e.em_dom e.em_codom
 
 let pp_iso_s fmt i = F.fprintf fmt "phi_%s,%s" i.iso_dom i.iso_codom
 
@@ -243,6 +335,21 @@ let pp_gs fmt gs =
   F.fprintf fmt "group setting:\n  %a\n  %a\n"
     (pp_list "\n  " pp_iso) gs.gs_isos
     (pp_list "\n  " pp_emap) gs.gs_emaps
+
+let pp_cmd fmt cmd =
+  match cmd with
+  | AddIsos isos ->
+    F.fprintf fmt "isos: %a.\n" (pp_list ", " pp_iso) isos
+  | AddMaps emaps ->
+    F.fprintf fmt "maps: %a.\n" (pp_list ", " pp_emap) emaps
+  | AddInputLeft ges ->
+    F.fprintf fmt "input_left %a.\n" (pp_list ", " pp_group_elem) ges
+  | AddInputRight ges ->
+    F.fprintf fmt "input_right %a.\n" (pp_list ", " pp_group_elem) ges
+  | AddInput ges ->
+    F.fprintf fmt "input  %a.\n" (pp_list ", " pp_group_elem) ges
+  | SetChallenge ge ->
+    F.fprintf fmt "challenge %a.\n" pp_group_elem ge
 (*i*)
 
 (*i*)
