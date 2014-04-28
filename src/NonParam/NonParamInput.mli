@@ -17,12 +17,14 @@ type iso = { iso_dom : group_id; iso_codom : group_id; }
 type emap = { em_dom : group_id list; em_codom : group_id; }
 
 (* \ic{A group setting consists of isomorphisms and multilinear maps.
-       Group ids are implicit.} *)
+       Group ids are implicit.\\
+     {\bf COMPOSITE:} add [gs_prime_num : int] } *)
 type group_setting = { gs_isos : iso list; gs_emaps : emap list; }
 
 (* \ic{%
    A closed group setting consists of isomorphisms, multilinear maps,
-   the target group, and the set of group ids. It has been validated. } *)
+   the target group, and the set of group ids. It has been validated. \\
+   {\bf COMPOSITE}: add [cgs_prime_num : int]} } *)
 type closed_group_setting = private {
   cgs_isos : iso list;
   cgs_emaps : emap list;
@@ -42,7 +44,8 @@ type rpoly = RP.t
    monomial basis [mon_basis]. We do not check if [f] contains monomials not included in [mon_basis].} *)
 val rp_to_vector : RP.monom list -> rpoly -> RP.coeff list
 
-(* \ic{We model a group element as a random polynomial and a group identifier.} *)
+(* \ic{We model a group element as a random polynomial and a group identifier.\\
+   {\bf COMPOSITE}: change [ge_rpolys : rpoly list]}} *)
 type group_elem = { ge_rpoly : rpoly; ge_group : group_id; }
 
 val shape: group_elem list -> group_id list
@@ -68,14 +71,17 @@ val fail_assm : string -> 'a
 (* \ic{Validate grout setting and create closed group setting.} *)
 val close_group_setting : group_setting -> closed_group_setting
 
-(* \ic{Create group setting for generic group (no isomorphisms and no maps, single group).} *)
+(* \ic{Create group setting for generic group (no isomorphisms and no maps, single group).
+   {\bf COMPOSITE}: add [int] for [prime_num]} *)
 val closed_generic_group : group_id -> closed_group_setting
 
 (* \ic{Create computational assumption.} *)
-val mk_computational : closed_group_setting -> group_elem list -> group_elem -> assumption
+val mk_computational :
+  closed_group_setting -> group_elem list -> group_elem -> assumption
 
 (* \ic{Create decisional assumption.} *)
-val mk_decisional : closed_group_setting -> group_elem list -> group_elem list -> assumption
+val mk_decisional :
+  closed_group_setting -> group_elem list -> group_elem list -> assumption
 
 (*******************************************************************)
 (* \hd{Commands for building assumptions} *)

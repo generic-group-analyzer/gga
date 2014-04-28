@@ -16,7 +16,8 @@ type recipe =
   | Iso   of iso * recipe
   | Emap  of emap * recipe list
 
-(* \ic{Apply a recipe to a list of inputs.} *)
+(* \ic{Apply a recipe to a list of inputs.\\
+   {\bf Composite:} Multiply component-wise} *)
 let apply_recipe inputs recip0 =
   let rec go recip =
     match recip with
@@ -61,7 +62,8 @@ end)
    and an input list with group ids [inp_gids]
    such that all computable elements in [cgid]
    can be computed by first applying these operations
-   followed only by [add] and [neg].} *)
+   followed only by [add] and [neg].\\
+    {\bf Composite:} Nothing changes, the param variables stand for tuples now.} *)
 let completion_ops cgs cgid inp_gids =
 
   (* \ic{We keep a map from group ids to known recipe polynomials.} *)
