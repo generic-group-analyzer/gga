@@ -1,4 +1,5 @@
-#!/usr/bin/env sage -python
+#!/bin/sh                                                                                        
+''''exec sage -python -- "$0" ${1+"$@"} # '''
 
 from z3 import *
 import json
