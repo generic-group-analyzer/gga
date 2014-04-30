@@ -6,7 +6,7 @@ open Util
 
 let main =
   if Array.length Sys.argv <> 3 then
-    output_string stderr (F.sprintf "usage: %s <param|nonparam> <inputfile>" Sys.argv.(0))
+    output_string stderr (F.sprintf "usage: %s <param|nonparam> <inputfile>\n" Sys.argv.(0))
   else
     let scmds = Util.input_file Sys.argv.(2) in
     match Sys.argv.(1) with
