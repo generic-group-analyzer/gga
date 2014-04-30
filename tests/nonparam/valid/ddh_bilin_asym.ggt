@@ -4,10 +4,8 @@ isos G1 -> G2.
 
 maps G1 * G2 -> GT.
 
-input_left [ X, Y ] in G2.
+input [ X, Y ] in G2.
 
 input_left [ X*Y ] in GT.
-
-input_right [ X, Y ] in G2.
 
 input_right [ Z ] in GT.

@@ -274,8 +274,13 @@ let handle_cmd cmd ias =
     let ias = set_is_decisional true ias in
     { ias with ia_input_right = ias.ia_input_right @ ges }
   | AddInput ges ->
-    let ias = set_is_decisional false ias in
-    { ias with ia_input = ias.ia_input @ ges }
+    (* \ic{We add to all three lists since we might not know
+       yet if the problem is decisional or computational.} *)
+    { ias with
+      ia_input = ias.ia_input @ ges;
+      ia_input_left = ias.ia_input_left @ ges;
+      ia_input_right = ias.ia_input_right @ ges;
+    }
   | SetChallenge ge   ->
     let ias = set_is_decisional false ias in
     begin match ias.ia_challenge with
