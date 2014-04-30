@@ -24,7 +24,7 @@ type group_setting = { gs_isos : iso list; gs_emaps : emap list; }
 (* \ic{%
    A closed group setting consists of isomorphisms, multilinear maps,
    the target group, and the set of group ids. It has been validated. \\
-   {\bf COMPOSITE}: add [cgs_prime_num : int]} } *)
+   {\bf COMPOSITE}: add [cgs_prime_num : int]} *)
 type closed_group_setting = private {
   cgs_isos : iso list;
   cgs_emaps : emap list;
@@ -45,7 +45,7 @@ type rpoly = RP.t
 val rp_to_vector : RP.monom list -> rpoly -> RP.coeff list
 
 (* \ic{We model a group element as a random polynomial and a group identifier.\\
-   {\bf COMPOSITE}: change [ge_rpolys : rpoly list]}} *)
+   {\bf COMPOSITE}: change [ge_rpolys : rpoly list]} *)
 type group_elem = { ge_rpoly : rpoly; ge_group : group_id; }
 
 val shape: group_elem list -> group_id list

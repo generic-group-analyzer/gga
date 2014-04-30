@@ -101,7 +101,7 @@ let get_vector_repr ps =
      {\bf FIXME:} For now, we don't track the bad primes in this case.
      We should use the same HNF + Kernel computation for [vchal] first line
      and [vcomp] matrix. Then only care about kernel elements where first line
-     is used (we get [exc_ub] this way).\end{enumerate}\\
+     is used (we get [exc_ub] this way).\end{enumerate}
    {\bf Composite:} Concat the vcomps for the different primes, same for vchal.} *)
 let analyze_computational gs inputs chal =
   let (comp,recipes) = completion_for_group gs chal.ge_group inputs in
@@ -138,7 +138,7 @@ let analyze_computational gs inputs chal =
        the challenge or input polynomials vanishes modulo $p$).
        For the second case, we consider it sufficient that for each attack, there
        \emph{exists} a lower bound $b$ such that the attack is valid for all $p > b$.
-   \end{enumerate}\\
+   \end{enumerate}
    {\bf Composite:} Concat the vcomps for the different primes, same for vchal.} *)
 let analyze_decisional gs linp rinp =
   let (lcomp, rcomp,recipes) = completions_for_group gs gs.cgs_target linp rinp in
