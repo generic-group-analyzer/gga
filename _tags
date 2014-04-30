@@ -3,5 +3,5 @@ true: bin_annot
 <src/Tool> or <src/Poly> or <src/Util> or <src/Param>: include
 <src/NonParam> or <src/Solver>: include
 <src/Tool/ggt.*>  or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix)
-<src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(ounit)
-<src/NonParam/NonParamTest.*>: package(num), package(ounit), package(yojson),package(str)
+<src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(oUnit)
+<src/NonParam/NonParamTest.*>: package(num), package(oUnit), package(yojson),package(str)
