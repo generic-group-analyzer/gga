@@ -48,6 +48,8 @@ val rp_to_vector : RP.monom list -> rpoly -> RP.coeff list
    {\bf COMPOSITE}: change [ge_rpolys : rpoly list]} *)
 type group_elem = { ge_rpoly : rpoly; ge_group : group_id; }
 
+val equal_group_elem : group_elem -> group_elem -> bool
+
 val shape: group_elem list -> group_id list
 
 (* \ic{%

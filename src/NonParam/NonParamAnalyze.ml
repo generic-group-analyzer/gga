@@ -201,18 +201,19 @@ let analyze_file fn = input_file fn |> analyze_from_string
 
 let string_of_attack v recipes =
   let arecipe =
-    L.concat (L.mapi
-               (fun i a ->
-                  let sa = if a = 1 then "" else string_of_int a^"*" in
-                  if a = 0 then []
-                  else [ fsprintf "%s%a" sa pp_recipe (L.nth recipes i) |> fsget ])
-               v)
+    L.concat
+      (L.mapi
+         (fun i a ->
+            let sa = if a = 1 then "" else string_of_int a^"*" in
+            if a = 0 then []
+            else [ fsprintf "%s%a" sa pp_recipe (L.nth recipes i) |> fsget ])
+       v)
   in String.concat " + " arecipe
 
 let pp_matrix fmt comp vcomp recipes =
   L.iter
     (fun (v,(f,r)) ->
-        F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v RP.pp f pp_recipe r)
+       F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v RP.pp f pp_recipe r)
     (L.combine vcomp (L.combine comp recipes))
 
 let pp_ci fmt ci =
@@ -228,10 +229,11 @@ let pp_ci fmt ci =
     F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) ci.ci_mbasis;
     F.fprintf fmt "%a \t(%a)\n" (pp_list "  \t" IntRing.pp) vchal RP.pp ci.ci_chal.ge_rpoly
 
-
 let pp_di fmt di =
-  F.fprintf fmt "\ninput left:\n  %a\n" (pp_list "\n  " pp_group_elem)  (fst di.di_inputs);
-  F.fprintf fmt "\ninput right:\n  %a\n" (pp_list "\n  " pp_group_elem) (snd di.di_inputs);
+  let (cinp, linp, rinp) = common_prefix equal_group_elem (fst di.di_inputs) (snd di.di_inputs) in
+  F.fprintf fmt "\ncommon input:\n  %a\n" (pp_list "\n  " pp_group_elem)  cinp;
+  F.fprintf fmt "\ninput left:\n  %a\n"   (pp_list "\n  " pp_group_elem)  linp;
+  F.fprintf fmt "\ninput right:\n  %a\n"  (pp_list "\n  " pp_group_elem)  rinp;
 
   F.fprintf fmt "\ncompletion left (for group %a):\n" pp_group_id di.di_gs.cgs_target;
   F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (fst di.di_mbasis);

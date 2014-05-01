@@ -118,6 +118,15 @@ let maximum xs0 =
 
 type ('a,'b) either = Left of 'a | Right of 'b
 
+let common_prefix eq xs ys =
+  let rec go acc xs ys =
+    match xs,ys with
+    | x::xs, y::ys when eq x y ->
+      go (x::acc) xs ys
+    | _ -> (L.rev acc,xs,ys)
+  in
+  go [] xs ys
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 

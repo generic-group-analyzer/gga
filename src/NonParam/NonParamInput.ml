@@ -50,6 +50,8 @@ type group_elem = {
   ge_group : group_id;
 }
 
+let equal_group_elem a b = a.ge_group = b.ge_group && RP.equal a.ge_rpoly b.ge_rpoly
+
 let shape ges = L.map (fun ge -> ge.ge_group) ges
 
 type assumption =
