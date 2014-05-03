@@ -77,6 +77,14 @@ let list_compare cmp xs0 ys0 =
   else if d < 0 then -1
   else go xs0 ys0
 
+(* \ic{Return the the list consisting of [i] elements [a].} *)
+let replicate a i =
+  let rec go i acc =
+    if i <= 0 then acc
+    else go (i - 1) (a::acc)
+  in
+  go i []
+
 (* \ic{Returns the cartesian product of a list of lists.} *)
 let cart_prod xss0 =
   let rec go acc xss =
