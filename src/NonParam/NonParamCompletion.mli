@@ -17,13 +17,13 @@ val completion_for_group :
   closed_group_setting ->
   group_id ->
   group_elem list ->
-  (rpoly list * recipe list)
+  (rpoly list list * recipe list)
 
 (* \ic{Same as before, but for two input lists at once computing
    the recipes only once.} *)
 val completions_for_group :
   closed_group_setting ->
   group_id -> group_elem list -> group_elem list ->
-  (rpoly list * rpoly list * recipe list)
+  (rpoly list list * rpoly list list * recipe list)
 
 val pp_recipe : F.formatter -> recipe -> unit

@@ -19,17 +19,22 @@ type emap = { em_dom : group_id list; em_codom : group_id; }
 (* \ic{A group setting consists of isomorphisms and multilinear maps.
        Group ids are implicit.\\
      {\bf COMPOSITE:} add [gs_prime_num : int] } *)
-type group_setting = { gs_isos : iso list; gs_emaps : emap list; }
+type group_setting = {
+  gs_isos : iso list;
+  gs_emaps : emap list;
+  gs_prime_num : int;
+}
 
 (* \ic{%
    A closed group setting consists of isomorphisms, multilinear maps,
    the target group, and the set of group ids. It has been validated. \\
    {\bf COMPOSITE}: add [cgs_prime_num : int]} *)
 type closed_group_setting = private {
-  cgs_isos : iso list;
-  cgs_emaps : emap list;
-  cgs_target : group_id;
-  cgs_gids : Ss.t;
+  cgs_isos      : iso list;
+  cgs_emaps     : emap list;
+  cgs_prime_num : int;
+  cgs_target    : group_id;
+  cgs_gids      : Ss.t;
 }
 
 (* \ic{Random polyomials such as $X*X + Y$.} *)
@@ -46,7 +51,10 @@ val rp_to_vector : RP.monom list -> rpoly -> RP.coeff list
 
 (* \ic{We model a group element as a random polynomial and a group identifier.\\
    {\bf COMPOSITE}: change [ge_rpolys : rpoly list]} *)
-type group_elem = { ge_rpoly : rpoly; ge_group : group_id; }
+type group_elem = {
+  ge_rpoly : rpoly list;
+  ge_group : group_id;
+}
 
 val equal_group_elem : group_elem -> group_elem -> bool
 
@@ -75,7 +83,7 @@ val close_group_setting : group_setting -> closed_group_setting
 
 (* \ic{Create group setting for generic group (no isomorphisms and no maps, single group).
    {\bf COMPOSITE}: add [int] for [prime_num]} *)
-val closed_generic_group : group_id -> closed_group_setting
+val closed_generic_group : group_id -> int -> closed_group_setting
 
 (* \ic{Create computational assumption.} *)
 val mk_computational :
@@ -91,6 +99,7 @@ val mk_decisional :
 type cmd =
   | AddIsos of iso list
   | AddMaps of emap list
+  | SetPrimeNum of int
   | AddInputLeft of group_elem list
   | AddInputRight of group_elem list
   | AddInput of group_elem list
@@ -117,6 +126,7 @@ val pp_emap       : F.formatter -> emap          -> unit
 val pp_iso_s      : F.formatter -> iso           -> unit
 val pp_emap_s     : F.formatter -> emap          -> unit
 val pp_group_id   : F.formatter -> group_id      -> unit
+val pp_rp_vec     : F.formatter -> rpoly list    -> unit
 val pp_group_elem : F.formatter -> group_elem    -> unit
 val pp_gs         : F.formatter -> group_setting -> unit
 val pp_cmd        : F.formatter -> cmd           -> unit

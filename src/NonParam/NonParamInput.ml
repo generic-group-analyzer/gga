@@ -21,15 +21,17 @@ type emap = {
 }
 
 type group_setting = {
-  gs_isos     : iso list;
-  gs_emaps     : emap list
+  gs_isos      : iso list;
+  gs_emaps     : emap list;
+  gs_prime_num : int
 }
 
 type closed_group_setting = {
-  cgs_isos   : iso list;
-  cgs_emaps  : emap list;
-  cgs_target : group_id;
-  cgs_gids   : Ss.t
+  cgs_isos      : iso list;
+  cgs_emaps     : emap list;
+  cgs_prime_num : int;
+  cgs_target    : group_id;
+  cgs_gids      : Ss.t
 }
 
 type rvar = string
@@ -46,11 +48,14 @@ type rpoly = RP.t
 let rp_to_vector mon_basis f = L.map (fun m -> RP.coeff f m) mon_basis
 
 type group_elem = {
-  ge_rpoly : rpoly;
+  ge_rpoly : rpoly list;
   ge_group : group_id;
 }
 
-let equal_group_elem a b = a.ge_group = b.ge_group && RP.equal a.ge_rpoly b.ge_rpoly
+let equal_rp_list a b =
+  list_equal (fun f g -> RP.equal f g) a b
+
+let equal_group_elem a b = a.ge_group = b.ge_group && equal_rp_list a.ge_rpoly b.ge_rpoly
 
 let shape ges = L.map (fun ge -> ge.ge_group) ges
 
@@ -173,9 +178,10 @@ exception InvalidAssumption of string
 
 let fail_assm s = raise (InvalidAssumption s)
 
-let closed_generic_group gid =
+let closed_generic_group gid prime_num =
   { cgs_isos   = [];
     cgs_emaps  = [];
+    cgs_prime_num = prime_num;
     cgs_gids   = Ss.singleton gid;
     cgs_target = gid }
 
@@ -188,6 +194,7 @@ let close_group_setting gs =
     let gids = gs_group_ids gs in
     { cgs_isos   = gs.gs_isos;
       cgs_emaps  = gs.gs_emaps;
+      cgs_prime_num = gs.gs_prime_num;
       cgs_gids   = gids;
       cgs_target = t }
   | None ->
@@ -197,14 +204,19 @@ let ensure_valid_groups cgs ges =
   if (List.exists (fun ge -> not (Ss.mem ge.ge_group cgs.cgs_gids)) ges)
   then fail_assm "Assumption contains elements in invalid group"
 
+let ensure_valid_composite cgs ges =
+  if (List.exists (fun ge -> L.length ge.ge_rpoly <> cgs.cgs_prime_num) ges)
+  then fail_assm "Assumption contains elements which are not comptabible with given composite"
+
 let ensure_equal_shape left right =
   if shape left <> shape right then fail_assm "assumptions do not have the same shape"
 
 let standardize_ones cgs inp =
-  let inp = L.filter (fun ge -> not (RP.equal RP.one ge.ge_rpoly)) inp in
-  let ones   =
+  let one = replicate RP.one cgs.cgs_prime_num in
+  let inp = L.filter (fun ge -> not (equal_rp_list one ge.ge_rpoly)) inp in
+  let ones =
     L.map
-      (fun gid -> { ge_group = gid; ge_rpoly = RP.one })
+      (fun gid -> { ge_group = gid; ge_rpoly = one })
       (Ss.elements cgs.cgs_gids |> L.sort compare)
   in
   ones @ inp
@@ -212,12 +224,14 @@ let standardize_ones cgs inp =
 let mk_computational cgs inputs chal =
   let inputs = standardize_ones cgs inputs in
   ensure_valid_groups cgs (chal::inputs);
+  ensure_valid_composite cgs (chal::inputs);
   Computational(cgs,inputs,chal)
 
 let mk_decisional cgs inputs_left inputs_right =
-  let inputs_left = standardize_ones cgs inputs_left in
+  let inputs_left  = standardize_ones cgs inputs_left in
   let inputs_right = standardize_ones cgs inputs_right in
   ensure_valid_groups cgs (inputs_left@inputs_right);
+  ensure_valid_composite cgs (inputs_left@inputs_right);
   ensure_equal_shape inputs_left inputs_right;
   Decisional(cgs,inputs_left,inputs_right)
 
@@ -227,6 +241,7 @@ let mk_decisional cgs inputs_left inputs_right =
 type cmd =
   | AddIsos of iso list
   | AddMaps of emap list
+  | SetPrimeNum of int
   | AddInputLeft of group_elem list
   | AddInputRight of group_elem list
   | AddInput of group_elem list
@@ -242,7 +257,7 @@ type incomp_assm = {
 }
 
 let empty_ias = {
-  ia_gs = { gs_isos = []; gs_emaps = [] };
+  ia_gs = { gs_isos = []; gs_emaps = []; gs_prime_num = 1 };
   ia_is_decisional = None;
   ia_input_left = [];
   ia_input_right = [];
@@ -265,6 +280,8 @@ let handle_cmd cmd ias =
     { ias with
       ia_gs = { ias.ia_gs with
                 gs_isos = ias.ia_gs.gs_isos @ isos } }
+  | SetPrimeNum i ->
+    { ias with ia_gs = { ias.ia_gs with gs_prime_num = i } }
   | AddMaps emaps ->
     { ias with
       ia_gs = { ias.ia_gs with
@@ -301,7 +318,7 @@ let eval_cmds cmds =
       let gs = ias.ia_gs in
       let cgs =
         if gs.gs_isos = [] && gs.gs_emaps = []
-        then closed_generic_group c.ge_group
+        then closed_generic_group c.ge_group gs.gs_prime_num
         else close_group_setting gs
       in
       mk_decisional cgs ias.ia_input_left ias.ia_input_right
@@ -313,7 +330,7 @@ let eval_cmds cmds =
       let gs = ias.ia_gs in
       let cgs =
         if gs.gs_isos = [] && gs.gs_emaps = []
-        then closed_generic_group c.ge_group
+        then closed_generic_group c.ge_group gs.gs_prime_num
         else close_group_setting gs
       in
       mk_computational cgs ias.ia_input c
@@ -335,8 +352,13 @@ let pp_emap_s fmt e =
 let pp_group_id fmt gid =
   F.fprintf fmt "G_%s" gid
 
+let pp_rp_vec fmt rps =
+  match rps with
+  | [rp] -> RP.pp fmt rp
+  | _    -> F.fprintf fmt "(%a)" (pp_list ", " RP.pp) rps
+
 let pp_group_elem fmt ge =
-  F.fprintf fmt "%a : %a" RP.pp ge.ge_rpoly pp_group_id ge.ge_group
+  F.fprintf fmt "%a : %a" pp_rp_vec ge.ge_rpoly pp_group_id ge.ge_group
 
 let pp_gs fmt gs =
   F.fprintf fmt "group setting:\n  %a\n  %a\n"
@@ -345,6 +367,8 @@ let pp_gs fmt gs =
 
 let pp_cmd fmt cmd =
   match cmd with
+  | SetPrimeNum i ->
+    F.fprintf fmt "composite: %i.\n" i
   | AddIsos isos ->
     F.fprintf fmt "isos: %a.\n" (pp_list ", " pp_iso) isos
   | AddMaps emaps ->

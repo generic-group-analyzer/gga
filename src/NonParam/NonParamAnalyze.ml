@@ -19,7 +19,7 @@ type dec_info = {
   di_gs         : closed_group_setting;
   di_inputs     : group_elem list * group_elem list;
   di_recipes    : recipe list;
-  di_comp       : RP.t list * RP.t list;
+  di_comp       : RP.t list list * RP.t list list;
   di_mbasis     : RP.monom list * RP.monom list;
   di_vcomp      : big_int list list * big_int list list;
   di_ker        : int list list *  int list list;
@@ -33,7 +33,7 @@ type comp_info = {
   ci_gs         : closed_group_setting;
   ci_inputs     : group_elem list;
   ci_chal       : group_elem;
-  ci_comp       : RP.t list;
+  ci_comp       : RP.t list list;
   ci_recipes    : recipe list;
   ci_mbasis     : RP.monom list;
   ci_vcomp      : big_int list list;
@@ -79,13 +79,16 @@ type res =
 (*******************************************************************)
 (* \hd{Analysis functions} *)
 
-(* \ic{[get_vector_repr ps] returns the list of vector representations of
-    of the polynomials [ps] with respect to the set of monomials occuring in [ps].
+(* \ic{[get_vector_repr pss] returns the list of vector representations of
+    of the lists polynomials [pss] with respect to the set of monomials occuring in [pss].
     It also returns the computed monomial basis.} *)
-let get_vector_repr ps =
-  let mbasis = sorted_nub compare (conc_map RP.mons ps) in
-  let vps = L.map (rp_to_vector mbasis) ps in
-  (mbasis,vps)
+let get_vector_repr pss =
+  let mbasis =
+    conc_map (fun ps -> conc_map RP.mons ps) pss |>
+      sorted_nub compare
+  in
+  let vps = L.map (fun ps -> conc_map (rp_to_vector mbasis) ps) pss in
+  (mbasis, vps)
 
 (* \ic{Analyze computational assumption by performning the following steps:
    \begin{enumerate}
@@ -108,14 +111,17 @@ let analyze_computational gs inputs chal =
   let (mbasis,vcomp) = get_vector_repr comp in
   let missing_mons =
     conc_map
-      (fun m -> if List.mem m mbasis then [] else [(m,RP.coeff chal.ge_rpoly m) ])
-      (RP.mons chal.ge_rpoly)
+      (fun f ->
+         conc_map
+           (fun m -> if List.mem m mbasis then [] else [(m,RP.coeff f m) ])
+           (RP.mons f))
+      chal.ge_rpoly
   in
   let mk_info = mk_comp_info gs inputs chal comp recipes mbasis vcomp in
   match missing_mons with
   | (m,c)::_ -> Valid(mk_info (Left m) None, int_of_big_int c)
   | [] ->
-    let vchal = rp_to_vector mbasis chal.ge_rpoly in
+    let vchal = conc_map (rp_to_vector mbasis) chal.ge_rpoly in
     let mk_info = mk_info (Right vchal) in
     begin match Sage_Solver.lin_solve vcomp vchal with
     | None      -> Valid(mk_info None, 1)
@@ -141,7 +147,10 @@ let analyze_computational gs inputs chal =
    \end{enumerate}
    {\bf Composite:} Concat the vcomps for the different primes, same for vchal.} *)
 let analyze_decisional gs linp rinp =
-  let (lcomp, rcomp,recipes) = completions_for_group gs gs.cgs_target linp rinp in
+  (* F.printf "\n#### %i\n" gs.cgs_prime_num; *)
+  (* F.printf "\n#### %a\n" (pp_list "; " pp_group_elem) linp; *)
+  let (lcomp,rcomp,recipes) = completions_for_group gs gs.cgs_target linp rinp in
+  (* F.printf "\n#### %a\n%!" (pp_list "; " pp_rp_vec) lcomp; *)
   let (lmb,lvcomp) = get_vector_repr lcomp in
   let (rmb,rvcomp) = get_vector_repr rcomp in
   let lk,rk,exc_ub,attacks = Sage_Solver.compare_kernel lvcomp rvcomp in
@@ -213,7 +222,7 @@ let string_of_attack v recipes =
 let pp_matrix fmt comp vcomp recipes =
   L.iter
     (fun (v,(f,r)) ->
-       F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v RP.pp f pp_recipe r)
+       F.fprintf fmt "%a \t(%a using %a)\n" (pp_list "  \t" IntRing.pp) v pp_rp_vec f pp_recipe r)
     (L.combine vcomp (L.combine comp recipes))
 
 let pp_ci fmt ci =
@@ -227,7 +236,7 @@ let pp_ci fmt ci =
   | Right vchal ->
     F.fprintf fmt "\nchallenge vector:\n";
     F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) ci.ci_mbasis;
-    F.fprintf fmt "%a \t(%a)\n" (pp_list "  \t" IntRing.pp) vchal RP.pp ci.ci_chal.ge_rpoly
+    F.fprintf fmt "%a \t(%a)\n" (pp_list "  \t" IntRing.pp) vchal pp_rp_vec ci.ci_chal.ge_rpoly
 
 let pp_di fmt di =
   let (cinp, linp, rinp) = common_prefix equal_group_elem (fst di.di_inputs) (snd di.di_inputs) in

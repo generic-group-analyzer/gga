@@ -16,13 +16,21 @@ type recipe =
   | Iso   of iso * recipe
   | Emap  of emap * recipe list
 
+let lmult_rp_vect gs rpss =
+  L.fold_left
+    (fun acc rps -> L.map (fun (f,g) -> RP.mult f g) (L.combine acc rps))
+    (replicate RP.one gs.cgs_prime_num)
+    rpss
+
 (* \ic{Apply a recipe to a list of inputs.\\
    {\bf Composite:} Multiply component-wise} *)
-let apply_recipe inputs recip0 =
-  let rec go recip =
+let apply_recipe gs inputs recip0 =
+  let rec go recip : rpoly list =
     match recip with
     | Param i        -> (L.nth inputs i).ge_rpoly
-    | Emap(_,recips) -> RP.lmult (L.map go recips)
+    | Emap(_,recips) ->
+      let rpss = L.map go recips in
+      lmult_rp_vect gs rpss
     | Iso(_,recip)   -> go recip
   in
   go recip0
@@ -36,8 +44,9 @@ module ReP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
-(* \ic{[apply_completion_ops cops gid inputs] applies completion ops [cops] to [inputs].} *)
-let apply_completion_ops cops inputs = L.map (apply_recipe inputs) cops
+(* \ic{[apply_completion_ops cops inputs] applies completion ops [cops] to [inputs].} *)
+let apply_completion_ops gs cops inputs =
+  L.map (apply_recipe gs inputs) cops
 
 (* \ic{Sets of recipe polynomials. } *)
 module Srep = Set.Make(struct type t = ReP.t let compare = ReP.compare end)
@@ -136,13 +145,13 @@ let completion_ops cgs cgid inp_gids =
 
 let completion_for_group gs cgid inputs =
   let cops = completion_ops gs cgid (shape inputs) in
-  (apply_completion_ops cops inputs, cops)
+  (apply_completion_ops gs cops inputs, cops)
 
 let completions_for_group gs cgid linputs rinputs =
   assert (shape linputs = shape rinputs);
   let cops = completion_ops gs cgid (shape linputs) in
-  ( apply_completion_ops cops linputs
-  , apply_completion_ops cops rinputs
+  ( apply_completion_ops gs cops linputs
+  , apply_completion_ops gs cops rinputs
   , cops)
 
 (*i*)

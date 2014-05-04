@@ -40,6 +40,7 @@ rule lex = parse
   | "input_left"    { INP_L }
   | "input_right"   { INP_R }
   | "challenge"     { CHAL }
+  | "composite"     { COMP }
   | "in"            { IN }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
