@@ -1,0 +1,7 @@
+(* simple subgroup assumption *)
+maps G1 * G1 -> GT.
+composite 2.
+
+input_left  [ (1,0), (X,X) ] in GT.
+
+input_right [ (1,0), (X,0) ] in GT.

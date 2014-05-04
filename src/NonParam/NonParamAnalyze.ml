@@ -239,17 +239,18 @@ let pp_ci fmt ci =
     F.fprintf fmt "%a \t(%a)\n" (pp_list "  \t" IntRing.pp) vchal pp_rp_vec ci.ci_chal.ge_rpoly
 
 let pp_di fmt di =
+  let exp_basis b = L.concat (replicate b di.di_gs.cgs_prime_num) in
   let (cinp, linp, rinp) = common_prefix equal_group_elem (fst di.di_inputs) (snd di.di_inputs) in
   F.fprintf fmt "\ncommon input:\n  %a\n" (pp_list "\n  " pp_group_elem)  cinp;
   F.fprintf fmt "\ninput left:\n  %a\n"   (pp_list "\n  " pp_group_elem)  linp;
   F.fprintf fmt "\ninput right:\n  %a\n"  (pp_list "\n  " pp_group_elem)  rinp;
 
   F.fprintf fmt "\ncompletion left (for group %a):\n" pp_group_id di.di_gs.cgs_target;
-  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (fst di.di_mbasis);
+  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (exp_basis (fst di.di_mbasis));
   pp_matrix fmt (fst di.di_comp) (fst di.di_vcomp) di.di_recipes;
 
   F.fprintf fmt "\ncompletion right (for group %a):\n" pp_group_id di.di_gs.cgs_target;
-  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (snd di.di_mbasis);
+  F.fprintf fmt "%a \t(monomial basis)\n" (pp_list " \t" RP.pp_monom) (exp_basis (snd di.di_mbasis));
   pp_matrix fmt (snd di.di_comp) (snd di.di_vcomp) di.di_recipes;
 
   if fst di.di_ker = [] && fst di.di_ker = [] then F.fprintf fmt "No equalities on left or right";
