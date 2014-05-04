@@ -17,8 +17,7 @@ type iso = { iso_dom : group_id; iso_codom : group_id; }
 type emap = { em_dom : group_id list; em_codom : group_id; }
 
 (* \ic{A group setting consists of isomorphisms and multilinear maps.
-       Group ids are implicit.\\
-     {\bf COMPOSITE:} add [gs_prime_num : int] } *)
+       Group ids are implicit.} *)
 type group_setting = {
   gs_isos : iso list;
   gs_emaps : emap list;
@@ -27,8 +26,7 @@ type group_setting = {
 
 (* \ic{%
    A closed group setting consists of isomorphisms, multilinear maps,
-   the target group, and the set of group ids. It has been validated. \\
-   {\bf COMPOSITE}: add [cgs_prime_num : int]} *)
+   the target group, and the set of group ids. It has been validated.} *)
 type closed_group_setting = private {
   cgs_isos      : iso list;
   cgs_emaps     : emap list;
@@ -49,8 +47,9 @@ type rpoly = RP.t
    monomial basis [mon_basis]. We do not check if [f] contains monomials not included in [mon_basis].} *)
 val rp_to_vector : RP.monom list -> rpoly -> RP.coeff list
 
-(* \ic{We model a group element as a random polynomial and a group identifier.\\
-   {\bf COMPOSITE}: change [ge_rpolys : rpoly list]} *)
+(* \ic{We model a group element as a list of random polynomials and
+   a group identifier. The length of the list corresponds to the number
+   of primes dividing the group order.} *)
 type group_elem = {
   ge_rpoly : rpoly list;
   ge_group : group_id;
@@ -81,8 +80,7 @@ val fail_assm : string -> 'a
 (* \ic{Validate grout setting and create closed group setting.} *)
 val close_group_setting : group_setting -> closed_group_setting
 
-(* \ic{Create group setting for generic group (no isomorphisms and no maps, single group).
-   {\bf COMPOSITE}: add [int] for [prime_num]} *)
+(* \ic{Create group setting for generic group (no isomorphisms and no maps, single group).} *)
 val closed_generic_group : group_id -> int -> closed_group_setting
 
 (* \ic{Create computational assumption.} *)

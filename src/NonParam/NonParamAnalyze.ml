@@ -13,8 +13,7 @@ module S = String
 (* \hd{Types for analysis} *)
 
 (* \ic{Info for analysis of decisional problem.\\
-   {\bf Composite:} Change [mbasis] to [RP.monom list list * RP.monom list list] (monomial basis
-   for each component/prime) and do the same for [vcomp].} *)
+   We use the same basis for all components.} *)
 type dec_info = {
   di_gs         : closed_group_setting;
   di_inputs     : group_elem list * group_elem list;
@@ -27,8 +26,7 @@ type dec_info = {
 }
 
 (* \ic{Info for analysis of computational problem.\\
-   {\bf Composite:} Change [mbasis] to [RP.monom list list] (one for each component/prime)
-   and do the same for [vcomp] and the vchal case.} *)
+   We use the same basis for all components.} *)
 type comp_info = {
   ci_gs         : closed_group_setting;
   ci_inputs     : group_elem list;
@@ -104,8 +102,7 @@ let get_vector_repr pss =
      {\bf FIXME:} For now, we don't track the bad primes in this case.
      We should use the same HNF + Kernel computation for [vchal] first line
      and [vcomp] matrix. Then only care about kernel elements where first line
-     is used (we get [exc_ub] this way).\end{enumerate}
-   {\bf Composite:} Concat the vcomps for the different primes, same for vchal.} *)
+     is used (we get [exc_ub] this way).\end{enumerate}} *)
 let analyze_computational gs inputs chal =
   let (comp,recipes) = completion_for_group gs chal.ge_group inputs in
   let (mbasis,vcomp) = get_vector_repr comp in
@@ -144,13 +141,9 @@ let analyze_computational gs inputs chal =
        the challenge or input polynomials vanishes modulo $p$).
        For the second case, we consider it sufficient that for each attack, there
        \emph{exists} a lower bound $b$ such that the attack is valid for all $p > b$.
-   \end{enumerate}
-   {\bf Composite:} Concat the vcomps for the different primes, same for vchal.} *)
+   \end{enumerate}} *)
 let analyze_decisional gs linp rinp =
-  (* F.printf "\n#### %i\n" gs.cgs_prime_num; *)
-  (* F.printf "\n#### %a\n" (pp_list "; " pp_group_elem) linp; *)
   let (lcomp,rcomp,recipes) = completions_for_group gs gs.cgs_target linp rinp in
-  (* F.printf "\n#### %a\n%!" (pp_list "; " pp_rp_vec) lcomp; *)
   let (lmb,lvcomp) = get_vector_repr lcomp in
   let (rmb,rvcomp) = get_vector_repr rcomp in
   let lk,rk,exc_ub,attacks = Sage_Solver.compare_kernel lvcomp rvcomp in

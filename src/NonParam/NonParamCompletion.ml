@@ -22,8 +22,7 @@ let lmult_rp_vect gs rpss =
     (replicate RP.one gs.cgs_prime_num)
     rpss
 
-(* \ic{Apply a recipe to a list of inputs.\\
-   {\bf Composite:} Multiply component-wise} *)
+(* \ic{Apply a recipe to a list of inputs.} *)
 let apply_recipe gs inputs recip0 =
   let rec go recip : rpoly list =
     match recip with
@@ -71,8 +70,7 @@ end)
    and an input list with group ids [inp_gids]
    such that all computable elements in [cgid]
    can be computed by first applying these operations
-   followed only by [add] and [neg].\\
-    {\bf Composite:} Nothing changes, the param variables stand for tuples now.} *)
+   followed only by [add] and [neg].} *)
 let completion_ops cgs cgid inp_gids =
 
   (* \ic{We keep a map from group ids to known recipe polynomials.} *)
