@@ -1,0 +1,56 @@
+\newcommand{\group}{\mathbb{G}}
+\chapter{Interactive Assumptions}
+
+This chapter covers the implementation of our approach for
+analyzing interactive assumptions.
+
+We get an input of the following form:
+\begin{verbatim}
+emaps G1 * G2 -> GT.
+isom G1 -> G2.
+
+input [ X, Y ] in G1.
+
+oracle O(m : Fq) = sample A:G1, (A, A*Y, A*X + m*A*X*Y).
+
+win(U:G1, V:G1, W:G1, mm) =
+  U <> 0 /\ mm <> m_i /\ V = UX /\ W = U*X + m*U*X*Y.
+\end{verbatim}
+
+For now, we make the following assumptions:
+\begin{enumerate}
+\item The group setting is a generic group or the input, oracle
+  arguments and return values, and winning condition input
+  are all in one group. In the last case, we exploit that the
+  problem is computational.
+\item All oracle inputs are of type \verb!Fq!. Allowing for group
+  elements complicates the definition.
+\end{enumerate}
+
+We first compute a formal sum for each \verb!win! input of type \verb!G1!.
+We use the following conventions:
+\begin{enumerate}
+\item Assume that the adversary is given inputs
+  $f_1, \ldots, f_k$ where $f_j$ defines an element in
+  $\group$ over random variables $\vec{X}$.
+\item That there is one oracle taking field elements
+  $m_1,\ldots,m_l$ and returning $g_1,\ldots,g_n$
+  where $g_j$ defines an element in $\group$.
+  Additionally assume that the oracle samples
+  random variables $A_1,\ldots,A_r$.
+\item We assume there are $q$ oracle queries.
+\item As a first step, we introduce indexed parameters
+  $m_{1,j},\ldots,m_{l,j}$ ($j \in [q]$) and
+  indexed random variables
+  $A_{1,j},\ldots,A_{r,j}$ ($j \in [q]$).  
+\item Then all computable elements can
+  be expressed as linear combinations as follows:
+  \[
+    \alpha_1 f_1 + \ldots + \alpha_k f_k
+    + \Sigma_{i=1}^q \beta_{1,i}\, g_1(\vec{m_i},\vec{A_i},\vec{X})
+    \ldots
+    + \Sigma_{i=1}^q \beta_{n,i}\, g_n(\vec{m_i},\vec{A_i},\vec{X})
+  \]
+\end{enumerate}
+
+We represent such linear combinations as formal sums.

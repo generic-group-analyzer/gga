@@ -18,11 +18,15 @@ PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
   Param/ParamParser.mly Param/ParamLexer.mll Param/ParamAnalyze.ml \
   Param/ParamTest.ml
 
+INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
+  Interactive/InteractiveTest.ml
+
 TOOL_MODULES = Tool/ggt.ml
 
 INFRA_FILES=$(addprefix src/,$(INFRA_MODULES))
 NONPARAM_FILES=$(addprefix src/,$(NONPARAM_MODULES))
 PARAM_FILES=$(addprefix src/,$(PARAM_MODULES))
+INTERACTIVE_FILES=$(addprefix src/,$(INTERACTIVE_MODULES))
 TOOL_FILES=$(addprefix src/,$(TOOL_MODULES))
 
 
@@ -45,6 +49,11 @@ nonparamtest:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/NonParam/NonParamTest.native
 	./NonParamTest.native
 
+interactivetest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Interactive/InteractiveTest.native
+	./InteractiveTest.native
+
+
 clean:
 	$(OCAMLBUILD) -clean
 
@@ -56,6 +65,7 @@ doc:
 	  doc/chap-infra.tex $(INFRA_FILES) \
 	  doc/chap-nonparam.tex $(NONPARAM_FILES) \
 	  doc/chap-param.tex $(PARAM_FILES) \
+	  doc/chap-interactive.tex $(INTERACTIVE_FILES) \
 	  doc/chap-tool.tex $(TOOL_FILES) \
 	  doc/close.tex --no-preamble --header > doc/tool.tex
 	echo "\end{document}" >> doc/tool.tex
