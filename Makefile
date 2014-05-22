@@ -19,6 +19,7 @@ PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
   Param/ParamTest.ml
 
 INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
+  Interactive/InteractiveAnalysis.ml \
   Interactive/InteractiveTest.ml
 
 TOOL_MODULES = Tool/ggt.ml
