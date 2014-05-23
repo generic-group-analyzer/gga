@@ -102,13 +102,13 @@ type fchoice_id = string
 type wvar = 
   | GroupChoice of gchoice_id
   | FieldChoice of fchoice_id
-  | OArg        of param_id
+  | OParam      of param_id
   | RVar        of rvar_id
 
 (*i*)
 let string_of_wvar v = match v with
   | GroupChoice s | FieldChoice s | RVar s -> s
-  | OArg s -> s^"_i"
+  | OParam s -> s^"_i"
 
 let pp_wvar fmt v = pp_string fmt (string_of_wvar v)
 (*i*)
@@ -125,7 +125,7 @@ type wpoly = WP.t
 
 (*i*)
 let pp_wpoly fmt wp =
-  if L.exists (function OArg _ -> true | _ -> false) (WP.vars wp) then
+  if L.exists (function OParam _ -> true | _ -> false) (WP.vars wp) then
     F.fprintf fmt "forall i: %a" WP.pp wp
   else
     WP.pp fmt wp
@@ -183,9 +183,9 @@ type oname = string
        the definition of (named) oracles, and
        the definition of the winning condition.} *)
 type gdef = {
-  gdef_inputs  : rpoly list;
-  gdef_oracles : (oname * odef) list;
-  gdef_wcond   : wcond;
+  gdef_inputs : rpoly list;
+  gdef_odefs  : (oname * odef) list;
+  gdef_wcond  : wcond;
 }
 
 (*i*)
@@ -193,7 +193,7 @@ let pp_gdef fmt gdef =
   F.fprintf fmt "input [%a] in G.\n\n%a\n\n%a"
     (pp_list ", " RP.pp) gdef.gdef_inputs
     (pp_list "\n" (fun fmt (n,o) -> F.fprintf fmt "oracle %s%a." n pp_opoly o))
-        gdef.gdef_oracles
+        gdef.gdef_odefs
     pp_wcond gdef.gdef_wcond
 (*i*)
 
@@ -230,9 +230,67 @@ let pp_cmd fmt cmd =
       (pp_list " /\\ " (fun fmt (f,cty) -> F.fprintf fmt "%a%s" RP.pp f (cty_to_string cty))) conds
 (*i*)
 
-let eval_cmds _cmds =
-  {
-    gdef_inputs = [];
-    gdef_oracles = [];
-    gdef_wcond = { wcond_eqs = []; wcond_ineqs = [] }
-  }
+let rpoly_to_opoly gvars params orvars p =
+  let params = List.map fst params in
+  let conv_var v =
+    if L.mem v params then Param(v)
+    else if L.mem v orvars then ORVar(v)
+    else if L.mem v gvars then SRVar(v)
+    else failwith ("undefined variables in oracle definition: "^v)
+  in
+  RP.to_terms p
+  |> L.map (fun (m,c) -> (L.map conv_var m, c))
+  |> OP.from_terms
+
+let rpoly_to_wpoly gvars choices oparams p =
+  let fchoices = conc_map (function (v,Field) -> [v] | _ -> []) choices in
+  let gchoices = conc_map (function (v,Group) -> [v] | _ -> []) choices in
+  let conv_var v =
+    if L.mem v oparams then OParam(v)
+    else if L.mem v fchoices then FieldChoice(v)
+    else if L.mem v gchoices then GroupChoice(v)
+    else if L.mem v gvars    then RVar(v)
+    else failwith ("undefined variables in winning condition definition: "^v)
+  in
+  RP.to_terms p
+  |> L.map (fun (m,c) -> (L.map conv_var m, c))
+  |> WP.from_terms
+
+let eval_cmd (inputs,odefs,oparams,mwcond) cmd =
+  let gvars = conc_map (fun f -> RP.vars f) inputs |> sorted_nub compare in
+  match cmd,mwcond with
+  | AddInput fs, None ->
+    ( inputs@fs
+    , odefs
+    , oparams
+    , mwcond
+    )
+  | AddOracle(on,params,orvars,fs), None ->
+    if L.exists (fun (p,_) -> L.mem p oparams) params
+      then failwith "Cannot use the same parameter name in different oracles";
+    if L.exists (fun (_,t) -> t = Group) params
+      then failwith "Oracles with group arguments not supported";
+    if L.exists (fun (on',_) -> on = on') odefs
+      then failwith ("Oracle name used twice: "^on);
+    ( inputs
+    , odefs@[ (on, L.map (rpoly_to_opoly gvars params orvars) fs) ]
+    , oparams@( L.map fst params )
+    , None
+    )
+  | SetWinning(choices,conds), None ->
+    let ineqs = conc_map (function (f,InEq) -> [ rpoly_to_wpoly gvars choices oparams f ] | (_,Eq)   -> []) conds in
+    let eqs   = conc_map (function (f,Eq)   -> [ rpoly_to_wpoly gvars choices oparams f ] | (_,InEq) -> []) conds in
+    ( inputs
+    , odefs
+    , oparams
+    , Some { wcond_ineqs = ineqs; wcond_eqs = eqs }
+    )
+  | _, Some _ ->
+    failwith "setting the winning condition must be the last command"
+
+let eval_cmds cmds =
+  match List.fold_left eval_cmd ([], [], [], None) cmds with
+  | (_, _, _, None)   ->
+    failwith "no winning condition given"
+  | (inputs, odefs, _, Some wcond) ->
+    { gdef_inputs = inputs; gdef_odefs = odefs; gdef_wcond = wcond }

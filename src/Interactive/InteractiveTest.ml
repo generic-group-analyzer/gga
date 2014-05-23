@@ -34,7 +34,7 @@ let wcond =
   let vV    = WP.var (GroupChoice "V") in
   let vW    = WP.var (GroupChoice "W") in
   let vm'   = WP.var (FieldChoice "m'") in
-  let vm    = WP.var (OArg "m") in
+  let vm    = WP.var (OParam "m") in
   let (+)   = WP.add in
   let ( * ) = WP.mult in  
   let (-)   = WP.minus in
@@ -45,14 +45,15 @@ let wcond =
 
 let gd =
   {
-    gdef_inputs  = inputs;
-    gdef_oracles = [ ("o", oracle) ];
-    gdef_wcond   = wcond;
+    gdef_inputs = inputs;
+    gdef_odefs  = [ ("o", oracle) ];
+    gdef_wcond  = wcond;
   }
 
 let def_string =
   "input [X, Y] in G.\n"^
   "oracle o(m:Fp) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + m*X*Y*A)."^
+  "oracle o'(w:Fp) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + w*X*Y*A)."^
   "win (U:G, V:G, W:G, m':Fp) = ( V - U*X = 0 /\\ W - U*X + m'*U*X*Y = 0 /\\ U <> 0 /\\ m' - m <> 0 )."
 
 (*i*)
@@ -60,6 +61,6 @@ let tpp () =
   F.printf "%a\n\n" pp_gdef gd
 
 let () =
-  let cmds = p_cmds def_string in
-  F.printf "%a\n\n" (pp_list "\n" pp_cmd) cmds
+  let gdef = p_cmds def_string |> eval_cmds in
+  F.printf "%a\n\n" pp_gdef gdef
 (*i*)
