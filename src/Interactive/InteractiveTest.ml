@@ -2,6 +2,7 @@
 
 (*i*)
 open InteractiveInput
+open InteractiveAnalyze
 open Util
 (*i*)
 
@@ -50,11 +51,15 @@ let gd =
   }
 
 let def_string =
-  "input [X, Y] in G."^
-  "oracle o(m:Fq) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + m*X*Y*A)."^
-  "win (U:G, V:G, W:G, m':Fq) = ( V - U*X = 0 /\\ W - U*X + m'*U*X*Y = 0 /\\ U <> 0 /\\ forall i: m' - m_i <> 0 )."
+  "input [X, Y] in G.\n"^
+  "oracle o(m:Fp) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + m*X*Y*A)."^
+  "win (U:G, V:G, W:G, m':Fp) = ( V - U*X = 0 /\\ W - U*X + m'*U*X*Y = 0 /\\ U <> 0 /\\ m' - m <> 0 )."
 
 (*i*)
-let () =
+let tpp () =
   F.printf "%a\n\n" pp_gdef gd
+
+let () =
+  let cmds = p_cmds def_string in
+  F.printf "%a\n\n" (pp_list "\n" pp_cmd) cmds
 (*i*)

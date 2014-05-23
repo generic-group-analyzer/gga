@@ -79,6 +79,7 @@ poly_comp :
 | p = poly
   { [p] }
 ;
+
 iso :
 | dom = GID; TO; codom = GID { { iso_dom = dom; iso_codom = codom } }
 ;

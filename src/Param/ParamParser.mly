@@ -42,8 +42,8 @@
 
 %token <string> VARU /* uppercase identifier */
 %token <string> VARL /* lowercase identifier */
-%token <int> RLIMIT /* range limit */
-%token VARLEVEL /* the highest level l */
+%token <int> RLIMIT  /* range limit */
+%token VARLEVEL      /* the highest level l */
 
 %token STAR
 %token PLUS

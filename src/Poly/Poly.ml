@@ -51,10 +51,11 @@ module MakePoly (V : Var) (C : Ring) = struct
   let equal =
     list_equal (fun (m1,c1) (m2,c2) -> C.equal c1 c2 && mon_equal m1 m2)
 
-  let compare =
-    list_compare (fun (m1,c1) (m2,c2) ->
-                    let cmp = C.compare c1 c2 in
-                    if cmp <> 0 then cmp else mon_compare m1 m2)
+  let term_compare (m1,c1) (m2,c2) =
+    let cmp = C.compare c1 c2 in
+    if cmp <> 0 then - cmp else mon_compare m1 m2
+
+  let compare = list_compare term_compare
 
   (*i*)
   (*********************************************************************)
@@ -71,6 +72,7 @@ module MakePoly (V : Var) (C : Ring) = struct
     else F.fprintf fmt "%a*%a" C.pp c pp_monom m
 
   let pp fmt f =
+    let f = L.sort term_compare f in
     let rec go fmt ts = match ts with
       | [] -> F.fprintf fmt ""
       | (m,c)::ts when C.compare c C.zero < 0->
