@@ -278,8 +278,9 @@ let eval_cmd (inputs,odefs,oparams,mwcond) cmd =
     , None
     )
   | SetWinning(choices,conds), None ->
-    let ineqs = conc_map (function (f,InEq) -> [ rpoly_to_wpoly gvars choices oparams f ] | (_,Eq)   -> []) conds in
-    let eqs   = conc_map (function (f,Eq)   -> [ rpoly_to_wpoly gvars choices oparams f ] | (_,InEq) -> []) conds in
+    let conv = rpoly_to_wpoly gvars choices oparams in
+    let ineqs = conc_map (function (f,InEq) -> [ conv f ] | (_,Eq)   -> []) conds in
+    let eqs   = conc_map (function (f,Eq)   -> [ conv f ] | (_,InEq) -> []) conds in
     ( inputs
     , odefs
     , oparams

@@ -39,11 +39,5 @@ let wrap_error f s0 =
     failwith err
   | InteractiveLexer.Error msg ->
     raise (failwith (Printf.sprintf "%s" msg))
-  (*
-  | InvalidAssumption _ as e->
-    raise e
-  | _ ->
-    failwith "Unknown error while lexing/parsing."
-  *)
 
 let p_cmds = wrap_error (InteractiveParser.cmds_t InteractiveLexer.lex)
