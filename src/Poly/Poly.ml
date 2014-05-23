@@ -71,9 +71,17 @@ module MakePoly (V : Var) (C : Ring) = struct
     else F.fprintf fmt "%a*%a" C.pp c pp_monom m
 
   let pp fmt f =
+    let rec go fmt ts = match ts with
+      | [] -> F.fprintf fmt ""
+      | (m,c)::ts when C.compare c C.zero < 0->
+        F.fprintf fmt "- %a %a" pp_term (m,C.opp c) go ts
+      | t::ts ->
+        F.fprintf fmt "+ %a %a" pp_term t go ts
+    in
     match f with
-    | [] -> F.fprintf fmt "0"
-    | _  -> F.fprintf fmt "%a" (pp_list " + " pp_term) f
+    | []     -> F.fprintf fmt "0"
+    | t::ts  ->
+      F.fprintf fmt "%a %a" pp_term t go ts
   (*i*)
 
   (*********************************************************************)
