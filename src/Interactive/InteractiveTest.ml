@@ -52,8 +52,8 @@ let gd =
 
 let def_string =
   "input [X, Y] in G.\n"^
-  "oracle o(m:Fp) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + m*X*Y*A)."^
-  "oracle o'(w:Fp) = A <-$ G; A <-$ G; A <-$ G; return (A, Y*A, X*A + w*X*Y*A)."^
+  "oracle o1(m:Fp) = A <-$ G; return (A, Y*A, X*A + m*X*Y*A)."^
+  "oracle o2(w:Fp) = E <-$ G; return (E, Y*E, X*E + w*X*Y*E)."^
   "win (U:G, V:G, W:G, m':Fp) = ( V - U*X = 0 /\\ W - U*X + m'*U*X*Y = 0 /\\ U <> 0 /\\ m' - m <> 0 )."
 
 (*i*)

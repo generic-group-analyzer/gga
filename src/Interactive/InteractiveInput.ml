@@ -27,7 +27,7 @@ end) (IntRing)
 type rpoly = RP.t
 
 (*******************************************************************)
-(* \hd{Oracle definitions} *)
+(* \hd{Oracle definition} *)
 
 (* \ic{For the oracle return values, we use polynomials in
        $\ZZ[\vec{X},\vec{A},\vec{m}]$ where
@@ -226,8 +226,12 @@ let pp_cmd fmt cmd =
       (pp_list ", " RP.pp) fs
   | SetWinning(choices,conds) ->
     F.fprintf fmt "set_winning (%a) cond: %a"
-      (pp_list ", " (fun fmt (s,ty) -> pp_string fmt (s^":"^ty_to_string ty))) choices
-      (pp_list " /\\ " (fun fmt (f,cty) -> F.fprintf fmt "%a%s" RP.pp f (cty_to_string cty))) conds
+      (pp_list ", "
+         (fun fmt (s,ty) -> pp_string fmt (s^":"^ty_to_string ty)))
+      choices
+      (pp_list " /\\ "
+         (fun fmt (f,cty) -> F.fprintf fmt "%a%s" RP.pp f (cty_to_string cty)))
+      conds
 (*i*)
 
 let rpoly_to_opoly gvars params orvars p =
@@ -256,42 +260,51 @@ let rpoly_to_wpoly gvars choices oparams p =
   |> L.map (fun (m,c) -> (L.map conv_var m, c))
   |> WP.from_terms
 
-let eval_cmd (inputs,odefs,oparams,mwcond) cmd =
-  let gvars = conc_map (fun f -> RP.vars f) inputs |> sorted_nub compare in
-  match cmd,mwcond with
+let eval_cmd (inputs0,odefs0,oparams0,orvars0,mwcond0) cmd =
+  let gvars = conc_map (fun f -> RP.vars f) inputs0 |> sorted_nub compare in
+  match cmd,mwcond0 with
   | AddInput fs, None ->
-    ( inputs@fs
-    , odefs
-    , oparams
-    , mwcond
+    ( inputs0@fs
+    , odefs0
+    , oparams0
+    , orvars0
+    , mwcond0
     )
-  | AddOracle(on,params,orvars,fs), None ->
-    if L.exists (fun (p,_) -> L.mem p oparams) params
+  | AddOracle(oname,params,orvars,fs), None ->
+    if (L.length params <> L.length (sorted_nub compare (L.map fst params)))
+      then failwith "Two arguments with the same name in oracle definition";
+    if (L.length orvars <> L.length (sorted_nub compare orvars))
+      then failwith "Oracle samples two random variables with the same name";
+    if L.exists (fun (p,_) -> L.mem p oparams0) params
       then failwith "Cannot use the same parameter name in different oracles";
+    if L.exists (fun orv -> L.mem orv orvars0) orvars
+      then failwith "Cannot use the same random variable name in different oracles";
     if L.exists (fun (_,t) -> t = Group) params
       then failwith "Oracles with group arguments not supported";
-    if L.exists (fun (on',_) -> on = on') odefs
-      then failwith ("Oracle name used twice: "^on);
-    ( inputs
-    , odefs@[ (on, L.map (rpoly_to_opoly gvars params orvars) fs) ]
-    , oparams@( L.map fst params )
+    if L.exists (fun (oname',_) -> oname = oname') odefs0
+      then failwith ("Oracle name used twice: "^oname);
+    ( inputs0
+    , odefs0@[ (oname, L.map (rpoly_to_opoly gvars params orvars) fs) ]
+    , oparams0@( L.map fst params )
+    , orvars0@orvars
     , None
     )
   | SetWinning(choices,conds), None ->
-    let conv = rpoly_to_wpoly gvars choices oparams in
+    let conv = rpoly_to_wpoly gvars choices oparams0 in
     let ineqs = conc_map (function (f,InEq) -> [ conv f ] | (_,Eq)   -> []) conds in
     let eqs   = conc_map (function (f,Eq)   -> [ conv f ] | (_,InEq) -> []) conds in
-    ( inputs
-    , odefs
-    , oparams
+    ( inputs0
+    , odefs0
+    , oparams0
+    , orvars0
     , Some { wcond_ineqs = ineqs; wcond_eqs = eqs }
     )
   | _, Some _ ->
     failwith "setting the winning condition must be the last command"
 
 let eval_cmds cmds =
-  match List.fold_left eval_cmd ([], [], [], None) cmds with
-  | (_, _, _, None)   ->
+  match List.fold_left eval_cmd ([], [], [], [], None) cmds with
+  | (_, _, _, _, None)   ->
     failwith "no winning condition given"
-  | (inputs, odefs, _, Some wcond) ->
+  | (inputs, odefs, _, _, Some wcond) ->
     { gdef_inputs = inputs; gdef_odefs = odefs; gdef_wcond = wcond }
