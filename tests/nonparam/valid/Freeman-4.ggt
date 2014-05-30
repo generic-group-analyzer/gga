@@ -1,0 +1,16 @@
+maps G1 * G2 -> GT.
+
+input_left [ x, u, A, A*y, A*v, B, B*z, B*w, a, x*a, u*a, s, x*s, u*s, a*s+A*c1, x*a*s+A*y*c1, u*a*s+A*v*c1 ] in G1.
+
+input_right [ x, u, A, A*y, A*v, B, B*z, B*w, a, x*a, u*a, s, x*s, u*s, a*s+A*c1, x*a*s+A*y*c1, u*a*s+A*v*c1 ] in G1.
+
+input_left [ z*v-y*w, w-v, y-z, E*z*u-E*x*w, E*w-E*u, E*z-E*x, F*y*u-F*x*v, F*v-F*u, F*x-F*y, z*v*g-y*w*g+E*z*u*c2-E*x*w*c2, w*g-v*g+E*w*c2-E*u*c2, y*g-z*g+E*z*c2-E*x*c2 ] in G2.
+
+input_right [ z*v-y*w, w-v, y-z, E*z*u-E*x*w, E*w-E*u, E*z-E*x, F*y*u-F*x*v, F*v-F*u, F*x-F*y, z*v*g-y*w*g+E*z*u*c2-E*x*w*c2, w*g-v*g+E*w*c2-E*u*c2, y*g-z*g+E*z*c2-E*x*c2 ] in G2.
+
+input_left [x*w*a*g - x*v*a*g + y*u*a*g - y*w*a*g - z*u*a*g + z*v*a*g ] in GT.
+input_right [x*w*a*g - x*v*a*g + y*u*a*g - y*w*a*g - z*u*a*g + z*v*a*g ] in GT.
+
+
+input_left [x*w*a*g*s - x*v*a*g*s + y*u*a*g*s - y*w*a*g*s - z*u*a*g*s + z*v*a*g*s ] in GT.
+input_right [ Y ] in GT.
