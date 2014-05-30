@@ -1,0 +1,6 @@
+(* 2-SCasc in bilinear group *)
+maps G1 * G1 -> GT.
+
+input [ a, 0, 1, b, 0, 1 ] in G1.
+input_left [ a*x, x + b*y, y ] in G1.
+input_right [ x, y, z ] in G1.
