@@ -56,6 +56,8 @@ interactivetest:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Interactive/InteractiveTest.native
 	./InteractiveTest.native
 
+webdoc:
+	pandoc -s -S --toc -c buttondown.css web/help.md > web/help.html
 
 clean:
 	$(OCAMLBUILD) -clean
