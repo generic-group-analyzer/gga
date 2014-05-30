@@ -1,6 +1,8 @@
 (* 2-SCasc in bilinear group *)
+(* The 0 and 1 entries of the matrix have been removed from the list *)
+(*  since 1 is implicitly already included and 0 can't add any relations *)
 maps G1 * G1 -> GT.
 
-input [ a, 0, 1, b, 0, 1 ] in G1.
+input [ a, b ] in G1.
 input_left [ a*x, x + b*y, y ] in G1.
 input_right [ x, y, z ] in G1.
