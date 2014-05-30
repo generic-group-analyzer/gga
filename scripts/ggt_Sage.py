@@ -121,7 +121,7 @@ def interp(req):
            , "attacks": attacks
            , "LK": matrixToInt(LK)
            , "RK": matrixToInt(RK)
-           , "exc_ub" : exc_ub }
+           , "exc_ub" : int(exc_ub) }
 
   elif cmd == "exit":
     print "end\n"
@@ -138,7 +138,7 @@ def main():
     cmd = json.loads(inp)
     cmd = _parseJSON(cmd)
     res = interp(cmd)
-    # debug(str(res))
+    #debug(str(res))
     print(json.dumps(res))
     sys.stdout.flush()
   except Exception:
