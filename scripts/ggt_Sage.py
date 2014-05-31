@@ -66,6 +66,30 @@ def vecToInt(v):
 def matrixToInt(M):
   return [ vecToInt(v) for v in M ]
 
+def translate_monom(PR,vs):
+  res = None
+  for v in vs:
+    if res is None:
+      res = PR(v)
+    else:
+      res = res * PR(v)
+  return (PR(1) if res is None else res)
+
+def translate_poly(PR,ts):
+  res = None
+  for t in ts:
+    (m,c) = t
+    pm = translate_monom(PR,m)
+    pt = (pm if c == 1 else c * pm)
+    #debug("res: " + str(res) + "\tts: " + str(ts) + "\tpm: " + str(pm) + "\tpt: " + str(res + pt))
+    if res is None:
+      res = pt
+    else:
+      #debug("else")
+      res += pt
+    #debug("res after: "+str(res)+"\n")
+  return (PR(0) if res is None else res)
+
 ###############################################################################
 # Interpreter for GGT commands
 ###############################################################################
@@ -122,6 +146,45 @@ def interp(req):
            , "LK": matrixToInt(LK)
            , "RK": matrixToInt(RK)
            , "exc_ub" : int(exc_ub) }
+
+  elif cmd == "checkSat":
+    pvars = req['vars']
+    zero = req['zero']
+    nzero = req['nzero']
+
+    def rabvar(i): return "R__%i"%(i)
+    rvars = [ "R__%i"%(i) for i in range(len(nzero)) ]
+
+    debug(str(pvars))
+    debug(str(zero))
+    debug(str(nzero))
+
+    PR = PolynomialRing(QQ,pvars+rvars)
+    debug(str(PR))
+    pzero = [ translate_poly(PR,f) for f in zero ]
+    pnzero = [ [ translate_poly(PR,f) for f in disj ] for disj in nzero ]
+    debug("pzero" + str(pzero))
+    debug("pnzero " + str(pnzero))
+
+    rabino_polys = []
+    for i in range(len(pnzero)):
+      disj = pnzero[i]
+      if len(disj) == 1:
+        f = disj[0]
+      else:
+        f = PR.sum( [ f*f for f in disj ])
+      rabino_polys += [PR(1) - f * PR(rabvar(i)) ]
+
+    debug("rabino_polys " + str(rabino_polys))
+
+    J = PR.ideal(pzero+rabino_polys)
+    J2 = J.groebner_basis('libsingular')
+    if len(J2) == 1 and J2[0].is_constant:
+      return { "ok" : True
+             , "contradictory" : True }
+    else:
+      return { "ok" : True
+             , "contradictory" : False }
 
   elif cmd == "exit":
     print "end\n"

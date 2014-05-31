@@ -22,6 +22,7 @@ module IntRing = struct
   let from_int i = big_int_of_int i
   let equal = eq_big_int
   let compare = compare_big_int
+  let use_parens = false
 end
 
 (*********************************************************************)
@@ -69,21 +70,26 @@ module MakePoly (V : Var) (C : Ring) = struct
   let pp_term fmt (m,c) =
     if m = [] then F.fprintf fmt "%a" C.pp c
     else if C.equal c C.one then pp_monom fmt m
+    else if C.use_parens then F.fprintf fmt "[%a]*%a" C.pp c pp_monom m
     else F.fprintf fmt "%a*%a" C.pp c pp_monom m
 
-  let pp fmt f =
+  let pp_ break fmt f =
     let f = L.sort term_compare f in
     let rec go fmt ts = match ts with
       | [] -> F.fprintf fmt ""
       | (m,c)::ts when C.compare c C.zero < 0->
-        F.fprintf fmt " - %a%a" pp_term (m,C.opp c) go ts
+        F.fprintf fmt " %s- %a%a" (if break then "\n" else "") pp_term (m,C.opp c) go ts
       | t::ts ->
-        F.fprintf fmt " + %a%a" pp_term t go ts
+        F.fprintf fmt " %s+ %a%a" (if break then "\n" else "") pp_term t go ts
     in
     match f with
     | []     -> F.fprintf fmt "0"
     | t::ts  ->
       F.fprintf fmt "%a%a" pp_term t go ts
+
+  let pp = pp_ false
+
+  let pp_break = pp_ true
   (*i*)
 
   (*********************************************************************)
@@ -120,7 +126,7 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let one  = [([], C.one)]
   
-  let zero = []
+  let zero : t = []
   
   let var v = [([v],C.one)]
   

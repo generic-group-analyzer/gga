@@ -2,4 +2,4 @@ input [1] in G. (* adversary is given X,Y in G1, challenge and oracle are in G2 
 
 oracle o1(m:Fp) = A <-$ G; return (A, A*X + m*A*Y).
 
-win (U:G,V:G,m':Fp) = ( V - U*X - m'*U*Y = 0 /\ m <> m' /\ U <> 0 /\ m <> 0 /\ m' <> 0).
+win (U:G,V:G,mm:Fp) = ( V - U*X - mm*U*Y = 0 /\ m <> mm /\ U <> 0 /\ m <> 0 /\ mm <> 0).

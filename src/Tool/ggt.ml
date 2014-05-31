@@ -32,7 +32,16 @@ let main =
     | "interactive" ->
       let open InteractiveAnalyze in
       begin try
-        let res = analyze_from_string scmds in
+        let res = analyze_unbounded_from_string scmds in
+        F.printf "%a\n" Z3_Solver.pp_result res
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.printf "Invalid assumption: %s\n" err
+      end
+    | "interactive_bounded" ->
+      let open InteractiveAnalyze in
+      begin try
+        let res = analyze_bounded_from_string scmds 5 in
         F.printf "%a\n" Z3_Solver.pp_result res
       with
         InteractiveInput.InvalidAssumption err ->

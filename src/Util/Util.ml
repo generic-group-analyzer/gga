@@ -37,6 +37,14 @@ let indices xs =
 let zip_indices xs =
   let c = ref (-1) in L.map (fun x -> c := !c + 1; (!c,x)) xs
 
+let list_from_to i j0 =
+  let rec go acc j =
+    if j < i then acc
+    else go (j::acc) (j - 1)
+  in
+  if j0 < i then failwith "list_from_to: upper bound < lower bound"
+  else go [] j0
+
 (* \ic{%
    [mapi' f xs] returns the list where the [i]-th
    element is computed as [f i xs[i]] using $1$-indexing.} *)

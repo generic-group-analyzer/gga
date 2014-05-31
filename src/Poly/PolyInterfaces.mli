@@ -20,6 +20,7 @@ module type Ring = sig
   val from_int : int -> t
   val equal : t -> t -> bool
   val compare : t -> t -> int
+  val use_parens : bool
 end
 
 module type Poly = sig
@@ -31,12 +32,13 @@ module type Poly = sig
   val pp_monom : Format.formatter -> monom -> unit
   val pp_term : Format.formatter -> term -> unit
   val pp : Format.formatter -> t -> unit
+  val pp_break : Format.formatter -> t -> unit
   val add : t -> t -> t
   val opp : t -> t
   val minus : t -> t -> t
   val mult : t -> t -> t
   val one : t
-  val zero : 'a list
+  val zero : t
   val lmult : t list -> t
   val ladd : t list -> t
   val var : var -> t

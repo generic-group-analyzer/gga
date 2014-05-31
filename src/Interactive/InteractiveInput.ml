@@ -7,6 +7,7 @@
 (*i*)
 open Util
 open Poly
+open StringPoly
 (*i*)
 
 exception InvalidAssumption of string
@@ -19,12 +20,7 @@ exception InvalidAssumption of string
 
 type rvar_id = string
 
-module RP = MakePoly(struct
-  type t = rvar_id
-  let pp = pp_string
-  let equal = (=)
-  let compare = compare
-end) (IntRing)
+module RP = SP
 
 type rpoly = RP.t
 
@@ -227,6 +223,15 @@ let simp_gdef gdef =
   in
   { gdef with
     gdef_odefs = List.map (fun (o,ops) -> (o, simp_orcl [] ops)) gdef.gdef_odefs }
+
+let gchoices_of_gdef gdef =
+  let eqs = gdef.gdef_wcond.wcond_eqs in
+  let ineqs = gdef.gdef_wcond.wcond_ineqs in  
+  conc_map WP.vars (eqs@ineqs)
+  |> L.map (function GroupChoice(v) -> Some(v) | _ -> None)
+  |> catSome
+  |> sorted_nub compare
+
 
 (*i*)
 let pp_gdef fmt gdef =

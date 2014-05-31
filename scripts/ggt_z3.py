@@ -179,20 +179,20 @@ def _parseJSON(obj):
       newobj = obj
   return newobj
 
-def translate_monom(vs):
+def translate_monom(constr,vs):
   res = None
   for v in vs:
     if res is None:
-      res = Int(v)
+      res = constr(v)
     else:
-      res = res * Int(v)
+      res = res * constr(v)
   return (1 if res is None else res)
 
-def translate_poly(ts):
+def translate_poly(constr,ts):
   res = None
   for t in ts:
     (m,c) = t
-    pm = translate_monom(m)
+    pm = translate_monom(constr,m)
     pt = (pm if c == 1 else c * pm)
     #debug("res: " + str(res) + "\tts: " + str(ts) + "\tpm: " + str(pm) + "\tpt: " + str(res + pt))
     if res is None:
@@ -220,10 +220,10 @@ def interp(req):
 
     for a,b in eqs:
       #debug("%s = %s"%(str(translate_poly(a)), str(translate_poly(b))))
-      s.add(translate_poly(a) == translate_poly(b))
-    for a,b in ineqs:
+      s.add(translate_poly(Int,a) == translate_poly(Int,b))
+    for a,b in leqs:
       # debug("%s <= %s"%(str(translate_poly(a)), str(translate_poly(b))))
-      s.add(translate_poly(a) <= translate_poly(b))
+      s.add(translate_poly(Int,a) <= translate_poly(Int,b))
     #print s.sexpr()
     #debug(str(s.sexpr()))
     #print(s.check())
@@ -249,6 +249,30 @@ def interp(req):
     #print s.sexpr()
     #debug(str(s.sexpr()))
     #print(s.check())
+    #res = s.check()
+    #debug(str(res))
+    if res == sat:
+      return { "ok": True
+             , "res": "sat"
+             , "model": str(s.model())}
+    elif res == unsat:
+      return { "ok": True
+             , "res": "unsat" }
+    else:
+      return { "ok": True
+             , "res": "unknown" }
+
+  if cmd == "boundedCounter":
+    zero = req['zero']
+    nzero = req['nzero']
+
+    s = Solver()
+    for f in zero:
+      s.add( translate_poly(Real,f) == 0 )
+    for disj in nzero:
+      s.add( Not(And([ (translate_poly(Real,f) == 0) for f in disj])) )
+
+    #debug(str(s.sexpr()))
     res = s.check()
     #debug(str(res))
     if res == sat:

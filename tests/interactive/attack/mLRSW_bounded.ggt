@@ -2,6 +2,6 @@ input [1, A, B, U, V] in G.
 
 oracle o1(m:Fp) = R <-$ G; return (m*U*R + A*B, V*R + A*B, R).
 
-win (X:G, S1:G, S2:G, m':Fp) =
-  ( S1 = m'*U*X + A*B /\ S2 = V*X + A*B
-    /\ m <> m' /\ X <> 0 /\ m <> 0 /\ m' <> 0).
+win (X:G, S1:G, S2:G, mm:Fp) =
+  ( S1 = mm*U*X + A*B /\ S2 = V*X + A*B
+    /\ m <> mm /\ X <> 0 /\ m <> 0 /\ mm <> 0).

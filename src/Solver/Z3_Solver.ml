@@ -89,3 +89,20 @@ let check_sat constrs =
     end
   else
     Error ("Z3 wrapper returned an error:"^(get_assoc "error" mres |> get_string))
+
+let find_counter zero_constrs nzero_constrs  =
+  let req =
+    `Assoc [ ("cmd", `String "boundedCounter"); ("zero", zero_constrs); ("nzero", nzero_constrs) ]
+  in
+  let sres = call_z3 (YS.to_string req^"\n") in
+  let mres = YS.from_string sres in
+  if get_assoc "ok" mres |> get_bool
+  then
+    begin match get_assoc "res" mres |> get_string with
+    | "sat"     -> Attack (get_assoc "model" mres |> get_string)
+    | "unsat"   -> Valid
+    | "unknown" -> Unknown
+    | _         -> Error "Error communicating with Z3 wrapper, expected sat/unsat/unknown."
+    end
+  else
+    Error ("Z3 wrapper returned an error:"^(get_assoc "error" mres |> get_string))

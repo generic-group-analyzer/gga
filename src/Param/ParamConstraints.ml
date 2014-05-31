@@ -1,22 +1,15 @@
 (*s Generation of constraints for parametric problems. *)
 (*i*)
-open Poly
+open StringPoly
 open Util
 open ParamInput
+
+module CP = SP
 (*i*)
 
 
 (*******************************************************************)
 (* \hd{Constraints} *)
-
-(* \ic{We use strings as variables for constraint polyomials.} *)
-module CP = MakePoly(
-  struct
-    type t = string
-    let pp = pp_string
-    let equal = (=)
-    let compare = compare
-  end) (IntRing)
 
 (* \ic{A constraint either represents $a = b$ or $a \leq b$.} *)
 type constr_type = Eq | Leq

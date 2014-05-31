@@ -54,3 +54,21 @@ let compare_kernel lm rm =
         ("compare_kernel: Sage wrapper returned an error: "^
          (get_assoc "error" mres |> get_string))
     )
+
+let check_sat zero_constrs nzero_constrs vars =
+  let req = 
+    `Assoc [ ("cmd",`String "checkSat")
+           ; ("zero",zero_constrs)
+           ; ("nzero",nzero_constrs)
+           ; ("vars", vars)]
+  in
+  let sres = call_Sage (YS.to_string req^"\n") in
+  let mres = YS.from_string sres in
+  if get_assoc "ok" mres |> get_bool
+    then (
+      get_assoc "contradictory" mres |> get_bool
+    ) else (
+      failwith
+        ("compare_kernel: Sage wrapper returned an error: "^
+         (get_assoc "error" mres |> get_string))
+    )
