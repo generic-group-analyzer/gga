@@ -271,6 +271,9 @@ let pp_option pp_some fmt o = match o with
   | Some(x) -> pp_some fmt x
   | None    -> Format.fprintf fmt " - "
 
+let pp_tuple sep p fmt (a,b) =
+  F.fprintf fmt "%a %s %a" p a sep p b
+
 let fsprintf fm = Format.fprintf Format.str_formatter fm
 
 let fsget _ = Format.flush_str_formatter ()

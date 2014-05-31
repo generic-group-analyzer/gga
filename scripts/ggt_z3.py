@@ -247,7 +247,7 @@ def interp(req):
     for c in constrs:
       s.add(trans_constr(c))
     #print s.sexpr()
-    debug(str(s.sexpr()))
+    #debug(str(s.sexpr()))
     #print(s.check())
     res = s.check()
     #debug(str(res))

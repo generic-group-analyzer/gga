@@ -196,6 +196,38 @@ type gdef = {
   gdef_wcond  : wcond;
 }
 
+(* \ic{Remove oracle outputs that are redundant because they can be computed from
+       the oracle inputs and other outputs.} *)
+let simp_gdef gdef =
+  let is_param = function Param(_) -> true | _ -> false in
+  let rec check xs ys =
+    match xs,ys with
+    | [], _ ->
+      L.for_all is_param ys
+    | x::xs, y::ys when x = y ->
+      check xs ys
+    | xs, y::ys when is_param y ->
+      check xs ys
+    | _ ->
+      false
+  in
+  let computable_from k s =
+    match OP.to_terms k, OP.to_terms s with
+    | [(vks,ck)],[(vss,_cs)] when not (IntRing.equal ck IntRing.zero) ->
+      check (L.sort compare vks) (L.sort compare vss)
+    | _ -> false
+  in
+  let rec simp_orcl ls rs =
+    match rs with
+    | []    -> L.rev ls
+    | r::rs ->
+      if L.exists (fun l -> computable_from l r) ls
+      then simp_orcl ls rs
+      else simp_orcl (r::ls) rs
+  in
+  { gdef with
+    gdef_odefs = List.map (fun (o,ops) -> (o, simp_orcl [] ops)) gdef.gdef_odefs }
+
 (*i*)
 let pp_gdef fmt gdef =
   F.fprintf fmt "input [%a] in G.\n\n%a\n\n%a"

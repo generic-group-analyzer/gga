@@ -98,7 +98,7 @@ val pp_fs_rvars :
 
 (* val db_idx_of_var : var -> (int * InteractiveInput.oname) option *)
 
-(* val db_idx_of_param : param -> (int * InteractiveInput.oname) option *)
+val db_idx_of_param : param -> (int * InteractiveInput.oname) option
 
 (* val db_idx_of_term : param list -> var list -> (int * InteractiveInput.oname) list *)
 

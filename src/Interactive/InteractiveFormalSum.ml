@@ -130,8 +130,8 @@ let pp_param fmt p =
   match p with
   | OParam((m,_o),i)  -> F.fprintf fmt "%s_i%i" m i
   | FieldChoice(w)    -> F.fprintf fmt "%s" w
-  | ICoeff(u,j)       -> F.fprintf fmt "%s_%i" u j
-  | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%s_%i_i%i" u j i
+  | ICoeff(u,j)       -> F.fprintf fmt "%si_%i" u j
+  | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%so_%i_i%i" u j i
 
 let pp_monom fmt m = pp_list " * " pp_var fmt m
 
@@ -412,9 +412,12 @@ let pp_fsp_term fmt (c,ps) =
   then F.fprintf fmt "%a" pp_params ps
   else F.fprintf fmt "%a * %a" IR.pp c pp_params ps
 
-let pp_fsp fmt fsp = F.fprintf fmt "%a" (pp_list " + " pp_fsp_term) fsp
+let pp_fsp fmt fsp =
+  match fsp with
+  | [] -> F.fprintf fmt "0"
+  | _  -> F.fprintf fmt "%a" (pp_list " + " pp_fsp_term) fsp
 
-let pp_quant fmt (i,o) = F.fprintf fmt "i%i in %s" i o
+let pp_quant fmt (i,o) = F.fprintf fmt "i%i in [q_%s]" i o
 
 let pp_binders fmt binders =
   match binders with
@@ -423,13 +426,8 @@ let pp_binders fmt binders =
 
 let pp_param_constr rel fmt (binders,fsp) =
   let pos, neg = L.partition (fun (c,_) -> IR.compare c IR.zero > 0) fsp in
-  begin match neg with
-  | [] ->
-    F.fprintf fmt "%a%a %s 0"  pp_binders binders pp_fsp fsp rel
-  | _ -> 
-    let neg = L.map (fun (c,ps) -> (IR.opp c,ps)) neg in
-    F.fprintf fmt "%a%a %s %a"  pp_binders binders pp_fsp pos rel pp_fsp neg
-  end
+  let neg = L.map (fun (c,ps) -> (IR.opp c,ps)) neg in
+  F.fprintf fmt "%a%a %s %a"  pp_binders binders pp_fsp pos rel pp_fsp neg
 
 let pp_param_constr_ineq fmt (binders,fsp) =
   match binders with
@@ -439,9 +437,18 @@ let pp_param_constr_ineq fmt (binders,fsp) =
     F.fprintf fmt "exists %a: %a <> 0" (pp_list ", " pp_quant) binders pp_fsp fsp
 
 let pp_fsr_term fmt (fsp,rvs) =
-  F.fprintf fmt "[%a](%a)" pp_fsp fsp (pp_list " * " pp_var) rvs
+  let binder =
+    if L.exists (fun v -> db_idx_of_var v <> None) rvs
+    then "Sum_{i0 in [q]} "
+    else ""
+  in
+  match rvs with
+  | [] -> 
+    F.fprintf fmt "@[%s[%a]@]" binder pp_fsp fsp
+  | _ -> 
+    F.fprintf fmt "@[%s[%a](%a)@]" binder pp_fsp fsp (pp_list " * " pp_var) rvs
 
 let pp_fs_rvars fmt fsr =
-  F.fprintf fmt "%a" (pp_list " + " pp_fsr_term) fsr
+  F.fprintf fmt "@[%a@]" (pp_list "@.+ " pp_fsr_term) fsr
 
 (*i*)
