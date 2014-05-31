@@ -130,8 +130,8 @@ let pp_param fmt p =
   match p with
   | OParam((m,_o),i)  -> F.fprintf fmt "%s_i%i" m i
   | FieldChoice(w)    -> F.fprintf fmt "%s" w
-  | ICoeff(u,j)       -> F.fprintf fmt "%si_%i" u j
-  | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%so_%i_i%i" u j i
+  | ICoeff(u,j)       -> F.fprintf fmt "%s_I_%i" u j
+  | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%s_O_%i_i%i" u j i
 
 let pp_monom fmt m = pp_list " * " pp_var fmt m
 

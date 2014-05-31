@@ -309,10 +309,9 @@ let gdef_to_constrs gdef =
   F.printf "#########################################################\n";
 
   F.printf "Winning conditions:\n";
-  F.printf "(for the chosen group element U in the winning condition\n";
-  F.printf " we use Ui_j for the coefficient of the j-th adversary input\n";
-  F.printf " we use Uo_j_i0 for the coefficient of the j-th oracle output in the i0-th query,\n";
-  F.printf " terms t with indices i0 must be interpreted as Sum_{i0} t)\n\n";
+  F.printf "(for the chosen group element U in the winning condition, we use\n";
+  F.printf " U_I_j for the coefficient of the j-th adversary input and\n";
+  F.printf " U_O_j_i0 for the coefficient of the j-th oracle output in the i0-th query)\n\n";
 
   List.iter
     (fun e ->
