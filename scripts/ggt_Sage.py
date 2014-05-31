@@ -147,9 +147,15 @@ def main():
       print(json.dumps({ 'ok': False
                        , 'error': "unknown error" }))
 
+def test():
+  print interp(
+    { 'cmd': "compareKernel"
+    , 'LM': [[7,0,1,0],[0,1,2,0],[0,1,2,0]]
+    , 'RM': [[7,0,1,0],[0,1,2,0],[0,1,2,0]]
+    })
+
 if __name__ == "__main__":
-  # print interp(
-  #   { 'cmd': "leftKernel"
-  #   , 'M': [[7,0,1,0],[0,1,2,0],[0,1,2,0]]
-  #   })
-  main()
+  if "test" in sys.argv:
+    test()
+  else:
+    main()
