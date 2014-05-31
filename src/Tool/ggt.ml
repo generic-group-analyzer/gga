@@ -29,6 +29,15 @@ let main =
         NonParamInput.InvalidAssumption err ->
           F.printf "Invalid assumption: %s\n" err
       end
+    | "interactive" ->
+      let open InteractiveAnalyze in
+      begin try
+        let res = analyze_from_string scmds in
+        F.printf "%a\n" Z3_Solver.pp_result res
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.printf "Invalid assumption: %s\n" err
+      end
     | s ->
       F.printf "Invalid command: %s\n" s
 

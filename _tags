@@ -1,7 +1,8 @@
 true: -traverse
 true: bin_annot
+<src/Interactive/InteractiveAnalyze.*>: package(yojson)
 <src/Tool> or <src/Poly> or <src/Util> or <src/Param>: include
-<src/NonParam> or <src/Solver>: include
+<src/NonParam> or <src/Solver> or <src/Interactive>: include
 <src/Tool/ggt.*>  or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix)
 <src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(oUnit)
 <src/NonParam/NonParamTest.*>: package(num), package(oUnit), package(yojson),package(str)

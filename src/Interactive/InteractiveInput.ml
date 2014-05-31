@@ -1,5 +1,5 @@
-(* s Input for interactive assumptions. We assume that there is only one group for now, i.e., the setting
-       is equivalent to the generic group setting.
+(*s Input for interactive assumptions. We assume that there is only one group for now,
+    i.e., the setting is equivalent to the generic group setting.
 %  
        Note that this is the case for most computational problems where
        a bilinear map that does not occur in the input, oracle, and
@@ -8,6 +8,8 @@
 open Util
 open Poly
 (*i*)
+
+exception InvalidAssumption of string
 
 (*******************************************************************)
 (* \hd{Adversary input definition} *)
@@ -39,12 +41,12 @@ type rpoly = RP.t
        sample $\vec{A} = freshvars(\vec{f})$ in $\group$,
        return $(f_1(\vec{X}, \vec{A}, \vec{m}),\ldots,
                 f_{|\vec{f}|}(\vec{X}, \vec{A}, \vec{m}))$.} *)
-type param_id = string
+type oparam_id = string
 type orvar_id = string
 
 (* \ic{Variables in oracle polynomials.} *)
 type ovar = 
-  | Param of param_id
+  | Param of oparam_id
   | SRVar of rvar_id
   | ORVar of orvar_id
 
@@ -73,8 +75,14 @@ type odef = opoly list
 let pp_opoly fmt opolys =
   let get_param v = match v with Param s -> [s] | _ -> [] in
   let get_orvar v = match v with ORVar s -> [s] | _ -> [] in
-  let params = conc_map (fun f -> conc_map get_param (OP.vars f)) opolys in
-  let orvars = conc_map (fun f -> conc_map get_orvar (OP.vars f)) opolys in
+  let params =
+    conc_map (fun f -> conc_map get_param (OP.vars f)) opolys
+    |> sorted_nub compare
+  in
+  let orvars =
+    conc_map (fun f -> conc_map get_orvar (OP.vars f)) opolys
+    |> sorted_nub compare
+  in
   F.fprintf fmt "(%a) = %a; return (%a)"
     (pp_list ", " (fun fmt -> F.fprintf fmt "%s:Fq")) params
     (pp_list "; " (fun fmt -> F.fprintf fmt "%s <-$ G")) orvars
@@ -102,7 +110,7 @@ type fchoice_id = string
 type wvar = 
   | GroupChoice of gchoice_id
   | FieldChoice of fchoice_id
-  | OParam      of param_id
+  | OParam      of oparam_id
   | RVar        of rvar_id
 
 (*i*)
@@ -209,8 +217,8 @@ type cond_type = Eq | InEq
        of variables.} *)
 type cmd =
   | AddInput   of rpoly list
-  | AddOracle  of oname * (param_id * ty) list * orvar_id list * rpoly list
-  | SetWinning of (param_id * ty) list * (rpoly * cond_type) list
+  | AddOracle  of oname * (oparam_id * ty) list * orvar_id list * rpoly list
+  | SetWinning of (oparam_id * ty) list * (rpoly * cond_type) list
 
 (*i*)
 let pp_cmd fmt cmd =
@@ -234,28 +242,38 @@ let pp_cmd fmt cmd =
       conds
 (*i*)
 
-let rpoly_to_opoly gvars params orvars p =
+let rpoly_to_opoly _gvars params orvars p =
   let params = List.map fst params in
   let conv_var v =
     if L.mem v params then Param(v)
     else if L.mem v orvars then ORVar(v)
-    else if L.mem v gvars then SRVar(v)
+    else SRVar(v)
+    (* 
+    else if L.mem v gvars then 
     else failwith ("undefined variables in oracle definition: "^v)
+    *)
   in
   RP.to_terms p
   |> L.map (fun (m,c) -> (L.map conv_var m, c))
   |> OP.from_terms
 
-let rpoly_to_wpoly gvars choices oparams p =
+let rpoly_to_wpoly _gvars choices oparams p =
   let fchoices = conc_map (function (v,Field) -> [v] | _ -> []) choices in
   let gchoices = conc_map (function (v,Group) -> [v] | _ -> []) choices in
+  let has_group_choice = ref false in
+  let has_oparam       = ref false in  
   let conv_var v =
-    if L.mem v oparams then OParam(v)
+    if L.mem v oparams then (has_oparam := true; OParam(v))
     else if L.mem v fchoices then FieldChoice(v)
-    else if L.mem v gchoices then GroupChoice(v)
+    else if L.mem v gchoices then (has_group_choice := true; GroupChoice(v))
+    else RVar(v)
+    (*
     else if L.mem v gvars    then RVar(v)
     else failwith ("undefined variables in winning condition definition: "^v)
+    *)
   in
+  if !has_oparam && !has_group_choice then
+    failwith "Polynomials that contain both oracle parameter and group choice not supported";
   RP.to_terms p
   |> L.map (fun (m,c) -> (L.map conv_var m, c))
   |> WP.from_terms
@@ -275,10 +293,6 @@ let eval_cmd (inputs0,odefs0,oparams0,orvars0,mwcond0) cmd =
       then failwith "Two arguments with the same name in oracle definition";
     if (L.length orvars <> L.length (sorted_nub compare orvars))
       then failwith "Oracle samples two random variables with the same name";
-    if L.exists (fun (p,_) -> L.mem p oparams0) params
-      then failwith "Cannot use the same parameter name in different oracles";
-    if L.exists (fun orv -> L.mem orv orvars0) orvars
-      then failwith "Cannot use the same random variable name in different oracles";
     if L.exists (fun (_,t) -> t = Group) params
       then failwith "Oracles with group arguments not supported";
     if L.exists (fun (oname',_) -> oname = oname') odefs0
@@ -300,7 +314,7 @@ let eval_cmd (inputs0,odefs0,oparams0,orvars0,mwcond0) cmd =
     , Some { wcond_ineqs = ineqs; wcond_eqs = eqs }
     )
   | _, Some _ ->
-    failwith "setting the winning condition must be the last command"
+    failwith "Setting the winning condition must be the last command"
 
 let eval_cmds cmds =
   match List.fold_left eval_cmd ([], [], [], [], None) cmds with

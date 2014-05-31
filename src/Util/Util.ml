@@ -31,6 +31,12 @@ let group rel xs =
 let sorted_nub cmp xs =
   xs |> L.sort cmp |> group (fun a b -> cmp a b = 0) |> L.map L.hd
 
+let indices xs =
+  let c = ref (-1) in L.map (fun _ -> c := !c + 1; !c) xs
+
+let zip_indices xs =
+  let c = ref (-1) in L.map (fun x -> c := !c + 1; (!c,x)) xs
+
 (* \ic{%
    [mapi' f xs] returns the list where the [i]-th
    element is computed as [f i xs[i]] using $1$-indexing.} *)
@@ -38,6 +44,15 @@ let mapi' f = L.mapi (fun i x -> f (i+1) x)
 
 (* \ic{Composition of [concat] and [map].} *)
 let conc_map f xs = L.concat (L.map f xs)
+
+let catSome xs0 =
+  let rec go xs acc =
+    match xs with
+    | [] -> L.rev acc
+    | Some x::xs -> go xs (x::acc)
+    | None::xs   -> go xs acc
+  in
+  go xs0 []
 
 (* \ic{[from_opt f def ox] takes an option value [ox] and
        applies [f] if possible, otherwise def is returned.} *)
@@ -100,6 +115,12 @@ module Ss = Set.Make(struct type t = string let compare = compare end)
 
 (* \ic{Convert list of strings to set of strings.} *)
 let ss_of_list = L.fold_left (fun acc x -> Ss.add x acc) Ss.empty
+
+(* \ic{Set of int pairs.} *)
+module Sii = Set.Make(struct type t = int * int let compare = compare end)
+
+(* \ic{Convert list of in pairs to set of strings.} *)
+let sii_of_list = L.fold_left (fun acc x -> Sii.add x acc) Sii.empty
 
 (* \ic{Map where keys are strings.} *)
 module Ms = Map.Make(struct type t = string let compare = compare end)

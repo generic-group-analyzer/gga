@@ -21,6 +21,7 @@ PARAM_MODULES=Param/ParamInput.mli Param/ParamInput.ml \
 INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
   Interactive/InteractiveParser.mly \
   Interactive/InteractiveLexer.mll \
+  Interactive/InteractiveFormalSum.ml \
   Interactive/InteractiveAnalyze.ml \
   Interactive/InteractiveTest.ml
 
