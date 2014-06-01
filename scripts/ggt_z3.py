@@ -249,7 +249,7 @@ def interp(req):
     #print s.sexpr()
     #debug(str(s.sexpr()))
     #print(s.check())
-    #res = s.check()
+    res = s.check()
     #debug(str(res))
     if res == sat:
       return { "ok": True
