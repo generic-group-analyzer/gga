@@ -63,7 +63,7 @@ wsggt:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/wsggt.native
 
 webdoc:
-	pandoc -s -S --toc -c buttondown.css web/help.md > web/help.html
+	pandoc -s -S --toc -c buttondown.css README > web/help.html
 
 clean:
 	$(OCAMLBUILD) -clean

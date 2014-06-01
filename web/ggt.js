@@ -22,7 +22,7 @@ function log(s) {
 /* Websocket connection                                             */
 /* ******************************************************************/
 var wsServer = window.location.hostname ? window.location.hostname : "127.0.0.1";
-var webSocket = new ReconnectingWebSocket("ws://" + wsServer + ":9999/");
+var webSocket = new ReconnectingWebSocket("ws://" + wsServer + ":9998/");
 var firstConnect = true;
 
 //webSocket.onclose = function(evt) {

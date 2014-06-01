@@ -143,4 +143,4 @@ let main =
   (* start server *)
   print_endline "Open the following URL in your browser (websocket support required):\n";
   print_endline ("    file://"^Sys.getcwd ()^"/web/index.html\n\n");
-  Lwt_main.run (run_server !server_name "9999" >>= fun _ -> wait_forever ())
+  Lwt_main.run (run_server !server_name "9998" >>= fun _ -> wait_forever ())
