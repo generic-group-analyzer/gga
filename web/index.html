@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+  <link rel="stylesheet" href="css/bootstrap.css">
+  <meta charset="utf-8">
+    <title>Generic Group Analyzer</title>
+    <style type="text/css" media="screen">
+        .editor {
+            width: 600px;
+            height: 600px;
+            margin-right: 1em;
+            margin-top: 1em;
+        }
+        button {
+            width: 8em;
+            margin-right: 0.5em;
+        }
+        .locked {
+            background: rgba(50, 255, 50, 0.3);
+            position: absolute;
+        }
+        .processing {
+          background: rgba(255, 50, 50, 0.3);
+          position: absolute;
+        }
+        /* Reset the container */
+        .container {
+          max-width: none !important;
+          min-width: 95%;
+          padding-left: 0px;
+          /*border: 5px solid green;*/
+        }
+
+        /* Demonstrate the grids */
+        .col-md-12 {
+          padding-top: 0px;
+          padding-bottom: 0px;
+          padding-left: 0px;
+          /*border: 5px solid red;*/
+        }
+    </style>
+</head>
+<body style="background-color: rgba(35, 35, 35, 0.84);">
+<div class="container">
+  <div class="row" style="color: #ffffff">
+    <div class="col-md-12">
+      Press Ctrl-Return to analyze the given assumption.
+      <select id="mode">
+        <option value="nonparam">Non-parametric</option>
+        <option value="param">Parametric</option>
+        <option value="interactive">Interactive</option>
+        <option value="interactive_2">Interactive bounded (bound 2)</option>
+      </select>
+      (<a href="help.html" target="_blank">Open</a> help and examples)
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12">
+      <table>
+        <tbody>
+        <tr>
+          <td>
+            <div class="editor" id="editor-proof"></div>
+          </td>
+          <td>
+            <div class="editor" id="editor-message"></div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Modal -->
+  <div id="Open file_modal" class="modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header" style="text-align: center">
+          <h3>Open file</h3>
+        </div>
+        <div class="modal-body" >
+          <div style="height: 200px; text-align: center; vertical-align: 400px">
+            File 1
+          </div>
+        </div>
+        <div class="modal-footer"></div>
+      </div>
+    </div>
+  </div>
+  <script src="imported/jquery/jquery-1.10.2.min.js"></script>
+  <script src="imported/ace/ace.js"></script>
+  <script src="imported/ace/keybinding-emacs.js"></script>
+  <script src="imported/ace/mode-zoocrypt.js"></script>
+  <script src="imported/reconnecting-websocket.js"></script>
+  <script src="ggt.js"></script>
+</body>
+</html>
