@@ -69,6 +69,8 @@ let from_opt f def ox =
   | None   -> def
   | Some x -> f x
 
+let exc_to_opt f = try Some (f ()) with _ -> None
+
 (* \ic{[id] is the identity function} *)
 let id x = x
 

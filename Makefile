@@ -38,7 +38,7 @@ TOOL_FILES=$(addprefix src/,$(TOOL_MODULES))
 
 .PHONY: native doc paramtest
 
-all: native
+all: native wsggt
 
 native:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
@@ -58,6 +58,9 @@ nonparamtest:
 interactivetest:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Interactive/InteractiveTest.native
 	./InteractiveTest.native
+
+wsggt:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/wsggt.native
 
 webdoc:
 	pandoc -s -S --toc -c buttondown.css web/help.md > web/help.html
