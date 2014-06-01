@@ -2,6 +2,8 @@
 
 (*i*)
 open Util
+
+module S = String
 (*i*)
 
 let main =
@@ -38,10 +40,15 @@ let main =
         InteractiveInput.InvalidAssumption err ->
           F.printf "Invalid assumption: %s\n" err
       end
-    | "interactive_bounded" ->
+    | s when S.sub s 0 (S.length "interactive_") = "interactive_" ->
+      let pref = "interactive_" in
+      let remainder = S.sub s (S.length pref) (S.length s - S.length pref) in
+      let bound = try int_of_string remainder with Failure _ -> 3 in
       let open InteractiveAnalyze in
       begin try
-        let res = analyze_bounded_from_string scmds 5 in
+        F.printf "bound set to %i\n" bound;
+
+        let res = analyze_bounded_from_string scmds bound in
         F.printf "%a\n" Z3_Solver.pp_result res
       with
         InteractiveInput.InvalidAssumption err ->
