@@ -1,0 +1,2 @@
+input [1, X, X*X, X*X*X, X*X*X*X, X*X*X*X*X] in G.
+win (c:Fp, Y:G) = ( X*Y+c*Y = 1 ).
