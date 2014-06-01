@@ -43,7 +43,7 @@ type result =
 
 let pp_result fmt res =
   match res with
-  | Attack s -> F.fprintf fmt "Attack found: %s" s
+  | Attack s -> F.fprintf fmt "Attack:\n%s\nAttack found (see above)." s
   | Error  s -> F.fprintf fmt "Error: %s" s
   | Valid    -> F.fprintf fmt "Assumption is valid."
   | Unknown  -> F.fprintf fmt "Z3 returned unknown."
