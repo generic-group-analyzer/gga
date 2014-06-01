@@ -127,6 +127,7 @@ var editorMessage = ace.edit("editor-message");
 editorMessage.setTheme("ace/theme/eclipse");
 editorMessage.setHighlightActiveLine(false);
 editorMessage.renderer.setShowGutter(false);
+editorMessage.getSession().setTabSize(8);
 
 // resize windows
 function resizeAce() {
