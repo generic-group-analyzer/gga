@@ -3,6 +3,7 @@ open Websocket
 
 module YS = Yojson.Safe
 module F = Format
+module S = String
 
 let (>>=) = Lwt.bind
 
@@ -22,11 +23,11 @@ let process_eval mode scmds =
     let res = `Assoc [("cmd", `String "setGoal"); ("arg", `String s)] in
     Lwt.return (Frame.of_string (YS.to_string res))
   in
+  let _ = F.flush_str_formatter () in
+  let fmt = F.str_formatter in
   match mode with
   | "nonparam" ->
     let open NonParamAnalyze in
-    let _ = F.flush_str_formatter () in
-    let fmt = F.str_formatter in
     begin try
       let res = analyze_from_string scmds in
       F.fprintf fmt "%a\n" pp_result_info res;
@@ -39,6 +40,49 @@ let process_eval mode scmds =
       let s = F.flush_str_formatter () in
       return_msg s
     end
+  | "param" ->
+      let open Z3_Solver in
+      begin try
+        let res = ParamAnalyze.analyze_from_string F.err_formatter scmds in
+        F.fprintf fmt "%a\n" pp_result res;
+        let s = F.flush_str_formatter () in
+        return_msg s
+      with
+        ParamInput.InvalidAssumption err ->
+          F.fprintf fmt "Invalid assumption: %s\n" err;
+          let s = F.flush_str_formatter () in
+          return_msg s
+      end
+    | "interactive" ->
+      let open InteractiveAnalyze in
+      begin try
+        let res = analyze_unbounded_from_string scmds in
+        F.fprintf fmt "%a\n" Z3_Solver.pp_result res;
+        let s = F.flush_str_formatter () in
+        return_msg s
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.fprintf fmt "Invalid assumption: %s\n" err;
+          let s = F.flush_str_formatter () in
+          return_msg s
+      end
+    | s when S.sub s 0 (S.length "interactive_") = "interactive_" ->
+      let pref = "interactive_" in
+      let remainder = S.sub s (S.length pref) (S.length s - S.length pref) in
+      let bound = try int_of_string remainder with Failure _ -> 3 in
+      let open InteractiveAnalyze in
+      begin try
+        F.printf "bound set to %i\n" bound;
+        let res = analyze_bounded_from_string scmds bound in
+        F.fprintf fmt "%a\n" Z3_Solver.pp_result res;
+        let s = F.flush_str_formatter () in
+        return_msg s
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.fprintf fmt "Invalid assumption: %s\n" err;
+        let s = F.flush_str_formatter () in
+        return_msg s
+      end
   | _ -> 
     return_msg "unknown mode"
 
@@ -56,8 +100,14 @@ let process_frame frame =
          match get "cmd" with
          | `String "eval" ->
            begin match get "mode", get "cmds" with
-           | `String mode, `String cmds -> 
-             process_eval mode cmds
+           | `String mode, `String cmds ->
+             begin try
+               process_eval mode cmds
+             with
+               _ ->
+                 let res = `Assoc [("cmd", `String "setGoal"); ("arg", `String "Unknown error")] in
+                 Lwt.return (Frame.of_string (YS.to_string res))
+             end
            | _ -> process_unknown inp
            end
          | _              -> process_unknown inp)

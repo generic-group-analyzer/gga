@@ -67,12 +67,11 @@ let analyze_bounded_from_string s bound =
   let res = Sage_Solver.check_sat (`List zcs) (`List nzcs) (`List vars) in
   flush stdout;
   if res
-    then F.printf "Assumption valid\n"
+    then Z3_Solver.Valid
     else (
       let res = Z3_Solver.find_counter (`List zcs) (`List nzcs) in
-      F.printf "%a\n" Z3_Solver.pp_result res
-    );
-  exit 0
+      res
+    )
 
 let analyze_unbounded_from_string s = 
   let gdef = p_cmds s |> II.eval_cmds in
