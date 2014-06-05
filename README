@@ -7,7 +7,7 @@ Use 'make native' to compile the commandline tool 'ggt.native'.
 Use 'make wsggt' to compile the web-server tool 'wsggt.native'.
 
 You need an up-to-date ocaml installation with the packages
-'websocket', 'yojson', and 'ounit'.
+'websocket', 'menhir', 'yojson', and 'ounit'.
 
 Usually, the easiest way to achieve is by using opam [^opam]. Our tool
 uses Sage and Z3 as a backend.
@@ -17,9 +17,9 @@ wrapper written in Python. This requires the Z3 Python bindings [^Z3Py]
 to work. You can test the interaction of our tool with Sage and Z3
 by running './scripts/ggt_Sage.py test' and './scripts/ggt_z3.py test'
 
-[^opam]: http://opam.ocaml.org/doc/Quick_Install.html
-[^Z3Py]: http://rise4fun.com/z3py/tutorial - Using Z3Py Locally
-[^Sage]: http://www.sagemath.org
+[^opam]: [http://opam.ocaml.org/doc/Quick_Install.html](http://opam.ocaml.org/doc/Quick_Install.html)
+[^Z3Py]: [http://z3.codeplex.com](http://z3.codeplex.com) (you might have to set PYTHONPATH)
+[^Sage]: [http://www.sagemath.org](http://www.sagemath.org)
 
 
 ## Batch mode
@@ -68,6 +68,13 @@ Then we give the common input and afterwards the left and right
 input.
 
 See [tests/nonparam/](tests/nonparam/) for more examples.
+
+#### Composite-order assumptions
+
+We also support non-parametric composite-order assumptions.
+See [tests/nonparam/valid/subgroup_1.ggt](tests/nonparam/valid/subgroup_1.ggt)
+for an example. We use tuples of polynomials to define the exponents
+of the generators of the subgroups.
 
 ### Parametric
 
@@ -165,7 +172,7 @@ We are also currently extending this implementation with support
 for a restricted class of parametric assumption with indexed
 random variables like k-lin and k-BDH.
 
-[^IDDH]: www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf
+[^IDDH]: [www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf](www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf)
 
 ## Web interface
 

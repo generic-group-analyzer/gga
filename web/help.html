@@ -28,7 +28,7 @@
 <h2 id="installation"><a href="#installation">Installation</a></h2>
 <p>Use ‘make native’ to compile the commandline tool ‘ggt.native’.</p>
 <p>Use ‘make wsggt’ to compile the web-server tool ‘wsggt.native’.</p>
-<p>You need an up-to-date ocaml installation with the packages ‘websocket’, ‘yojson’, and ‘ounit’.</p>
+<p>You need an up-to-date ocaml installation with the packages ‘websocket’, ‘menhir’, ‘yojson’, and ‘ounit’.</p>
 <p>Usually, the easiest way to achieve is by using opam <sup><a href="#fn1" class="footnoteRef" id="fnref1">1</a></sup>. Our tool uses Sage and Z3 as a backend.</p>
 <p>For Sage<sup><a href="#fn2" class="footnoteRef" id="fnref2">2</a></sup>, you should be able to start ‘sage -python’. We use a Z3 wrapper written in Python. This requires the Z3 Python bindings <sup><a href="#fn3" class="footnoteRef" id="fnref3">3</a></sup> to work. You can test the interaction of our tool with Sage and Z3 by running ‘./scripts/ggt_Sage.py test’ and ‘./scripts/ggt_z3.py test’</p>
 <h2 id="batch-mode"><a href="#batch-mode">Batch mode</a></h2>
@@ -51,6 +51,8 @@ input_left [ X*Y ] in GT.
 input_right [ Z ] in GT.</code></pre>
 <p>We use <code>(*</code> and <code>*)</code> as comment markers, <code>G*</code> for group names, and uppercase identifiers for random variables. The adversary input is given as a polynomial “in the exponent”. Here, we specify the group setting by giving the isomorphisms and bilinear maps first. Then we give the common input and afterwards the left and right input.</p>
 <p>See <a href="tests/nonparam/">tests/nonparam/</a> for more examples.</p>
+<h4 id="composite-order-assumptions"><a href="#composite-order-assumptions">Composite-order assumptions</a></h4>
+<p>We also support non-parametric composite-order assumptions. See <a href="tests/nonparam/valid/subgroup_1.ggt">tests/nonparam/valid/subgroup_1.ggt</a> for an example. We use tuples of polynomials to define the exponents of the generators of the subgroups.</p>
 <h3 id="parametric"><a href="#parametric">Parametric</a></h3>
 <p>We use DHE as an example.</p>
 <pre><code>setting symmetric.           (* symmetric (leveled) multilinear map *)
@@ -101,10 +103,10 @@ win (U:G, V:G, W:G, mm:Fp) =
 <div class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>http://opam.ocaml.org/doc/Quick_Install.html<a href="#fnref1">↩</a></p></li>
-<li id="fn2"><p>http://www.sagemath.org<a href="#fnref2">↩</a></p></li>
-<li id="fn3"><p>http://rise4fun.com/z3py/tutorial - Using Z3Py Locally<a href="#fnref3">↩</a></p></li>
-<li id="fn4"><p>www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf<a href="#fnref4">↩</a></p></li>
+<li id="fn1"><p><a href="http://opam.ocaml.org/doc/Quick_Install.html">http://opam.ocaml.org/doc/Quick_Install.html</a><a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p><a href="http://www.sagemath.org">http://www.sagemath.org</a><a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p><a href="http://z3.codeplex.com">http://z3.codeplex.com</a> (you might have to set PYTHONPATH)<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p><a href="www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf">www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf</a><a href="#fnref4">↩</a></p></li>
 </ol>
 </div>
 </body>
