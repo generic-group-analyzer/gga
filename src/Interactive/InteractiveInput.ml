@@ -285,10 +285,10 @@ let rpoly_to_opoly _gvars params orvars p =
     if L.mem v params then Param(v)
     else if L.mem v orvars then ORVar(v)
     else SRVar(v)
-    (* 
+    (*i 
     else if L.mem v gvars then 
     else failwith ("undefined variables in oracle definition: "^v)
-    *)
+    i*)
   in
   RP.to_terms p
   |> L.map (fun (m,c) -> (L.map conv_var m, c))
@@ -304,10 +304,10 @@ let rpoly_to_wpoly _gvars choices oparams p =
     else if L.mem v fchoices then FieldChoice(v)
     else if L.mem v gchoices then (has_group_choice := true; GroupChoice(v))
     else RVar(v)
-    (*
+    (*i
     else if L.mem v gvars    then RVar(v)
     else failwith ("undefined variables in winning condition definition: "^v)
-    *)
+    i*)
   in
   if !has_oparam && !has_group_choice then
     failwith "Polynomials that contain both oracle parameter and group choice not supported";
