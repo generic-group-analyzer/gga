@@ -42,6 +42,7 @@
 %token GROUP
 %token FIELD
 
+%token EXP
 %token STAR
 %token PLUS
 %token MINUS
@@ -74,6 +75,7 @@ poly :
 | f = poly; MINUS; g = poly { RP.minus f g }
 | MINUS; f = poly           { RP.opp f }
 | LPAR;  f = poly; RPAR     { f }
+| f = poly; EXP; i = NAT    { RP.ring_exp f i }
 ;
 
 param_type :

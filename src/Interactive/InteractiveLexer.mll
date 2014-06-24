@@ -31,6 +31,7 @@ rule lex = parse
   | "+"     { PLUS }
   | "-"     { MINUS }
   | "*"     { STAR }
+  | "^"     { EXP }
   | "["     { LBRACK }
   | "]"     { RBRACK }
   | ","     { COMMA }
