@@ -18,6 +18,10 @@ module IntRing = struct
   let mult = mult_big_int
   let one  = unit_big_int
   let zero = zero_big_int
+  let rec ring_exp m n =
+    if n > 0 then mult m (ring_exp m (n-1))
+    else if n = 0 then one
+    else failwith "Negative exponent in IntRing"
   let ladd cs = L.fold_left (fun acc c -> add c acc) zero cs
   let from_int i = big_int_of_int i
   let equal = eq_big_int
@@ -127,6 +131,11 @@ module MakePoly (V : Var) (C : Ring) = struct
   let one  = [([], C.one)]
   
   let zero : t = []
+
+  let rec ring_exp f n =
+    if n > 0 then mult f (ring_exp f (n-1)) 
+    else if n = 0 then one
+    else failwith "Negative exponent in for polynomial"
   
   let var v = [([v],C.one)]
   

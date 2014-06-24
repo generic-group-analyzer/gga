@@ -52,6 +52,7 @@ module PPolyRing = struct
   let add  = PP.add
   let opp  = PP.opp
   let mult = PP.mult
+  let ring_exp = PP.ring_exp
   let one  = PP.one
   let zero : PP.t = PP.zero
   let ladd cs = L.fold_left (fun acc c -> PP.add c acc) PP.zero cs

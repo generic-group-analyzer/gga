@@ -31,6 +31,7 @@ rule lex = parse
   | "["     { LBRACK }
   | "]"     { RBRACK }
   | ","     { COMMA }
+  | "^"     { EXP }
 
   | "maps"          { EMAPS }
   | "isos"          { ISOS }

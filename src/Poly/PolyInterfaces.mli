@@ -14,6 +14,7 @@ module type Ring = sig
   val add : t -> t -> t
   val opp : t -> t
   val mult : t -> t -> t
+  val ring_exp : t -> int -> t
   val one : t
   val zero : t
   val ladd : t list -> t
@@ -37,6 +38,7 @@ module type Poly = sig
   val opp : t -> t
   val minus : t -> t -> t
   val mult : t -> t -> t
+  val ring_exp : t -> int -> t
   val one : t
   val zero : t
   val lmult : t list -> t
