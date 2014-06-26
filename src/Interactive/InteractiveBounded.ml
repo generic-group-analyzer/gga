@@ -15,14 +15,29 @@ module OP = II.OP
 
 (* \hd{Parameter polynomials.} *)
 
+(* \ic{We use integer indices $i$ for values associated with the $i$-th oracle call.} *)
 type idx = int
 
+(* \ic{We use integer indices $i$ for values associated with the $i$-th adversary input polynomial.} *)
 type input_idx = int
 
+(* \ic{We use integer indices $i$ for values associated with the $i$-th polynomial returned by an oracle.} *)
 type oreturn_idx = int
 
+(* \ic{We identify oracle parameters by the parameter name $m$ and the oracle name $o$.} *)
 type oparam_id = II.oparam_id * II.oname
 
+ (* \ic{We use parameters in
+     \begin{description}
+     \item [OParam((m,o),i)] ${}=m^o_{i}$: parameter $m$ given to the oracle $o$ in the
+       $i$-th query.
+     \item [FieldChoice(w)] ${}=w$: parameter $w$ chosen by the adversary for the winning
+       condition.
+     \item [ICoeff(U,i)] ${}=\alpha^{(U,n)}$: Coefficient of $i$-th adversary input in
+       $U \in \group$ chosen for winning condition.
+     \item [OCoeff(U,o,n,i)] ${}=\beta_{i}^{(U,o,n)}$: Coefficient of $n$-th component of oracle output
+       for $o$ in $i$-th call in $U \in \group$ chosen for winning condition.
+    \end{description}}*)
 type param =
   | OParam      of oparam_id * idx
   | FieldChoice of II.fchoice_id
@@ -38,6 +53,7 @@ let pp_param fmt p =
   | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%s_O_%i_%i" u j i
 (*i*)
 
+(* \ic{We define polynomials $\ZZ[\vec{P}]$ over parameters $\vec{P}$.} *)
 module PP = MakePoly(struct
   type t = param
   let pp = pp_param
@@ -45,6 +61,7 @@ module PP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
+(* \ic{These parameter polynomials again form a ring.} *)
 module PPolyRing = struct
   type t = PP.t
   let pp = PP.pp
@@ -67,15 +84,24 @@ end
 
 type orvar_id = II.orvar_id * II.oname
 
+(* \ic{Random variables
+   \begin{description}
+   \item [SRVar(X)]${}=X$: shared random variable $X$ used in adversary input.
+   \item [ORVar((A,o),i)] ${}=A^o_{i}$: random variable $A$ sampled in oracle $o$
+     in the $i$-th query.
+   \end{description}} *)
 type var =
   | SRVar of II.rvar_id
   | ORVar of orvar_id * idx
 
+(*i*)
 let pp_var fmt v =
   match v with
   | SRVar(x)        -> F.fprintf fmt "%s" x
   | ORVar((a,_o),i) -> F.fprintf fmt "%s_%i" a i
+(*i*)
 
+(* \ic{We define polynomials $(\ZZ[\vec{P}])[\vec{R}]$ over random variables $\vec{R}$.} *)
 module RPP = MakePoly(struct
   type t = var
   let pp = pp_var
@@ -135,32 +161,45 @@ let ppoly_term_to_rp (vs,c) =
 let ppoly_to_rp pp =
   RP.ladd (L.map ppoly_term_to_rp (PP.to_terms pp))
 
-(* \hd{Linear combinations of polynomials represent returned group elements} *)
+(* \hd{Linear combinations of polynomials that represent returned group elements} *)
 
 let rpp_of_gdef b gdef gchoice =
+
+  (* \ic{Inputs for adversary: $f_1,\ldots,f_n$.} *)
   let inputs = gdef.II.gdef_inputs in
+
+  (* \ic{Oracle definitions: $(o_1,[g_{1,1},\ldots]),\ldots,o_k,[g_{k,1},\ldots])$.} *)
   let odefs = gdef.II.gdef_odefs in
 
-  (* \ic{Linear combination of adversary inputs.} *)
+  (* \ic{Linear combination of adversary inputs: $\sum_{i=1}^{|\vec{f}|} \alpha^{(U,i)} f_i$.} *)
   let f1 =
     zip_indices inputs
     |> L.map (fun (n,rp) -> RPP.mult (RPP.const (PP.var (ICoeff(gchoice,n)))) (rpoly_to_rpp rp))
     |> RPP.ladd
   in
 
-  (* \ic{Linear combination of oracle return values.} *)  
+  (* \ic{Compute $\beta_{i}^{(U,o,n)} * f_{o,n}$ where $f_{o,n}$ is the $n$-th polynomial returned by $o$.} *)
   let rpp_of_opoly i n o op =
     RPP.mult
       (RPP.const (PP.var (OCoeff(gchoice,o,n,i))))
       (opoly_to_rpp i o op)
   in
+
+  (* \ic{Compute sum of polynomials returned by given oracle $o$ in $i$-th query.} *)
   let rpp_of_odef i (o,ops) =
     zip_indices ops
     |> L.map (fun (n,op) -> rpp_of_opoly i n o op)
     |> RPP.ladd
   in
-  let os i = RPP.ladd (L.map (rpp_of_odef i) odefs) in
-  RPP.add f1 (RPP.ladd (L.map os (list_from_to 1 b)))
+
+  (* \ic{Compute sum of polynomials returned by $i$-th query to oracles $o_1,\ldots,o_k$.} *)
+  let rpp_of_query i = RPP.ladd (L.map (rpp_of_odef i) odefs) in
+
+  (* \ic{Linear combination of polynomials returned by oracles for $b$ queries.} *)
+  let f2 = RPP.ladd (L.map rpp_of_query (list_from_to 1 b)) in
+
+  (* \ic{Linear combination of input polynomials and polynomials returned by oracles.} *)
+  RPP.add f1 f2
 
 (* \hd{Translate game definition into polynomial constraints for a given bound} *)
 
