@@ -9,7 +9,7 @@ Use 'make wsggt' to compile the web-server tool 'wsggt.native'.
 You need an up-to-date ocaml installation with the packages
 'websocket', 'menhir', 'yojson', and 'ounit'.
 
-Usually, the easiest way to achieve is by using opam [^opam]. Our tool
+Usually, the easiest way to achieve this is by using opam [^opam]. Our tool
 uses Sage and Z3 as a backend.
 
 For Sage[^Sage], you should be able to start 'sage -python'. We use a Z3
@@ -180,4 +180,3 @@ The web interface consists of an input editor and an output display.
 You can choose the mode, input the assumption, and press CTRL-return
 to run the tool with the right options. For long-running computations,
 you should install the tool on your own machine.
-
