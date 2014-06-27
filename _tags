@@ -1,6 +1,8 @@
 true: -traverse
 true: bin_annot
 <src/Interactive/InteractiveUnbounded.*>: package(yojson)
+<src/Interactive/InteractiveBounded.*>: package(yojson)
+<src/Util/Util.*>: package(yojson)
 <src/Tool/wsggt.*>: package(websocket), package(yojson)
 <src/Tool> or <src/Poly> or <src/Util> or <src/Param>: include
 <src/NonParam> or <src/Solver> or <src/Interactive>: include

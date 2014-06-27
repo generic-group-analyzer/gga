@@ -81,3 +81,6 @@ doc:
 	  doc/close.tex --no-preamble --header > doc/tool.tex
 	echo "\end{document}" >> doc/tool.tex
 	cd doc && latexmk -pdf tool.tex
+
+%.inferred.mli:
+	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) src/$@ && cat _build/src/$@
