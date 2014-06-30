@@ -8,7 +8,6 @@
 open Util
 open Poly
 open StringPoly
-open Printf
 (*i*)
 
 exception InvalidAssumption of string
