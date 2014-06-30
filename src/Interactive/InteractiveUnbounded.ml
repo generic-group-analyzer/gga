@@ -226,7 +226,7 @@ let fs_of_gdef gdef gchoice =
     let conv_term_orcl o n (m,c) =
       (c
       , OCoeff(gchoice,o,n,0)
-        ::(conc_map (function II.Param(id) -> [OParam((id,o),0)] | _ -> []) m)
+        ::(conc_map (function II.FParam(id) -> [OParam((id,o),0)] | _ -> []) m)
       , conc_map
           (function II.SRVar(v) -> [SRVar(v)] | II.ORVar(v) -> [ORVar((v,o),0)] | _ -> [])
           m
@@ -246,7 +246,7 @@ let wpoly_to_fs gchoices oparams wp : FS.t =
     | II.GroupChoice(v) -> L.assoc v gchoices
     | II.FieldChoice(v) -> FS.(param (FieldChoice(v)))
     | II.RVar(v)        -> FS.(var (SRVar(v)))
-    | II.OParam(v)      -> FS.(param (OParam((v,L.assoc v oparams),0)))
+    | II.OFParam(v)      -> FS.(param (OParam((v,L.assoc v oparams),0)))
   in
   let eval_monom ms acc =
     L.fold_left (fun fs v -> FS.mult fs (eval_var v)) acc ms
@@ -284,14 +284,14 @@ let gdef_to_constrs gdef =
          conc_map
            (fun op ->
               conc_map
-                (function II.Param v -> [(v,o)] | _ -> [])
+                (function II.FParam v -> [(v,o)] | _ -> [])
                 (II.OP.vars op))
            ops)
       odefs
     |> sorted_nub compare
   in
 
-  let is_oparam = function II.OParam(_) -> true | _ -> false in
+  let is_oparam = function II.OFParam(_) -> true | _ -> false in
 
   let qeqs, eqs = L.partition (fun wp -> L.exists is_oparam (II.WP.vars wp)) eqs in
 

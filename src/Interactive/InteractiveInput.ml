@@ -8,6 +8,7 @@
 open Util
 open Poly
 open StringPoly
+open Printf
 (*i*)
 
 exception InvalidAssumption of string
@@ -38,16 +39,19 @@ type rpoly = RP.t
        return $(f_1(\vec{X}, \vec{A}, \vec{m}),\ldots,
                 f_{|\vec{f}|}(\vec{X}, \vec{A}, \vec{m}))$.} *)
 type oparam_id = string
+type ofparam_id = string
+type ohparam_id = string
 type orvar_id = string
 
 (* \ic{Variables in oracle polynomials.} *)
 type ovar = 
-  | Param of oparam_id
+  | FParam of ofparam_id
+  | HParam  of ohparam_id 
   | SRVar of rvar_id
   | ORVar of orvar_id
 
 let string_of_ovar v = match v with
-  | Param s | SRVar s | ORVar s -> s
+  | FParam s | HParam s | SRVar s | ORVar s -> s
 
 (*i*)
 let pp_ovar fmt v = pp_string fmt (string_of_ovar v)
@@ -64,23 +68,30 @@ end) (IntRing)
 type opoly = OP.t
 
 (* \ic{An oracle definition is just a list of oracle polynomials
-       using the interpretation given above.} *) 
+       using the interpretation given above.} *)
 type odef = opoly list
 
 (*i*)
 let pp_opoly fmt opolys =
-  let get_param v = match v with Param s -> [s] | _ -> [] in
-  let get_orvar v = match v with ORVar s -> [s] | _ -> [] in
-  let params =
-    conc_map (fun f -> conc_map get_param (OP.vars f)) opolys
+  let get_fparam v = match v with FParam s -> [s] | _ -> [] in
+  let get_hparam v = match v with HParam s -> [s] | _ -> [] in
+  let get_orvar  v = match v with ORVar s -> [s] | _ -> [] in
+  let fparams =
+    conc_map (fun f -> conc_map get_fparam (OP.vars f)) opolys
+    |> sorted_nub compare
+  in
+  let hparams =
+    conc_map (fun f -> conc_map get_hparam (OP.vars f)) opolys
     |> sorted_nub compare
   in
   let orvars =
     conc_map (fun f -> conc_map get_orvar (OP.vars f)) opolys
     |> sorted_nub compare
   in
-  F.fprintf fmt "(%a) = %a; return (%a)"
-    (pp_list ", " (fun fmt -> F.fprintf fmt "%s:Fq")) params
+  F.fprintf fmt "(%a%s%a) = %a; return (%a)"
+    (pp_list ", " (fun fmt -> F.fprintf fmt "%s:Fq")) fparams
+    (if fparams = [] then "" else ", ")
+    (pp_list ", " (fun fmt -> F.fprintf fmt "%s:G")) hparams
     (pp_list "; " (fun fmt -> F.fprintf fmt "%s <-$ G")) orvars
     (pp_list ", " OP.pp) opolys
 (*i*)
@@ -106,13 +117,14 @@ type fchoice_id = string
 type wvar = 
   | GroupChoice of gchoice_id
   | FieldChoice of fchoice_id
-  | OParam      of oparam_id
+  | OFParam     of ofparam_id
+  | OHParam     of ohparam_id
   | RVar        of rvar_id
 
 (*i*)
 let string_of_wvar v = match v with
   | GroupChoice s | FieldChoice s | RVar s -> s
-  | OParam s -> s^"_i"
+  | OFParam s | OHParam s-> s^"_i"
 
 let pp_wvar fmt v = pp_string fmt (string_of_wvar v)
 (*i*)
@@ -129,7 +141,7 @@ type wpoly = WP.t
 
 (*i*)
 let pp_wpoly fmt wp =
-  if L.exists (function OParam _ -> true | _ -> false) (WP.vars wp) then
+  if L.exists (function OFParam _ -> true | _ -> false) (WP.vars wp) then
     F.fprintf fmt "forall i: %a" WP.pp wp
   else
     WP.pp fmt wp
@@ -195,7 +207,7 @@ type gdef = {
 (* \ic{Remove oracle outputs that are redundant because they can be computed from
        the oracle inputs and other outputs.} *)
 let simp_gdef gdef =
-  let is_param = function Param(_) -> true | _ -> false in
+  let is_param = function FParam(_) -> true | _ -> false in
   let rec check xs ys =
     match xs,ys with
     | [], _ ->
@@ -280,9 +292,11 @@ let pp_cmd fmt cmd =
 (*i*)
 
 let rpoly_to_opoly _gvars params orvars p =
-  let params = List.map fst params in
+  let fparams = List.map fst (List.filter (fun (_, t) -> t = Field) params) in
+  let hparams = List.map fst (List.filter (fun (_, t) -> t = Group) params) in
   let conv_var v =
-    if L.mem v params then Param(v)
+    if L.mem v fparams then FParam(v)
+    else if L.mem v hparams then HParam(v) 
     else if L.mem v orvars then ORVar(v)
     else SRVar(v)
     (*i 
@@ -290,6 +304,10 @@ let rpoly_to_opoly _gvars params orvars p =
     else failwith ("undefined variables in oracle definition: "^v)
     i*)
   in
+(*  printf "\nField vars:\n";
+  List.iter (printf "%s") fvars;
+  printf "\nGroup vars:\n";
+  List.iter (printf "%s") hvars; *)
   RP.to_terms p
   |> L.map (fun (m,c) -> (L.map conv_var m, c))
   |> OP.from_terms
@@ -300,7 +318,7 @@ let rpoly_to_wpoly _gvars choices oparams p =
   let has_group_choice = ref false in
   let has_oparam       = ref false in  
   let conv_var v =
-    if L.mem v oparams then (has_oparam := true; OParam(v))
+    if L.mem v oparams then (has_oparam := true; OFParam(v))
     else if L.mem v fchoices then FieldChoice(v)
     else if L.mem v gchoices then (has_group_choice := true; GroupChoice(v))
     else RVar(v)
@@ -330,10 +348,9 @@ let eval_cmd (inputs0,odefs0,oparams0,orvars0,mwcond0) cmd =
       then failwith "Two arguments with the same name in oracle definition";
     if (L.length orvars <> L.length (sorted_nub compare orvars))
       then failwith "Oracle samples two random variables with the same name";
-    if L.exists (fun (_,t) -> t = Group) params
-      then failwith "Oracles with group arguments not supported";
     if L.exists (fun (oname',_) -> oname = oname') odefs0
       then failwith ("Oracle name used twice: "^oname);
+    F.printf "%a\n" pp_cmd cmd;
     ( inputs0
     , odefs0@[ (oname, L.map (rpoly_to_opoly gvars params orvars) fs) ]
     , oparams0@( L.map fst params )

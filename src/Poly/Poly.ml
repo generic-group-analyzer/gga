@@ -135,7 +135,7 @@ module MakePoly (V : Var) (C : Ring) = struct
   let rec ring_exp f n =
     if n > 0 then mult f (ring_exp f (n-1)) 
     else if n = 0 then one
-    else failwith "Negative exponent in for polynomial"
+    else failwith "Negative exponent in polynomial"
   
   let var v = [([v],C.one)]
   

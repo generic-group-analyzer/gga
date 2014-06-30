@@ -25,7 +25,8 @@ type input_idx = int
 type oreturn_idx = int
 
 (* \ic{We identify oracle parameters by the parameter name $m$ and the oracle name $o$.} *)
-type oparam_id = II.oparam_id * II.oname
+type ofparam_id = II.ofparam_id * II.oname
+type ohparam_id = II.ohparam_id * II.oname
 
  (* \ic{We use parameters in
      \begin{description}
@@ -39,7 +40,8 @@ type oparam_id = II.oparam_id * II.oname
        for $o$ in $i$-th call in $U \in \group$ chosen for winning condition.
     \end{description}}*)
 type param =
-  | OParam      of oparam_id * idx
+  | OFParam     of ofparam_id * idx
+  | OHParam     of ohparam_id * idx
   | FieldChoice of II.fchoice_id
   | ICoeff      of II.gchoice_id * input_idx
   | OCoeff      of II.gchoice_id * II.oname * oreturn_idx * idx
@@ -47,7 +49,8 @@ type param =
 (*i*)
 let pp_param fmt p =
   match p with
-  | OParam((m,_o),i)  -> F.fprintf fmt "%s_%i" m i
+  | OFParam((m,_o),i) -> F.fprintf fmt "%s_%i" m i
+  | OHParam((m,_o),i) -> F.fprintf fmt "%s_%i" m i
   | FieldChoice(w)    -> F.fprintf fmt "%s" w
   | ICoeff(u,j)       -> F.fprintf fmt "%s_I_%i" u j
   | OCoeff(u,_o,j,i)  -> F.fprintf fmt "%s_O_%i_%i" u j i
@@ -113,7 +116,8 @@ end) (PPolyRing)
 
 let ovar_to_rpp i o v =
   match v with
-  | II.Param(v) -> RPP.const (PP.var (OParam((v,o),i)))
+  | II.FParam(v) -> RPP.const (PP.var (OFParam((v,o),i)))
+  | II.HParam(v) -> RPP.const (PP.var (OHParam((v,o),i)))
   | II.SRVar(v) -> RPP.var (SRVar(v))
   | II.ORVar(v) -> RPP.var (ORVar((v,o),i))
 
@@ -132,7 +136,8 @@ let rpoly_to_rpp rp = RPP.ladd (L.map rpoly_term_to_rpp (RP.to_terms rp))
 
 let wvar_to_rpp i gchoices v =
   match v with
-  | II.OParam(v)      -> RPP.const (PP.var (OParam((v,"on"),i)))
+  | II.OFParam(v)      -> RPP.const (PP.var (OFParam((v,"on"),i)))
+  | II.OHParam(v)      -> RPP.const (PP.var (OHParam((v,"on"),i)))
   | II.RVar(v)        -> RPP.var (SRVar(v))
   | II.GroupChoice(v) -> L.assoc v gchoices
   | II.FieldChoice(v) -> RPP.const (PP.var (FieldChoice(v)))
@@ -148,7 +153,8 @@ let wcond_to_rpp i gchoices wp =
 
 let param_to_string p =
   match p with
-  | OParam((m,_o),i)  -> F.sprintf "%s_%i" m i
+  | OFParam((m,_o),i) -> F.sprintf "%s_%i" m i
+  | OHParam((m,_o),i) -> F.sprintf "%s_%i" m i
   | FieldChoice(w)    -> F.sprintf "%s" w
   | ICoeff(u,j)       -> F.sprintf "%s_I_%i" u j
   | OCoeff(u,_o,j,i)  -> F.sprintf "%s_O_%i_%i" u j i
@@ -215,11 +221,11 @@ let gdef_to_constrs b gdef =
   let eqs = gdef.II.gdef_wcond.II.wcond_eqs in
   let ineqs = gdef.II.gdef_wcond.II.wcond_ineqs in
 
-  let is_oparam = function II.OParam(_) -> true | _ -> false in
+  let is_ofparam = function II.OFParam(_) -> true | _ -> false in
 
-  let qeqs, eqs = L.partition (fun wp -> L.exists is_oparam (WP.vars wp)) eqs in
+  let qeqs, eqs = L.partition (fun wp -> L.exists is_ofparam (WP.vars wp)) eqs in
 
-  let qineqs, ineqs = L.partition (fun wp -> L.exists is_oparam (WP.vars wp)) ineqs in
+  let qineqs, ineqs = L.partition (fun wp -> L.exists is_ofparam (WP.vars wp)) ineqs in
 
   if qeqs <> [] then
     failwith "only inequality constraints allowed to contain oracle parameter";
