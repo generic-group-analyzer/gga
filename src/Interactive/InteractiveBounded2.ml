@@ -48,3 +48,21 @@ type var =
 (* 4. completion computation *)
 
 (* 5. Sending everything to Sage *)
+
+
+(* Notes on enumeration:
+
+Fix:
+public key = random variables K1 and K2 in G1
+messages   = M in G2
+signature  = random variable R and signature S which is sum of monomials (all coeffs are 1)
+
+INPUT: k = sum of total degrees for S
+
+1. Split k into decreasing sequence k1, .., kl of natural mumbers with weight k
+2. Given n variables, generate all n-vectors of weight ki and use as exponent
+   vector.
+3. If k_i = k_{i+1}, ensure that "monomial for i" > "monomial for {i+1}" with respect
+   to lex-order. Otherwise, total degree is already greater by construction.
+
+*)
