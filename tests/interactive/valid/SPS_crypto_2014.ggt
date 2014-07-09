@@ -1,0 +1,11 @@
+map G1 * G2 -> GT.
+
+iso G2 -> G1.
+
+input [1,V,W] in G1.
+
+oracle o1(M:G2) =
+  sample R;
+  return [ H*R, M*V+ H*R^2 + H*W ] in G2.
+
+win (M':G2, R':G2, S':G2) = (M' <> M /\ S' = V*M' + R'^2 + W).
