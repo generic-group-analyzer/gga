@@ -1,4 +1,5 @@
 (*i*)
+(*i
 open Util
 open Poly
 
@@ -452,3 +453,4 @@ let pp_fs_rvars fmt fsr =
   F.fprintf fmt "@[%a@]" (pp_list "@.+ " pp_fsr_term) fsr
 
 (*i*)
+i*)

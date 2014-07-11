@@ -1,5 +1,6 @@
 (*s Unbounded analysis for interactive assumptions. *)
 
+(*
 (*i*)
 open Util
 open Poly
@@ -433,3 +434,6 @@ let rec translate_qineq qineqs =
       `List [ `String "forall"; idx_of i; translate_qineq [(binders,fsp)] ]
     end
   | _ -> failwith "impossible"
+*)
+
+let gdef_to_constrs _ = failwith "undefined"

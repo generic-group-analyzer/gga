@@ -1,3 +1,5 @@
+(*i
+
 open Poly
 
 type db_idx = int
@@ -144,3 +146,4 @@ val db_idx_of_param : param -> (int * InteractiveInput.oname) option
 
 (* val fs_to_fs_rvars : (IntRing.t * param list * var list) list -> fs_rvars *)
 
+i*)

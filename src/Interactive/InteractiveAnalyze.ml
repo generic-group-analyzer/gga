@@ -4,11 +4,12 @@
 open Util
 open Poly
 
-open InteractiveUnbounded
+(* open InteractiveUnbounded *)
 
 module FS = InteractiveFormalSum
 module IR = IntRing
 module II = InteractiveInput
+module IE = InteractiveEval
 module RP = II.RP
 module S = String
 (*i*)
@@ -50,7 +51,7 @@ let p_cmds = wrap_error (InteractiveParser.cmds_t InteractiveLexer.lex)
 (* \hd{Analyze game definitions} *)
 
 let analyze_bounded_from_string s bound = 
-  let gdef = p_cmds s |> II.eval_cmds in
+  let gdef = p_cmds s |> IE.eval_cmds in
   F.printf "%a\n\n" II.pp_gdef gdef;
   let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs bound gdef in
   let zcs = L.map Z3_Solver.poly_to_json zero_constrs in
@@ -73,8 +74,9 @@ let analyze_bounded_from_string s bound =
       res
     )
 
-let analyze_unbounded_from_string s = 
-  let gdef = p_cmds s |> II.eval_cmds in
+let analyze_unbounded_from_string _s =
+  (*i
+  let gdef = p_cmds s |> IE.eval_cmds in
   F.printf "%a\n\n" II.pp_gdef gdef;
   let eq_constrs, ineq_constrs, qineq_constrs = InteractiveUnbounded.gdef_to_constrs gdef in
   
@@ -88,5 +90,5 @@ let analyze_unbounded_from_string s =
   let pconstrs3 = sorted_nub compare (L.map translate_ineq ineq_constrs) in
 
   (*i List.iter (fun pc -> print_endline (YS.to_string pc)) (pconstrs1 @ pconstrs2 @ pconstrs3); i*)
-
-  Z3_Solver.check_sat (pconstrs1 @ pconstrs2 @ pconstrs3)
+  i*)
+  Z3_Solver.check_sat [] (*i (pconstrs1 @ pconstrs2 @ pconstrs3) i*)
