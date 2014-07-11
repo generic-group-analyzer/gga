@@ -1,5 +1,6 @@
 (*s Bounded analysis for interactive assumptions. *)
 
+(*
 (*i*)
 (* open Util *)
 open Util
@@ -271,3 +272,7 @@ let gdef_to_constrs b gdef =
     nzero_constrs;
 
   (zero_constrs, nzero_constrs)
+
+*)
+
+let gdef_to_constrs _ _ = failwith "undefined"
