@@ -120,6 +120,12 @@ let cart_prod xss0 =
       go acc xss
   in go [[]] (L.rev xss0)
 
+(* \ic{Returns true if the list does not contain duplicate elements ($O(n^2)$).} *)
+let rec unique xs =
+  match xs with
+  | y::ys -> if L.mem y ys then false else unique ys
+  | []    -> true
+
 (* \ic{Set of strings.} *)
 module Ss = Set.Make(struct type t = string let compare = compare end)
 
