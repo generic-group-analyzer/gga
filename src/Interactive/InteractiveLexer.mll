@@ -44,7 +44,7 @@ rule lex = parse
   | "win"    { WIN }
   | "in"     { IN }
 
-  | "G"  { GROUP }
+  | "G"idchars* as s  { GROUP s }
   | "Fp" { FIELD }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }

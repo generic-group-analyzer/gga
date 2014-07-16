@@ -1,6 +1,7 @@
 %{
   (*i*)
   open InteractiveInput
+  open InteractiveEval
   (*i*)
 %}
 
@@ -39,7 +40,7 @@
 
 %token <string> VAR   /* uppercase identifier */
 
-%token GROUP
+%token <string> GROUP
 %token FIELD
 
 %token EXP
@@ -59,7 +60,7 @@
 /************************************************************************/
 /* \hd{Start symbols} */
 
-%type <InteractiveInput.cmd list> cmds_t
+%type <InteractiveEval.cmd list> cmds_t
 
 %start cmds_t
 %%
@@ -79,7 +80,7 @@ poly :
 ;
 
 param_type :
-| GROUP { Group }
+| s = GROUP { Group s }
 | FIELD { Field }
 ;
 
@@ -89,9 +90,8 @@ samp_var : v = VAR; SAMP; GROUP; SEMICOLON
 
 typed_var :
 | v = VAR; COLON; ty = param_type;
-  { (v,ty) }
+  { { tid_id = v; tid_ty = ty } } 
 ;
-
 cond :
 | p1 = poly; EQ; p2 = poly;
   { (RP.minus p1 p2, Eq) }
@@ -99,12 +99,17 @@ cond :
   { (RP.minus p1 p2, InEq) }
 ;
 
+poly_group:
+| p = poly; IN; g = GROUP
+  { (p,g) }
+; /* fix this */
+
 cmd :
 | INP; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; GROUP; DOT
   { AddInput(ps) }
 | ORACLE; oname = VAR; LPAR; params = separated_list(COMMA,typed_var); RPAR;
   EQ; orvar = list(samp_var);
-  RETURN; LPAR; ps = separated_list(COMMA,poly); RPAR;
+  RETURN; LPAR; ps = separated_list(COMMA,poly_group); RPAR;
   DOT
   { AddOracle(oname,params,orvar,ps) }
 | WIN; LPAR; params = separated_list(COMMA,typed_var); RPAR;
