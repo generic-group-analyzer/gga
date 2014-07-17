@@ -14,7 +14,7 @@
 
 let blank = [' ' '\t' '\r' '\n']
 let newline = '\n'
-let idchars = ['a'-'z' 'A'-'Z' '0'-'9']
+let idchars = ['a'-'z' 'A'-'Z' '0'-'9' '\'']
 
 rule lex = parse
   | blank+  { lex lexbuf }
@@ -24,8 +24,8 @@ rule lex = parse
   | "."     { DOT }
   | "("     { LPAR }
   | ")"     { RPAR }
-  | "<-$"   { SAMP }
   | "="     { EQ }
+  | "->"    { TO }  
   | "/\\"   { LAND }
   | "<>"    { INEQ }
   | "+"     { PLUS }
@@ -37,6 +37,11 @@ rule lex = parse
   | ","     { COMMA }
   | ";"     { SEMICOLON }
   | ":"     { COLON }
+  | "sample" { SAMP }
+  | "maps"   { EMAPS }
+  | "isos"   { ISOS }
+  | "map"    { EMAPS }
+  | "iso"    { ISOS }
 
   | "return" { RETURN }
   | "input"  { INP }
@@ -44,7 +49,7 @@ rule lex = parse
   | "win"    { WIN }
   | "in"     { IN }
 
-  | "G"idchars* as s  { GROUP s }
+  | ['G']idchars* as s { GROUP (S.sub s 1 (S.length s - 1)) }
   | "Fp" { FIELD }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
