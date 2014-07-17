@@ -161,7 +161,7 @@ let gp_to_ep p =
 let extract_constraints p =
   gp_to_ep p |> EP.to_terms |> L.map snd
 
-let cp_to_rpoly (p : CP.t) =
+let cp_to_rpoly p =
   let cconv c = RP.const c in
   let vconv v = RP.var (string_of_param v) in
   CP.to_terms p |> RP.eval_generic cconv vconv
