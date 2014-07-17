@@ -28,18 +28,21 @@ INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
   Interactive/InteractiveAnalyze.ml \
   Interactive/InteractiveTest.ml
 
+SYNTH_MODULES=Synthesis/Synthesis.ml
+
 TOOL_MODULES = Tool/ggt.ml
 
 INFRA_FILES=$(addprefix src/,$(INFRA_MODULES))
 NONPARAM_FILES=$(addprefix src/,$(NONPARAM_MODULES))
 PARAM_FILES=$(addprefix src/,$(PARAM_MODULES))
 INTERACTIVE_FILES=$(addprefix src/,$(INTERACTIVE_MODULES))
+SYNTH_FILES=$(addprefix src/,$(SYNTH_MODULES))
 TOOL_FILES=$(addprefix src/,$(TOOL_MODULES))
 
 
 .PHONY: native doc paramtest
 
-all: native wsggt
+all: doc native # wsggt
 
 native:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
@@ -78,10 +81,12 @@ doc:
 	  doc/chap-nonparam.tex $(NONPARAM_FILES) \
 	  doc/chap-param.tex $(PARAM_FILES) \
 	  doc/chap-interactive.tex $(INTERACTIVE_FILES) \
+	  doc/chap-synth.tex $(SYNTH_FILES) \
 	  doc/chap-tool.tex $(TOOL_FILES) \
-	  doc/close.tex --no-preamble --header > doc/tool.tex
-	echo "\end{document}" >> doc/tool.tex
-	cd doc && latexmk -pdf tool.tex
+	  doc/close.tex --no-preamble --header > doc/tool.tex.tmp
+	echo "\end{document}" >> doc/tool.tex.tmp
+	mv doc/tool.tex.tmp doc/tool.tex
+	cd doc && latexmk -pv -pdf tool.tex
 
 %.inferred.mli:
 	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) src/$@ && cat _build/src/$@
