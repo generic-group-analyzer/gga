@@ -166,12 +166,6 @@ let cp_to_rpoly (p : CP.t) =
   let vconv v = RP.var (string_of_param v) in
   CP.to_terms p |> RP.eval_generic cconv vconv
 
-let ep_to_rpoly p =
-  let cconv c = cp_to_rpoly c in
-  let vconv v = RP.var (string_of_rvar v) in
-  EP.to_terms p |> RP.eval_generic cconv vconv
-
-
 (****************************************************
  *************** Extract constraints ****************
  ****************************************************)
@@ -180,19 +174,6 @@ let rpoly_to_gp p =
   let cconv i = GP.const i in
   let vconv v = GP.var (RVar (SRVar v)) in
   RP.to_terms p |> GP.eval_generic cconv vconv
-
-
-(* TODO :
-  1. Convert non quantified WP to a GP
-
-  2. Convert a quantified WP to a GP
-
-*)
-
-(*let nonquant_wp_to_gp p =
-  let cconv i = ... in
-  let vconv v = ... in
-  WP.to_terms p |> GP.eval_generic cconv vconv*)
 
 let cgen s =
     let i = ref 0 in
