@@ -176,9 +176,10 @@ let rpoly_to_gp p =
   RP.to_terms p |> GP.eval_generic cconv vconv
 
 let cgen s =
-    let i = ref 0 in
-    function () -> i := !i+1;
-                   GP.var (Param (ChoiceCoeff (s, !i)))
+  let i = ref 0 in
+  function () ->
+    i := !i+1;
+    GP.var (Param (ChoiceCoeff (s, !i)))
 
 let nonquant_wp_to_gp cur p =
   let cconv c = GP.const c in
