@@ -102,12 +102,13 @@ let pp_poly vars fmt f =
 let synth () =
   let vars = ["v"; "w"; "r"] in
   let bounds = [3; 3; 3] in
+  let max_terms = 2 in
   let i = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_string) vars
     (pp_list ", " pp_int) bounds;
   Nondet.iter (-1)
-    (prod (pick_set 2 (vecs_smaller bounds)))
+    (prod (pick_set max_terms (vecs_smaller bounds)))
     (fun (f,g) ->
        incr i;
        F.printf "%i. f = %a, g = %a\n" !i (pp_poly vars) f (pp_poly vars) g)

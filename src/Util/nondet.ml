@@ -1,14 +1,16 @@
+open Lazy
+
 (* Nondeterminism Monad *)
 
 type 'a stream =
     Nil
-  | Cons of 'a * (unit -> 'a stream)
+  | Cons of 'a * ('a stream) lazy_t
 
-type 'a nondet = unit -> 'a stream
+type 'a nondet = 'a stream lazy_t
 
-let mempty = fun () -> Nil
+let mempty = lazy Nil
 
-let ret a = fun () -> Cons (a, mempty)
+let ret a = lazy (Cons (a, mempty))
 
 let guard pred =
   if pred then ret () else mempty
@@ -16,19 +18,19 @@ let guard pred =
 (* Combine results returned by a with results
    returned by b. Results from a and b are
    interleaved. *)
-let rec mplus a b = fun () ->
-  match a () with
+let rec mplus a b = from_fun (fun () ->
+  match force a with
   | Cons (a1, a2) -> Cons (a1, mplus b a2)
   | Nil           ->
-    begin match b () with
+    begin match force b with
     | Nil           -> Nil
     | Cons (b1, b2) -> Cons (b1, mplus a b2)
-    end
+    end)
 
-let rec bind m f = fun () ->
-  match m () with
+let rec bind m f = from_fun (fun () ->
+  match force m with
   | Nil         -> Nil
-  | Cons (a, b) -> mplus (f a) (bind b f) ()
+  | Cons (a, b) -> force (mplus (f a) (bind b f)))
 
 (* Execute and get first n results as list,
    use n = -1 to get all values. *)
@@ -36,7 +38,7 @@ let run n m =
   let rec go n m acc =
     if n = 0 then List.rev acc
     else
-      match m () with
+      match force m with
       | Nil         -> List.rev acc
       | Cons (a, b) -> go (pred n) b (a::acc)
   in go n m []
@@ -47,7 +49,7 @@ let iter n m f =
   let rec go n m =
     if n = 0 then ()
     else
-      match m () with
+      match force m with
       | Nil         -> ()
       | Cons (a, b) -> f a; go (pred n) b
   in go n m
