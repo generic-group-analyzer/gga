@@ -299,6 +299,13 @@ let fsprintf fmt =
       Buffer.contents buf)
     fbuf fmt
 
+let pp_opt pp_v fmt m =
+  match m with
+  | None   -> F.fprintf fmt "None"
+  | Some v -> F.fprintf fmt "%a" pp_v v
+
+let map_opt f = function None -> None | Some x -> Some (f x)
+
 (* let fsprintf fm = Format.fprintf Format.str_formatter fm *)
 
 let fsget _ = Format.flush_str_formatter ()
