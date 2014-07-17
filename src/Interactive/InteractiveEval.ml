@@ -16,6 +16,8 @@ type cond_type = Eq | InEq
        we have all information required to distinguish the different types
        of variables.
        \begin{itemize}
+       \item $AddIsos(isos)$: add isomorphisms to group setting.
+       \item $AddMaps(isos)$: add maps to group setting.
        \item $AddInput(f)$: Add $f$ to adversary inputs.
        \item $AddOracle(on, tids, ids, rps)$: Add the oracle where the name
            is denoted by $on$,, the (typed) arguments are denoted by $tids$,
@@ -28,6 +30,8 @@ type cond_type = Eq | InEq
          the adversary are denoted by $tids$.
        \end{itemize}} *)
 type cmd =
+  | AddIsos    of iso list
+  | AddMaps    of emap list
   | AddInput   of rpoly list
   | AddOracle  of oname * tid list * id list * (rpoly * gid) list
   | SetWinning of tid list * (rpoly * cond_type) list
@@ -36,6 +40,10 @@ type cmd =
 let pp_cmd fmt cmd =
   let cty_to_string = function Eq -> " = 0" | InEq -> " <> 0" in
   match cmd with
+  | AddIsos isos ->
+    F.fprintf fmt "isos: %a.\n" (pp_list ", " pp_iso) isos
+  | AddMaps emaps ->
+    F.fprintf fmt "maps: %a.\n" (pp_list ", " pp_emap) emaps
   | AddInput fs ->
     F.fprintf fmt "add_input %a" (pp_list "," RP.pp) fs
   | AddOracle(s,params,orvars,fs) ->
@@ -104,6 +112,7 @@ let rpoly_to_wpoly (choices : tid list) (oparams : tid list) (p : rpoly) =
   |> WP.from_terms
 
 type eval_state = {
+  es_gs      : group_setting;
   es_inputs  : rpoly list;
   es_odefs   : odef list;
   es_oparams : tid list;
@@ -116,11 +125,16 @@ let empty_eval_state = {
   es_odefs   = [];
   es_oparams = [];
   es_orvars  = [];
+  es_gs      = { gs_isos = []; gs_emaps = [] };
   es_mwcond  = None;
 }  
 
 let eval_cmd estate cmd =
   match cmd,estate.es_mwcond with
+  | AddIsos(isos),None ->
+    { estate with es_gs = { estate.es_gs with gs_isos = estate.es_gs.gs_isos@isos } }
+  | AddMaps(emaps),None ->
+    { estate with es_gs = { estate.es_gs with gs_emaps = estate.es_gs.gs_emaps@emaps } }
   | AddInput fs, None ->
     { estate with es_inputs = estate.es_inputs@fs }
   | AddOracle(oname,params,orvars,fs), None ->
@@ -155,4 +169,5 @@ let eval_cmds cmds =
   | None   ->
     failwith "no winning condition given"
   | Some wcond ->
-    { gdef_inputs = es.es_inputs; gdef_odefs = es.es_odefs; gdef_wcond = wcond }
+    { gdef_inputs = es.es_inputs; gdef_odefs = es.es_odefs; gdef_wcond = wcond;
+      gdef_gs = { gs_isos = []; gs_emaps = [] } }

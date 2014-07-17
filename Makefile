@@ -22,7 +22,7 @@ INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
   Interactive/InteractiveEval.ml \
   Interactive/InteractiveParser.mly \
   Interactive/InteractiveLexer.mll \
-  Interactive/InteractiveBounded.ml \
+#  Interactive/InteractiveBounded.ml \
   Interactive/InteractiveFormalSum.ml \
   Interactive/InteractiveUnbounded.ml \
   Interactive/InteractiveAnalyze.ml \

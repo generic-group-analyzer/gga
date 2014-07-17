@@ -8,7 +8,7 @@ open StringPoly
 exception InvalidAssumption of string
 
 (*******************************************************************)
-(* \hd{Identifiers and types} *)
+(* \hd{Identifiers, types, and group settings} *)
 
 (* \ic{Identifier for variables and parameters.} *)
 type id = string
@@ -25,6 +25,24 @@ type tid = {
   tid_ty : ty;
 }
 
+(* \ic{An isomorphism has a domain and a codomain.} *)
+type iso = {
+  iso_dom   : gid;
+  iso_codom : gid
+}
+
+(* \ic{An n-linear map has a domain and a codomain.} *)
+type emap = {
+  em_dom   : gid list;
+  em_codom : gid
+}
+
+(* \ic{A group setting defines a list of isomorphisms and a list of n-linear maps} *)
+type group_setting = {
+  gs_isos      : iso list;
+  gs_emaps     : emap list;
+}
+
 (*i*)
 let pp_ty fmt ty = match ty with
   | Field   -> pp_string fmt "Fq"
@@ -32,6 +50,25 @@ let pp_ty fmt ty = match ty with
 
 let pp_tid fmt tid =
   F.fprintf fmt "%s:%a" tid.tid_id pp_ty tid.tid_ty
+
+let pp_iso fmt i = F.fprintf fmt "phi : %s -> %s" i.iso_dom i.iso_codom
+
+let pp_emap fmt e =
+  F.fprintf fmt "e : %a -> %s" (pp_list " * " pp_string) e.em_dom e.em_codom
+
+let pp_iso_s fmt i = F.fprintf fmt "phi_%s,%s" i.iso_dom i.iso_codom
+
+let pp_emap_s fmt e =
+  F.fprintf fmt "e_%s" e.em_codom
+
+let pp_group_id fmt gid =
+  F.fprintf fmt "G_%s" gid
+
+let pp_gs fmt gs =
+  F.fprintf fmt "group setting:\n  %a\n  %a\n"
+    (pp_list "\n  " pp_iso) gs.gs_isos
+    (pp_list "\n  " pp_emap) gs.gs_emaps
+
 (*i*)
 
 
@@ -225,6 +262,7 @@ let pp_wcond fmt wcond =
        the definition of (named) oracles, and
        the definition of the winning condition.} *)
 type gdef = {
+  gdef_gs     : group_setting;
   gdef_inputs : rpoly list;
   gdef_odefs  : odef list;
   gdef_wcond  : wcond;
@@ -232,7 +270,8 @@ type gdef = {
 
 (* \ic{Simplify game definition by removing oracle outputs that are redundant
        because they can be computed from the oracle inputs and other outputs.
-       For example in $o(x) = return\; [A,A*x]\; in\; \group_1$, $A*x$ is redundant.} *)
+       For example in $o(x) = return\; [A,A*x]\; in\; \group_1$, $A*x$ is
+       redundant.} *)
 
 let simp_gdef gdef =
   let is_fparam = function Param(tid) when tid.tid_ty = Field -> true | _ -> false in
