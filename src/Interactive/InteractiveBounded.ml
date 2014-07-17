@@ -207,23 +207,6 @@ let quant_wp_to_gps cur bound p =
   in  
   L.map (fun p -> q := !q + 1; WP.to_terms p |> GP.eval_generic cconv vconv) ps
 
-
-
-let unroll_constraints fs bound =
-  let annot_oparam q p = match p with
-      | II.OParam t -> II.OParam({t with II.tid_id = t.II.tid_id^"_"^(string_of_int q)})
-      | x        -> x
-  in
-  let annot_poly q f =
-    WP.to_terms f |> L.map (fun (vs, c) -> (L.map (annot_oparam q) vs, c))
-                  |> WP.from_terms
-  in
-  L.fold_left (fun acc f ->
-                 acc @
-                 (L.map (fun q -> annot_poly q f) (list_from_to 1 bound)))
-              []
-              fs
-
 (* Checks if a wpoly is quantified, i.e. contains oracle parameters *)
 let is_quantified f =
   let is_qvar v = match v with | II.OParam _ -> true | _ -> false in
