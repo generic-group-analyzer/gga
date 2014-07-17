@@ -38,8 +38,8 @@ let pp_rvar fmt r = pp_string fmt (string_of_rvar r)
   \end{itemize}
 *)
 type param =
-  | FOParam of II.id * query_idx              (* Field param in oracle *) 
-  | OCoeff  of II.id * query_idx * coeff_idx  (*  *)
+  | FOParam of II.id * query_idx
+  | OCoeff  of II.id * query_idx * coeff_idx
   | FChoice of II.id
   | ChoiceCoeff of II.id * coeff_idx
 
@@ -84,7 +84,7 @@ let ovar_to_gp cur q v =
   match v with
   | II.SRVar r -> GP.var (RVar (SRVar r))
   | II.ORVar r -> GP.var (RVar (ORVar (r, q)))
-  | II.Param t    -> if t.II.tid_ty = II.Field
+  | II.Param t -> if t.II.tid_ty = II.Field
                   then GP.var (Param (FOParam (t.II.tid_id, q)))
                   else lin_comb_of_gps cur
                        (make_fresh_var_gen (F.sprintf "[%s]" t.II.tid_id) q)
@@ -126,7 +126,7 @@ module CP = MakePoly(struct
 end) (IntRing)
 
 module CPR = struct
-  type t          = CP.t
+  type t         = CP.t
   let pp         = CP.pp
   let add        = CP.add
   let opp        = CP.opp
@@ -151,32 +151,97 @@ end) (CPR)
 let is_rvar f = match f with | RVar _ -> true | _ -> false
 
 let gp_to_ep p =
-  let convert_term t = 
-    let (rvars, params) = L.partition is_rvar (fst t) in
-    let coeff = snd t in
-    let rvars = L.map (fun v -> match v with | RVar r -> r) rvars in
-    let params = L.map (fun v -> match v with | Param p -> p) params in
-    (rvars, CP.from_terms [(params, coeff)])
+  let cconv i = EP.const (CP.const i) in
+  let vconv v = match v with
+    | RVar r  -> EP.var r
+    | Param p -> EP.const (CP.var p)
   in
-  p |> GP.to_terms
-    |> L.map convert_term
-    |> EP.from_terms
+  GP.to_terms p |> EP.eval_generic cconv vconv
 
 let extract_constraints p =
   gp_to_ep p |> EP.to_terms |> L.map snd
+
+let cp_to_rpoly (p : CP.t) =
+  let cconv c = RP.const c in
+  let vconv v = RP.var (string_of_param v) in
+  CP.to_terms p |> RP.eval_generic cconv vconv
+
+let ep_to_rpoly p =
+  let cconv c = cp_to_rpoly c in
+  let vconv v = RP.var (string_of_rvar v) in
+  EP.to_terms p |> RP.eval_generic cconv vconv
+
 
 (****************************************************
  *************** Extract constraints ****************
  ****************************************************)
 
 let rpoly_to_gp p =
-  let convert_term t : (GP.var list * GP.coeff) =
-    let vars = fst t in
-    let coeff = snd t in
-    (L.map (fun v -> RVar (SRVar v)) vars, coeff)
+  let cconv i = GP.const i in
+  let vconv v = GP.var (RVar (SRVar v)) in
+  RP.to_terms p |> GP.eval_generic cconv vconv
+
+
+(* TODO :
+  1. Convert non quantified WP to a GP
+
+  2. Convert a quantified WP to a GP
+
+*)
+
+(*let nonquant_wp_to_gp p =
+  let cconv i = ... in
+  let vconv v = ... in
+  WP.to_terms p |> GP.eval_generic cconv vconv*)
+
+let cgen s =
+    let i = ref 0 in
+    function () -> i := !i+1;
+                   GP.var (Param (ChoiceCoeff (s, !i)))
+
+let nonquant_wp_to_gp cur p =
+  let cconv c = GP.const c in
+  let vconv v = match v with
+    | II.RVar id    -> GP.var (RVar (SRVar id))
+    | II.OParam _   -> failwith "Called with quantified winning condition."
+    | II.Choice tid -> if tid.II.tid_ty = Field
+                       then GP.var (Param (FChoice(tid.II.tid_id)))
+                       else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
   in
-  RP.to_terms p |> L.map convert_term
-                |> GP.from_terms
+  WP.to_terms p |> GP.eval_generic cconv vconv
+
+let quant_wp_to_gps cur bound p =
+  let ps = L.map (fun _ -> p) (list_from_to 1 bound) in
+  let q = ref 0 in
+  let cconv c = GP.const c in
+  let vconv v = match v with
+    | II.RVar id    -> GP.var (RVar (SRVar id))
+    | II.OParam tid -> if tid.II.tid_ty = Field
+                       then GP.var (Param (FOParam (tid.II.tid_id, !q)))
+                       else GP.var (Param (FOParam ("FIXME", !q)))
+                       (* else failwith "Oracle handles in winning condition not supported!" *)
+    | II.Choice tid -> if tid.II.tid_ty = Field
+                       then GP.var (Param (FChoice(tid.II.tid_id)))
+                       else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
+  in  
+  L.map (fun p -> q := !q + 1; WP.to_terms p |> GP.eval_generic cconv vconv) ps
+
+
+
+let unroll_constraints fs bound =
+  let annot_oparam q p = match p with
+      | II.OParam t -> II.OParam({t with II.tid_id = t.II.tid_id^"_"^(string_of_int q)})
+      | x        -> x
+  in
+  let annot_poly q f =
+    WP.to_terms f |> L.map (fun (vs, c) -> (L.map (annot_oparam q) vs, c))
+                  |> WP.from_terms
+  in
+  L.fold_left (fun acc f ->
+                 acc @
+                 (L.map (fun q -> annot_poly q f) (list_from_to 1 bound)))
+              []
+              fs
 
 (* Checks if a wpoly is quantified, i.e. contains oracle parameters *)
 let is_quantified f =
@@ -206,6 +271,31 @@ let gdef_to_constrs b gdef =
   if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
 
   (* Expand winning conditions based on number of oracle queries *)
+  F.printf "\n############ Unrolled Inequalities ###########\n";
+  let qineqs = conc_map (quant_wp_to_gps comp b) qineqs in
+  F.printf "%a\n" (pp_list "\n" GP.pp) qineqs;
 
+  let eqs = L.map (nonquant_wp_to_gp comp) eqs in
+  let ineqs = L.map (nonquant_wp_to_gp comp) ineqs in
 
-  failwith "unknown"
+  (* Substitute group variables with their possible values *)
+
+  F.printf "\n############ Equalities for constraint generation ###########\n";
+  F.printf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs);
+
+  F.printf "\n############ Inequalities for constraint generation ###########\n";
+  F.printf "0 <> %a\n" (pp_list "\n\n0 <> " EP.pp) (L.map gp_to_ep ineqs);
+
+  let eqs_constrs = conc_map extract_constraints eqs in
+
+  F.printf "\n############## Equality constraints ##############\n";
+  F.printf "0 = %a\n" (pp_list "\n\n0 = " RP.pp) (L.map cp_to_rpoly eqs_constrs);
+
+  let ineqs_constrs = L.map extract_constraints (ineqs @ qineqs) in
+
+  F.printf "\n############## Inequality constraints ##############\n";
+  List.iter (fun fs ->
+               F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
+             (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
+  
+  (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)
