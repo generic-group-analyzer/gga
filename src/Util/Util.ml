@@ -290,7 +290,16 @@ let pp_option pp_some fmt o = match o with
 let pp_tuple sep p fmt (a,b) =
   F.fprintf fmt "%a %s %a" p a sep p b
 
-let fsprintf fm = Format.fprintf Format.str_formatter fm
+let fsprintf fmt =
+  let buf  = Buffer.create 127 in
+  let fbuf = Format.formatter_of_buffer buf in
+  Format.kfprintf
+    (fun _ ->
+      Format.pp_print_flush fbuf ();
+      Buffer.contents buf)
+    fbuf fmt
+
+(* let fsprintf fm = Format.fprintf Format.str_formatter fm *)
 
 let fsget _ = Format.flush_str_formatter ()
 (*i*)
