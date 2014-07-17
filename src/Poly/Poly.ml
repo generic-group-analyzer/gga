@@ -160,6 +160,10 @@ module MakePoly (V : Var) (C : Ring) = struct
     let eval_term (m,c) = mult (const c) (eval_monom m) in
     ladd (L.map eval_term f)
 
+  let eval_generic cconv vconv terms =
+    let vars_to_poly vs = lmult (L.map vconv vs) in
+    ladd (L.map (fun (vs, c) ->  mult (vars_to_poly vs) (cconv c)) terms)
+
   let to_terms f = f
 
   let from_terms f = norm f

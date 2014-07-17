@@ -50,6 +50,7 @@ module type Poly = sig
   (* \ic{[eval env f] returns the polynomial [f] evaluated at
          the points [x := env x].} *)
   val eval : (var -> t) -> t -> t
+  val eval_generic : ('c -> t) -> ('v -> t) -> ('v list * 'c) list -> t
   val vars : t -> var list
 
   (* \ic{[partition p f] returns a tuple [(t1s,t2s)]
