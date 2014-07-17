@@ -4,7 +4,7 @@ true: bin_annot
 <src/Interactive/InteractiveBounded.*>: package(yojson)
 <src/Util/Util.*>: package(yojson)
 <src/Tool/wsggt.*>: package(websocket), package(yojson)
-<src/Tool> or <src/Poly> or <src/Util> or <src/Param>: include
+<src/Tool> or <src/Poly> or <src/Util> or <src/Param> or <src/Synthesis>: include
 <src/NonParam> or <src/Solver> or <src/Interactive>: include
 <src/Tool/ggt.*>  or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix)
 <src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(oUnit)

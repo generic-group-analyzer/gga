@@ -6,12 +6,14 @@ open Util
 module S = String
 (*i*)
 
-let main =
+let main_analyze () = 
   if Array.length Sys.argv <> 3 then
-    output_string stderr (F.sprintf "usage: %s <param|nonparam|interactive|interactive_i> <inputfile>\n" Sys.argv.(0))
+    output_string stderr (F.sprintf "usage: %s <param|nonparam|interactive|interactive_i|synth> <inputfile>\n" Sys.argv.(0))
   else
     let scmds = Util.input_file Sys.argv.(2) in
     match Sys.argv.(1) with
+    | "synth" ->
+      Synthesis.synth ()
     | "param" ->
       let open Z3_Solver in
       begin try
@@ -57,3 +59,7 @@ let main =
     | s ->
       F.printf "Invalid command: %s\n" s
 
+let main =
+  if Sys.argv.(1) = "synth"
+  then Synthesis.synth ()
+  else main_analyze ()
