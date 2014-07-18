@@ -188,13 +188,7 @@ let compute_completion st o bound gs =
   let rec loop q st =
     if q > bound then st
     else complete_gs gs st
-         |> (fun st ->
-               F.printf "######## Before Calling Oracle ########\n\n";
-               F.printf "%a" pp_state st; st)
          |> call_oracle o q
-         |> (fun st ->
-               F.printf "######## After Calling Oracle ########\n\n";
-               F.printf "%a" pp_state st; st)
          |> complete_gs gs
          |> loop (q+1)
   in
@@ -267,18 +261,24 @@ let cgen s =
     i := !i+1;
     GP.var (Param (ChoiceCoeff (s, !i)))
 
-let nonquant_wp_to_gp cur p =
+let get_gid tid = match tid.II.tid_ty with | Group s -> s | _ -> failwith "Uhh?"
+
+let nonquant_wp_to_gp st p =
   let cconv c = GP.const c in
   let vconv v = match v with
     | II.RVar id    -> GP.var (RVar (SRVar id))
     | II.OParam _   -> failwith "Called with quantified winning condition."
     | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
-                       else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
+                       else begin
+                              let gid = get_gid tid in
+                              let ps = L.assoc gid st.groups in
+                              lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
+                            end
   in
   WP.to_terms p |> GP.eval_generic cconv vconv
 
-let quant_wp_to_gps hmap cur bound p =
+let quant_wp_to_gps st bound p =
   let ps = L.map (fun _ -> p) (list_from_to 1 bound) in
   let q = ref 0 in
   let cconv c = GP.const c in
@@ -287,13 +287,16 @@ let quant_wp_to_gps hmap cur bound p =
     | II.OParam tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FOParam (tid.II.tid_id, !q)))
                        else begin
-                            let gid = match tid.II.tid_ty with | Group s -> s | _ -> failwith "Uhh?"
-                            in
-                            L.assoc (tid.II.tid_id, gid, q) hmap
+                              let gid = get_gid tid in
+                              L.assoc (tid.II.tid_id, gid, !q) st.hmap
                             end
     | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
-                       else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
+                       else begin
+                              let gid = get_gid tid in
+                              let ps = L.assoc gid st.groups in
+                              lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
+                            end
   in  
   L.map (fun p -> q := !q + 1; WP.to_terms p |> GP.eval_generic cconv vconv) ps
 
@@ -302,33 +305,16 @@ let is_quantified f =
   let is_qvar v = match v with | II.OParam _ -> true | _ -> false in
   L.fold_left (fun acc v -> acc || is_qvar v) false (WP.vars f)
 
-
-(* TODO: Add parsing of gdef *)
 let gdef_to_state gdef =
   L.fold_left (fun acc (p, gid) -> state_app_group gid (rpoly_to_gp p) acc)
               { groups = []; hmap = [] }
               gdef.II.gdef_inputs
-(*  {
-    groups = [("1", [GP.from_int 1; rpoly_to_gp (RP.var "V"); rpoly_to_gp (RP.var "W")]); ("2", [GP.from_int 1])];
-    hmap   = []
-  } *)
   
 let gdef_to_constrs b gdef =
   let st = gdef_to_state gdef in
-  (*F.printf "############# Initial state #############\n\n";
-  F.printf "%a" pp_state st;
-  F.printf "\n\n###########################################\n";
-  F.printf "############# Completed state #############\n";
-  F.printf "###########################################\n\n";*)
   let st = compute_completion st (L.hd gdef.II.gdef_odefs) b gdef.II.gdef_gs in
-  (*F.printf "%a" pp_state st;*)
-  failwith "unknown"
 
-     
-
-(*
-  let comp = compute_completion cur (L.hd gdef.II.gdef_odefs) b in
-  F.printf "%a\n" (pp_list "\n" GP.pp) comp;
+  F.printf "%a" pp_state st;
 
   let eqs = gdef.II.gdef_wcond.II.wcond_eqs in
   let ineqs = gdef.II.gdef_wcond.II.wcond_ineqs in
@@ -347,11 +333,11 @@ let gdef_to_constrs b gdef =
   if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
 
   F.printf "\n############ Unrolled Inequalities ###########\n";
-  let qineqs = conc_map (quant_wp_to_gps comp b) qineqs in
+  let qineqs = conc_map (quant_wp_to_gps st b) qineqs in
   F.printf "%a\n" (pp_list "\n" GP.pp) qineqs;
 
-  let eqs = L.map (nonquant_wp_to_gp comp) eqs in
-  let ineqs = L.map (nonquant_wp_to_gp comp) ineqs in
+  let eqs = L.map (nonquant_wp_to_gp st) eqs in
+  let ineqs = L.map (nonquant_wp_to_gp st) ineqs in
 
   F.printf "\n############ Equalities for constraint generation ###########\n";
   F.printf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs);
@@ -372,4 +358,3 @@ let gdef_to_constrs b gdef =
          (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
   
   (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)
-*)
