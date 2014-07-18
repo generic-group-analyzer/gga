@@ -123,8 +123,8 @@ cmd :
 | ISOS; isos = separated_nonempty_list(COMMA,iso); DOT
   { AddIsos isos }
 
-| INP; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; GROUP; DOT
-  { AddInput(ps) }
+| INP; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; g = GROUP; DOT
+  { AddInput(ps,g) }
 | ORACLE; oname = VAR; LPAR; params = separated_list(COMMA,typed_var); RPAR;
   EQ; orvar = list(samp_vars);
   RETURN; ps = separated_list(COMMA,polys_group); DOT

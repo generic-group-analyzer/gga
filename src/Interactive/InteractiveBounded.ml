@@ -101,7 +101,7 @@ let state_update_hmaps keyvals st =
 
 let state_app_group gid p st =
   let l = try L.assoc gid st.groups with
-          | _ -> failwith "State not properly initialized with all groups."
+          | _ -> []
   in
   {st with groups = (gid, p :: l) :: st.groups}
 
@@ -313,7 +313,6 @@ let gdef_to_constrs b gdef =
      
 
 (*
-  let cur = L.map rpoly_to_gp gdef.II.gdef_inputs in
   let comp = compute_completion cur (L.hd gdef.II.gdef_odefs) b in
   F.printf "%a\n" (pp_list "\n" GP.pp) comp;
 

@@ -263,7 +263,7 @@ let pp_wcond fmt wcond =
        the definition of the winning condition.} *)
 type gdef = {
   gdef_gs     : group_setting;
-  gdef_inputs : rpoly list;
+  gdef_inputs : (rpoly * gid) list;
   gdef_odefs  : odef list;
   gdef_wcond  : wcond;
 }
@@ -318,8 +318,8 @@ let gchoices_of_gdef gdef =
 
 (*i*)
 let pp_gdef fmt gdef =
-  F.fprintf fmt "input [%a] in G.\n\n%a\n\n%a"
-    (pp_list ", " RP.pp) gdef.gdef_inputs
+  F.fprintf fmt "input [%a].\n\n%a\n\n%a"
+    (pp_list ", " (fun fmt (p,gid) -> F.fprintf fmt "%a in %s" RP.pp p gid)) gdef.gdef_inputs
     (pp_list "\n" pp_odef) gdef.gdef_odefs
     pp_wcond gdef.gdef_wcond
 (*i*)

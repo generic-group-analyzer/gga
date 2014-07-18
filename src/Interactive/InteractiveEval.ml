@@ -32,7 +32,7 @@ type cond_type = Eq | InEq
 type cmd =
   | AddIsos    of iso list
   | AddMaps    of emap list
-  | AddInput   of rpoly list
+  | AddInput   of rpoly list * gid
   | AddOracle  of oname * tid list * id list * (rpoly * gid) list
   | SetWinning of tid list * (rpoly * cond_type) list
 
@@ -44,8 +44,8 @@ let pp_cmd fmt cmd =
     F.fprintf fmt "isos: %a.\n" (pp_list ", " pp_iso) isos
   | AddMaps emaps ->
     F.fprintf fmt "maps: %a.\n" (pp_list ", " pp_emap) emaps
-  | AddInput fs ->
-    F.fprintf fmt "add_input %a" (pp_list "," RP.pp) fs
+  | AddInput (fs,gid) ->
+    F.fprintf fmt "add_input %a in %s\n" (pp_list "," RP.pp) fs gid
   | AddOracle(s,params,orvars,fs) ->
     F.fprintf fmt "add_oracle %s(%a) sample %a; (%a)" s
       (pp_list ", " pp_tid) params
@@ -113,7 +113,7 @@ let rpoly_to_wpoly (choices : tid list) (oparams : tid list) (p : rpoly) =
 
 type eval_state = {
   es_gs      : group_setting;
-  es_inputs  : rpoly list;
+  es_inputs  : (rpoly * gid) list;
   es_odefs   : odef list;
   es_oparams : tid list;
   es_orvars  : id list;
@@ -135,8 +135,8 @@ let eval_cmd estate cmd =
     { estate with es_gs = { estate.es_gs with gs_isos = estate.es_gs.gs_isos@isos } }
   | AddMaps(emaps),None ->
     { estate with es_gs = { estate.es_gs with gs_emaps = estate.es_gs.gs_emaps@emaps } }
-  | AddInput fs, None ->
-    { estate with es_inputs = estate.es_inputs@fs }
+  | AddInput(fs,gid), None ->
+    { estate with es_inputs = estate.es_inputs@(L.map (fun p -> (p,gid)) fs) }
   | AddOracle(oname,params,orvars,fs), None ->
     if not (unique (L.map (fun tid -> tid.tid_id) params))
       then failwith "Two arguments with the same name in oracle definition";
