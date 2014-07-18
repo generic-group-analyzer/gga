@@ -80,3 +80,34 @@ let rec mconcat ms =
 let (>>=) = bind
 
 let (>>) m1 m2 = m1 >>= fun _ -> m2
+
+
+(* \ic{Return all subsets $S$ of $m$ such that $|S| \leq k$.} *)
+let pick_set k m =
+  let rec go k acc =
+    mplus
+      (ret acc)
+      (guard (k <> 0) >>
+       m >>= fun x ->
+       guard ((List.for_all (fun y -> y < x) acc)) >>
+       go (k-1) (x::acc))
+  in
+  go k []
+
+(* \ic{Return the cartesian product of $m1$ and $m2$.} *)
+let cart m1 m2 =
+  m1 >>= fun x1 ->
+  m2 >>= fun x2 ->
+  ret (x1,x2)
+
+(* \ic{Return the cartesian product of $m$.} *)
+let prod m = cart m m
+
+(* \ic{Return the $n$-fold cartesian product of $ms$.} *)
+let rec ncart ms =
+  match ms with
+  | []    -> ret []
+  | m::ms ->
+    m >>= fun x ->
+    ncart ms >>= fun xs ->
+    ret (x::xs)

@@ -2,6 +2,7 @@
 
 (*i*)
 open Util
+open Nondet
 (*i*)
 
 (* \hd{Generate monomials} *)
@@ -10,7 +11,7 @@ open Util
        The enumeration algorithm considers the vector $v$ as a mixed radix
        representation of a natural number with respect to the radix $w$.} *)
 
-(* \ic{For radix $r$ and vector $v$, the result is
+(* \ic{[vec_to_int r v] for the radix $r$ and the vector $v$ returns
        $\Sigma_{i=1}^{|r|} v_i\,(\Pi_{j=1}^{i-1} r_i)$.} *)
 let vec_to_int radix v =
   let rec go bs rs i mult =
@@ -24,63 +25,26 @@ let vec_to_int radix v =
   in
   go v radix 0 1
 
-(* \ic{The inverse of [vec_to_int].} *)
-let int_to_vec radix i0 =
+(* \ic{[int_to_vec r i] is the inverse of [vec_to_int].} *)
+let int_to_vec radix i =
   let rec go i rs v =
     match rs with
     | [] ->
-      if i = 0 then Some (List.rev v) else None
+      if i = 0 then Some (L.rev v) else None
     | r::rs ->
       go (i / r) rs ((i mod r)::v)
   in
-  go i0 radix []
+  go i radix []
 
 (* \ic{Generate all $k$-dimensional vectors $w \in \mathbb{N}^k$ such
        that $k = dim(v)$ and $w_i < v_i$ for all $i$.} *)
 let vecs_smaller bvec =
   let rec go i =
     match int_to_vec bvec i with
-    | Some v -> Nondet.mplus (Nondet.ret v) (go (succ i))
-    | None   -> Nondet.mempty
-  in go 1
-
-(* \hd{Combinators for generation} *)
-
-(* \ic{Return all subsets $S$ of $m$ such that $|S| \leq k$.} *)
-let pick_set k m =
-  let rec go k acc =
-    Nondet.(
-      mplus
-        (ret acc)
-        (if k = 0 then mempty
-         else m >>= fun x ->
-              guard ((List.for_all (fun y -> y < x) acc)) >>
-              go (k-1) (x::acc))
-    )
+    | Some v -> mplus (ret v) (go (succ i))
+    | None   -> mempty
   in
-  go k []
-
-(* \ic{Return the cartesian product of $m1$ and $m2$.} *)
-let cart m1 m2 =
-  Nondet.(
-    m1 >>= fun x1 ->
-    m2 >>= fun x2 ->
-    ret (x1,x2)
-  )
-
-(* \ic{Return the cartesian product of $m$.} *)
-let prod m = cart m m
-
-(* \ic{Return the $n$-fold cartesian product of $ms$.} *)
-let rec ncart ms =
-  match ms with
-  | []    -> Nondet.ret []
-  | m::ms ->
-    Nondet.(
-      m >>= fun x ->
-      ncart ms >>= fun xs ->
-      ret (x::xs)
-    )
+  go 1
 
 (* \hd{Compute verification equation} *)
 
@@ -88,7 +52,7 @@ let rec ncart ms =
 
 let pp_mon vars fmt v =
   let ev =
-    L.filter (fun (e,_) -> e > 0) (List.combine v vars)
+    L.filter (fun (e,_) -> e > 0) (L.combine v vars)
   in
   let pp_vp fmt (e,v) =
     if e = 1 then F.fprintf fmt "%s" v
@@ -107,7 +71,7 @@ let synth () =
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_string) vars
     (pp_list ", " pp_int) bounds;
-  Nondet.iter (-1)
+  iter (-1)
     (prod (pick_set max_terms (vecs_smaller bounds)))
     (fun (f,g) ->
        incr i;

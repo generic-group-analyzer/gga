@@ -1,10 +1,6 @@
 type 'a stream
-  (* =
-    Nil
-  | Cons of 'a * (unit -> 'a stream) *)
 
 type 'a nondet
-  (* = unit -> 'a stream *)
 
 val ret : 'a -> 'a nondet
 val mempty : 'a nondet
@@ -23,3 +19,8 @@ val msum : ('a nondet) list -> 'a nondet
 val (>>=) : 'a nondet -> ('a -> 'b nondet) -> 'b nondet
 
 val (>>) : 'a nondet -> 'b nondet -> 'b nondet
+
+val pick_set : int -> 'a nondet -> ('a list) nondet
+val cart : 'a nondet -> 'b nondet -> ('a * 'b) nondet
+val prod : 'a nondet -> ('a * 'a) nondet
+val ncart : 'a nondet list -> ('a list) nondet
