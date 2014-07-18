@@ -76,18 +76,3 @@ let synth () =
     (fun (f,g) ->
        incr i;
        F.printf "%i. f = %a, g = %a\n" !i (pp_poly vars) f (pp_poly vars) g)
-
-let test () =
-  let radix = [ 3; 3; 3 ] in
-  let v2i = vec_to_int radix in
-  let i2v = int_to_vec radix in
-  let pr i =
-    F.printf "%a\n" (pp_opt pp_int) (map_opt v2i (i2v i))
-  in
-  pr 5;
-  pr 6;
-  pr 7;
-  pr 8;
-  pr 9;
-  pr 10;
-  pr 11
