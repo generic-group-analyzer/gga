@@ -170,16 +170,6 @@ let call_oracle o q st =
   in
   loop st o.II.odef_return
 
-let ovar_to_gp cur q v =
-  match v with
-  | II.SRVar r -> GP.var (RVar (SRVar r))
-  | II.ORVar r -> GP.var (RVar (ORVar (r, q)))
-  | II.Param t -> if t.II.tid_ty = II.Field
-                  then GP.var (Param (FOParam (t.II.tid_id, q)))
-                  else lin_comb_of_gps cur
-                       (make_fresh_var_gen (F.sprintf "C_%s" t.II.tid_id) q)
-
-
 (* TODO: Add completion computation with respect to group setting *)
 let complete_gs gs st =
   st
