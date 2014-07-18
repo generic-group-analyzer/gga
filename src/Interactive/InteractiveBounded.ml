@@ -93,17 +93,22 @@ let state_update_hmaps keyvals st =
 
 (* This adds a polynomial to the list for gid.
    Note: We add the updated group list to the front of the list, since
-         assoc always returns the most up-to-date list. Maybe replace
-         by better data structure in the future.
+         assoc always returns the first most up-to-date list. Maybe replace
+         by better data structure in the future...??
 
          The pretty printer needs to be fixed, since it prints the whole
          list. Alternatively replace with a Map. *)
 
 let state_app_group gid p st =
-  let l = try L.assoc gid st.groups with
-          | _ -> []
-  in
-  {st with groups = (gid, p :: l) :: st.groups}
+  try let l =  L.assoc gid st.groups
+      in
+      {st with groups = (gid, p :: l) :: st.groups}
+  with
+  | _ ->
+  (* If the first element added is "1", don't add it twice *)
+  if GP.is_const p
+  then {st with groups = (gid, [p]) :: st.groups}
+  else {st with groups = (gid, p :: [GP.from_int 1]) :: st.groups}
 
 let lin_comb_of_gps ps cgen =
   L.fold_left (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
@@ -133,7 +138,7 @@ let add_poly groups st gid p q =
     | Not_found ->
     try L.assoc (id, gid, q) !hmap with
     | Not_found -> begin
-                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> failwith "Foobar!")
+                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> [GP.from_int 1])
                               (make_fresh_var_gen (F.sprintf "C_%s" id) q)
                    in set_map id v; v
                    end
@@ -183,7 +188,13 @@ let compute_completion st o bound gs =
   let rec loop q st =
     if q > bound then st
     else complete_gs gs st
+         |> (fun st ->
+               F.printf "######## Before Calling Oracle ########\n\n";
+               F.printf "%a" pp_state st; st)
          |> call_oracle o q
+         |> (fun st ->
+               F.printf "######## After Calling Oracle ########\n\n";
+               F.printf "%a" pp_state st; st)
          |> complete_gs gs
          |> loop (q+1)
   in
@@ -294,20 +305,23 @@ let is_quantified f =
 
 (* TODO: Add parsing of gdef *)
 let gdef_to_state gdef =
-  {
+  L.fold_left (fun acc (p, gid) -> state_app_group gid (rpoly_to_gp p) acc)
+              { groups = []; hmap = [] }
+              gdef.II.gdef_inputs
+(*  {
     groups = [("1", [GP.from_int 1; rpoly_to_gp (RP.var "V"); rpoly_to_gp (RP.var "W")]); ("2", [GP.from_int 1])];
     hmap   = []
-  }
+  } *)
   
 let gdef_to_constrs b gdef =
   let st = gdef_to_state gdef in
-  F.printf "############# Initial state #############\n\n";
+  (*F.printf "############# Initial state #############\n\n";
   F.printf "%a" pp_state st;
   F.printf "\n\n###########################################\n";
   F.printf "############# Completed state #############\n";
-  F.printf "###########################################\n\n";
+  F.printf "###########################################\n\n";*)
   let st = compute_completion st (L.hd gdef.II.gdef_odefs) b gdef.II.gdef_gs in
-  F.printf "%a" pp_state st;
+  (*F.printf "%a" pp_state st;*)
   failwith "unknown"
 
      
