@@ -186,7 +186,7 @@ let nonquant_wp_to_gp cur p =
   let vconv v = match v with
     | II.RVar id    -> GP.var (RVar (SRVar id))
     | II.OParam _   -> failwith "Called with quantified winning condition."
-    | II.Choice tid -> if tid.II.tid_ty = Field
+    | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
   in
@@ -198,11 +198,11 @@ let quant_wp_to_gps cur bound p =
   let cconv c = GP.const c in
   let vconv v = match v with
     | II.RVar id    -> GP.var (RVar (SRVar id))
-    | II.OParam tid -> if tid.II.tid_ty = Field
+    | II.OParam tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FOParam (tid.II.tid_id, !q)))
                        else GP.var (Param (FOParam ("FIXME", !q)))
                        (* else failwith "Oracle handles in winning condition not supported!" *)
-    | II.Choice tid -> if tid.II.tid_ty = Field
+    | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
   in  
@@ -215,7 +215,7 @@ let is_quantified f =
 
 let gdef_to_constrs b gdef =
   (* Compute the completion of the input w.r.t. b oracle calls *)  
-  let cur = L.map rpoly_to_gp gdef.II.gdef_inputs in
+  let cur = L.map rpoly_to_gp (L.map fst gdef.II.gdef_inputs) in (* FIX HERE *)
   let comp = compute_completion cur (L.hd gdef.II.gdef_odefs) b in
   F.printf "%a\n" (pp_list "\n" GP.pp) comp;
 
