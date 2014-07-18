@@ -70,15 +70,100 @@ module GP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
-let make_fresh_var_gen s q =
-  let i = ref 0 in
-  function () -> i := !i+1;
-                 GP.var (Param (OCoeff (s, q, !i)))
+(* State of the completion computation:
+   - groups: Contains a monomial basis for each group
+
+   - handle_values: During oracle queries, handles get replaced by
+     linear combinations. We store these for constraint generation
+*)
+
+type state = {
+  groups : (II.gid * GP.t list) list;
+  hmap : ((II.id * II.gid * query_idx) * GP.t) list
+}
+
+let pp_state fmt st =
+  F.fprintf fmt "---------- Group elements ----------\n";
+  L.iter (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps) st.groups;
+  F.fprintf fmt "\n------- Handle substitutions -------\n";
+  L.iter (fun ((id, gid, q), p) -> F.fprintf fmt "\n%s_%i in G%s = %a\n" id q gid GP.pp p) st.hmap
+
+let state_update_hmaps keyvals st =
+  {st with hmap = keyvals @ st.hmap}
+
+(* This adds a polynomial to the list for gid.
+   Note: We add the updated group list to the front of the list, since
+         assoc always returns the most up-to-date list. Maybe replace
+         by better data structure in the future.
+
+         The pretty printer needs to be fixed, since it prints the whole
+         list. Alternatively replace with a Map. *)
+
+let state_app_group gid p st =
+  let l = try L.assoc gid st.groups with
+          | _ -> failwith "State not properly initialized with all groups."
+  in
+  {st with groups = (gid, p :: l) :: st.groups}
 
 let lin_comb_of_gps ps cgen =
   L.fold_left (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
               GP.zero
               ps
+
+let make_fresh_var_gen s q =
+  let i = ref 0 in
+  function () -> i := !i+1;
+                 GP.var (Param (OCoeff (s, q, !i)))
+
+
+(* This function does the following:
+   1. Replaces all handles in given poly with a linear combination of computable monomials.
+   2. Adds the polynomial into the group it belongs to.
+   3. For each new handle record its value in the state. 
+   *)
+let add_poly groups st gid p q =
+  (* Keep track of handle values defined to be added to state *)
+  let hmap = ref []
+  in
+  let set_map id v = hmap := ((id, gid, q), v) :: !hmap
+  in  
+  let get_handle_value id =
+    (* First check if already stored in our old state *)
+    try L.assoc (id, gid, q) st.hmap with
+    | Not_found ->
+    try L.assoc (id, gid, q) !hmap with
+    | Not_found -> begin
+                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> failwith "Foobar!")
+                              (make_fresh_var_gen (F.sprintf "C_%s" id) q)
+                   in set_map id v; v
+                   end
+  in
+  (* Convert ovars to GP polynomials and update hmap on each converted handle *)
+  let ovar_to_gp v =
+    match v with
+    | II.SRVar r -> GP.var (RVar (SRVar r))
+    | II.ORVar r -> GP.var (RVar (ORVar (r, q)))
+    | II.Param t -> if t.II.tid_ty = II.Field
+                  then GP.var (Param (FOParam (t.II.tid_id, q)))
+                  else get_handle_value t.II.tid_id
+  in
+  (* Adds polynomial to the group gid and adds handle value mappings *)
+  let update_state p =
+    let st = state_app_group gid p st in
+    state_update_hmaps !hmap st
+  in
+  OP.to_terms p
+  |> GP.eval_generic (fun i -> GP.const i) ovar_to_gp
+  |> update_state
+
+
+let call_oracle o q st =
+  let rec loop st' rvals =
+    match rvals with
+    | (p, gid) :: xs -> loop (add_poly st.groups st' gid p q) xs
+    | []             -> st'
+  in
+  loop st o.II.odef_return
 
 let ovar_to_gp cur q v =
   match v with
@@ -87,32 +172,22 @@ let ovar_to_gp cur q v =
   | II.Param t -> if t.II.tid_ty = II.Field
                   then GP.var (Param (FOParam (t.II.tid_id, q)))
                   else lin_comb_of_gps cur
-                       (make_fresh_var_gen (F.sprintf "[%s]" t.II.tid_id) q)
+                       (make_fresh_var_gen (F.sprintf "C_%s" t.II.tid_id) q)
 
 
-(* cur is the currently computable polynomials, f is an opoly
-  returned by an oracle query *)
-let complete_polynomial cur q f =
-  let translate_term t =
-    let factors = L.map (ovar_to_gp cur q) (fst t) in
-    let coeff = GP.const (snd t) in
-    GP.mult (GP.lmult factors)
-            coeff
-  in 
-  f |> OP.to_terms
-    |> L.map translate_term
-    |> GP.ladd
+(* TODO: Add completion computation with respect to group setting *)
+let complete_gs gs st =
+  st
 
-let compute_completion cur o bound =
-  let rec loop i cur =
-    if i > bound then cur
-    else L.map fst o.II.odef_return
-         |> L.map (complete_polynomial cur i)
-         |> (@) cur 
-         |> loop (i+1) 
+let compute_completion st o bound gs =
+  let rec loop q st =
+    if q > bound then st
+    else complete_gs gs st
+         |> call_oracle o q
+         |> complete_gs gs
+         |> loop (q+1)
   in
-  loop 1 cur
-
+  loop 1 st
 
 (****************************************************
  *************** Extract coefficients ***************
@@ -186,23 +261,26 @@ let nonquant_wp_to_gp cur p =
   let vconv v = match v with
     | II.RVar id    -> GP.var (RVar (SRVar id))
     | II.OParam _   -> failwith "Called with quantified winning condition."
-    | II.Choice tid -> if tid.II.tid_ty = Field
+    | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
   in
   WP.to_terms p |> GP.eval_generic cconv vconv
 
-let quant_wp_to_gps cur bound p =
+let quant_wp_to_gps hmap cur bound p =
   let ps = L.map (fun _ -> p) (list_from_to 1 bound) in
   let q = ref 0 in
   let cconv c = GP.const c in
   let vconv v = match v with
     | II.RVar id    -> GP.var (RVar (SRVar id))
-    | II.OParam tid -> if tid.II.tid_ty = Field
+    | II.OParam tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FOParam (tid.II.tid_id, !q)))
-                       else GP.var (Param (FOParam ("FIXME", !q)))
-                       (* else failwith "Oracle handles in winning condition not supported!" *)
-    | II.Choice tid -> if tid.II.tid_ty = Field
+                       else begin
+                            let gid = match tid.II.tid_ty with | Group s -> s | _ -> failwith "Uhh?"
+                            in
+                            L.assoc (tid.II.tid_id, gid, q) hmap
+                            end
+    | II.Choice tid -> if tid.II.tid_ty = II.Field
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else lin_comb_of_gps cur (cgen (F.sprintf "C_%s" tid.II.tid_id))
   in  
@@ -213,8 +291,28 @@ let is_quantified f =
   let is_qvar v = match v with | II.OParam _ -> true | _ -> false in
   L.fold_left (fun acc v -> acc || is_qvar v) false (WP.vars f)
 
+
+(* TODO: Add parsing of gdef *)
+let gdef_to_state gdef =
+  {
+    groups = [("1", [GP.from_int 1; rpoly_to_gp (RP.var "V"); rpoly_to_gp (RP.var "W")]); ("2", [GP.from_int 1])];
+    hmap   = []
+  }
+  
 let gdef_to_constrs b gdef =
-  (* Compute the completion of the input w.r.t. b oracle calls *)  
+  let st = gdef_to_state gdef in
+  F.printf "############# Initial state #############\n\n";
+  F.printf "%a" pp_state st;
+  F.printf "\n\n###########################################\n";
+  F.printf "############# Completed state #############\n";
+  F.printf "###########################################\n\n";
+  let st = compute_completion st (L.hd gdef.II.gdef_odefs) b gdef.II.gdef_gs in
+  F.printf "%a" pp_state st;
+  failwith "unknown"
+
+     
+
+(*
   let cur = L.map rpoly_to_gp gdef.II.gdef_inputs in
   let comp = compute_completion cur (L.hd gdef.II.gdef_odefs) b in
   F.printf "%a\n" (pp_list "\n" GP.pp) comp;
@@ -235,15 +333,12 @@ let gdef_to_constrs b gdef =
 
   if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
 
-  (* Expand winning conditions based on number of oracle queries *)
   F.printf "\n############ Unrolled Inequalities ###########\n";
   let qineqs = conc_map (quant_wp_to_gps comp b) qineqs in
   F.printf "%a\n" (pp_list "\n" GP.pp) qineqs;
 
   let eqs = L.map (nonquant_wp_to_gp comp) eqs in
   let ineqs = L.map (nonquant_wp_to_gp comp) ineqs in
-
-  (* Substitute group variables with their possible values *)
 
   F.printf "\n############ Equalities for constraint generation ###########\n";
   F.printf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs);
@@ -259,8 +354,9 @@ let gdef_to_constrs b gdef =
   let ineqs_constrs = L.map extract_constraints (ineqs @ qineqs) in
 
   F.printf "\n############## Inequality constraints ##############\n";
-  List.iter (fun fs ->
-               F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
-             (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
+  L.iter (fun fs ->
+         F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
+         (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
   
   (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)
+*)
