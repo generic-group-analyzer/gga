@@ -147,6 +147,22 @@ def interp(req):
            , "RK": matrixToInt(RK)
            , "exc_ub" : int(exc_ub) }
 
+  if cmd == "computeKernel":
+    M  = matrix(req['M'])
+
+    debug(str(M))
+
+    S,U = M.hermite_form(transformation=True, include_zero_rows=True)
+
+    K = kernelGenerating(S,U)
+
+    #K = span(K,base_ring=ZZ).basis()
+
+    return { "ok": True
+           #, "K": []
+           , "K": matrixToInt(K)
+           }
+
   elif cmd == "checkSat":
     pvars = req['vars']
     zero = req['zero']
@@ -196,14 +212,15 @@ def interp(req):
 
 def main():
   try:
-    inp = sys.stdin.readline()
-    #debug(inp)
-    cmd = json.loads(inp)
-    cmd = _parseJSON(cmd)
-    res = interp(cmd)
-    #debug(str(res))
-    print(json.dumps(res))
-    sys.stdout.flush()
+    while True:
+      inp = sys.stdin.readline()
+      #debug(inp)
+      cmd = json.loads(inp)
+      cmd = _parseJSON(cmd)
+      res = interp(cmd)
+      #debug(str(res))
+      print(json.dumps(res))
+      sys.stdout.flush()
   except Exception:
       if debug_enabled:
         traceback.print_exc()

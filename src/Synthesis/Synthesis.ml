@@ -103,7 +103,7 @@ let evecs_to_poly vs =
   in
   RMP.ladd (L.map evec_to_poly vs)
 
-let verif_eq s =
+let verif_eq ?sts s =
 
   (* \ic{ input in $\group_1$: $[1,V,W,R,S,M]$ } *)
   let inp_g1 =
@@ -149,9 +149,7 @@ let verif_eq s =
     |> sorted_nub compare 
   in
   let coeff_vecs = L.map (fun (p,_) -> L.map (RMP.coeff p) basis) inp_gt in
-  let left_kernel,_,_,_ =
-    Sage_Solver.compare_kernel coeff_vecs coeff_vecs
-  in
+  let left_kernel = Sage_Solver.compute_kernel ?sts coeff_vecs in
   (* F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; *)
 
   let recip_of_kernel vker =
@@ -166,7 +164,8 @@ let verif_eq s =
 let synth () =
   let bounds = [2; 2; 3] in
   let max_terms = 2 in
-  let i = ref 0 in
+  let i_verif = ref 0 in
+  let i_total = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) bounds;
@@ -175,14 +174,22 @@ let synth () =
     guard (f <> []) >>
     ret (f,g)
   in
-  iter (10)
+  let sts = Sage_Solver.start_sage () in
+  iter (-1)
     sigs
     (fun (f,g) ->
+       incr i_total;
        let f = evecs_to_poly f in
        let g = evecs_to_poly g in
        let s = RMP.(f *@ (var V_M) +@ g) in
-       let veqs = verif_eq s in
-       if veqs <> [] then (
-         incr i;
-         F.printf "%i. S = %a, verif: %a\n" !i RMP.pp s
-           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs))
+       let veqs = verif_eq ~sts s in
+       if veqs = [] then (
+         F.printf ".%!";
+       ) else (
+         incr i_verif;
+         F.printf "\n%i. S = %a, verif: %a\n%!" !i_verif RMP.pp s
+           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs
+       )
+    );
+  Sage_Solver.stop_sage sts;
+  F.printf "\nChecked %i signature schemes, %i have verification equations" !i_total !i_verif
