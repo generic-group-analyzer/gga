@@ -101,21 +101,21 @@ type gpoly = GP.t
 
 (* \ic{State of the completion computation:
    \begin{itemize}
-   \item [groups]: Contains a monomial basis for each group
-   \item [handle_values]: During oracle queries, handles get replaced by
-     linear combinations. We store these for making the winning condition
-     handle-free.
+   \item [known]: Basis for known values in each group.
+   \item [hmap]: During oracle queries, handles get replaced by
+     linear combinations of known values. We store these for making
+     the winning condition handle-free.
    \end{itemize}}
 *)
 type state = {
-  groups : (II.gid * gpoly list) list;
+  known : (II.gid * gpoly list) list;
   hmap : ((II.id * II.gid * query_idx) * gpoly) list
 }
 
 (*i*)
 let pp_state fmt st =
   F.fprintf fmt "---------- Group elements ----------\n";
-  L.iter (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps) st.groups;
+  L.iter (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps) st.known;
   F.fprintf fmt "\n------- Handle substitutions -------\n";
   L.iter (fun ((id, gid, q), p) -> F.fprintf fmt "\n%s_%i in G%s = %a\n" id q gid GP.pp p) st.hmap
 (*i*)
@@ -132,15 +132,15 @@ let state_update_hmaps keyvals st =
          list. Alternatively replace with a Map. i*)
 
 let state_app_group gid p st =
-  try let l =  L.assoc gid st.groups
+  try let l =  L.assoc gid st.known
       in
-      {st with groups = (gid, p :: l) :: st.groups}
+      {st with known = (gid, p :: l) :: st.known}
   with
   | _ ->
   (*i If the first element added is "1", don't add it twice i*)
   if GP.is_const p
-  then {st with groups = (gid, [p]) :: st.groups}
-  else {st with groups = (gid, p :: [GP.from_int 1]) :: st.groups}
+  then {st with known = (gid, [p]) :: st.known}
+  else {st with known = (gid, p :: [GP.from_int 1]) :: st.known}
 
 let lin_comb_of_gps ps cgen =
   L.fold_left (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
@@ -197,7 +197,7 @@ let add_poly groups st gid p q =
 let call_oracle o q st =
   let rec loop st' rvals =
     match rvals with
-    | (p, gid) :: xs -> loop (add_poly st.groups st' gid p q) xs
+    | (p, gid) :: xs -> loop (add_poly st.known st' gid p q) xs
     | []             -> st'
   in
   loop st o.II.odef_return
@@ -295,7 +295,7 @@ let nonquant_wp_to_gp st p =
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else begin
                               let gid = get_gid tid in
-                              let ps = L.assoc gid st.groups in
+                              let ps = L.assoc gid st.known in
                               lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
                             end
   in
@@ -317,7 +317,7 @@ let quant_wp_to_gps st bound p =
                        then GP.var (Param (FChoice(tid.II.tid_id)))
                        else begin
                               let gid = get_gid tid in
-                              let ps = L.assoc gid st.groups in
+                              let ps = L.assoc gid st.known in
                               lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
                             end
   in  
@@ -330,7 +330,7 @@ let is_quantified f =
 
 let gdef_to_state gdef =
   L.fold_left (fun acc (p, gid) -> state_app_group gid (rpoly_to_gp p) acc)
-              { groups = []; hmap = [] }
+              { known = []; hmap = [] }
               gdef.II.gdef_inputs
   
 let gdef_to_constrs b gdef =
