@@ -173,5 +173,5 @@ let eval_cmds cmds =
   | None   ->
     failwith "no winning condition given"
   | Some wcond ->
-    { gdef_inputs = es.es_inputs; gdef_odefs = es.es_odefs; gdef_wcond = wcond;
-      gdef_gs = { gs_isos = []; gs_emaps = [] } }
+    { gdef_inputs = es.es_inputs; gdef_odefs = es.es_odefs;
+      gdef_wcond = wcond; gdef_gs = es.es_gs }
