@@ -52,7 +52,7 @@ let p_cmds = wrap_error (InteractiveParser.cmds_t InteractiveLexer.lex)
 
 let analyze_bounded_from_string s bound = 
   let gdef = p_cmds s |> IE.eval_cmds in
-  F.printf "%a\n\n" II.pp_gdef gdef;
+  F.printf "\n%a\n\n" II.pp_gdef gdef;
   let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs bound gdef in
   let zcs = L.map Z3_Solver.poly_to_json zero_constrs in
   let nzcs =

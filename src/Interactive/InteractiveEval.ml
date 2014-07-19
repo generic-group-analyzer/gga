@@ -118,13 +118,13 @@ let ensure_oracle_valid estate ovarnames =
   if estate.es_odefs <> []
     then failwith "Oracle already defined, multiple oracles not supported."
 
-(* \ic{Raise error if oracle definition invalid.} *)
+(* \ic{Raise error if winning condition definition invalid.} *)
 let ensure_winning_valid estate choices =
   let names = estate.es_varnames @ L.map (fun tid -> tid.tid_id) choices in
   if not (unique names) then failwith "Winning condition reuses names."
 
 (* \ic{Evaluate [cmd] in the interpreter state [estate] and
-   return the update interpreter state.} *)
+   return the updated interpreter state.} *)
 let eval_cmd estate cmd =
   match cmd,estate.es_mwcond with
   | AddIsos(isos),None ->
@@ -143,7 +143,6 @@ let eval_cmd estate cmd =
       estate.es_varnames @ orvars @ L.map (fun tid -> tid.tid_id) params
     in
     ensure_oracle_valid estate varnames;
-    F.printf "%a\n" pp_cmd cmd;
     let od =
       { odef_name = oname;
         odef_return = L.map (fun (p, gid) -> (rpoly_to_opoly params orvars p,gid)) fs }
