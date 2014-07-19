@@ -43,6 +43,7 @@ module type Poly = sig
   val zero : t
   val lmult : t list -> t
   val ladd : t list -> t
+  val pow : t -> int -> t
   val var : var -> t
   val const : coeff -> t
   val from_int : int -> t

@@ -3,13 +3,15 @@
 (*i*)
 open Util
 open Nondet
+open Poly
 (*i*)
 
 (* \hd{Generate monomials} *)
 
-(* \ic{We generate all exponent vectors $v$ for a degree bound vector $w$.
-       The enumeration algorithm considers the vector $v$ as a mixed radix
-       representation of a natural number with respect to the radix $w$.} *)
+(* \ic{We generate all exponent vectors $v$ for a vector $w$ of degree bounds.
+       The enumeration algorithm is based on a ranking function that considers
+       the vector $v$ as a mixed radix representation of a natural number with
+       respect to the radix $w$.} *)
 
 (* \ic{[vec_to_int r v] for the radix $r$ and the vector $v$ returns
        $\Sigma_{i=1}^{|r|} v_i\,(\Pi_{j=1}^{i-1} r_i)$.} *)
@@ -46,33 +48,141 @@ let vecs_smaller bvec =
   in
   go 1
 
+(* \hd{Recipe polynomials} *)
+
+(* \ic{We use the following variables for recipe polynomials.} *)
+type recipvar = M | V | W | R | S | One
+
+let string_of_recipvar v = match v with
+  | M -> "M" | V -> "V" | W -> "W" | R -> "R" | S -> "S" | One -> "1"
+
+(*i*)
+let pp_recipvar fmt v = pp_string fmt (string_of_recipvar v)
+(*i*)
+
+(* \ic{Recipe polynomials.} *)
+module RecipP = MakePoly(struct
+  type t = recipvar
+  let pp = pp_recipvar
+  let equal = (=)
+  let compare = compare
+end) (IntRing)
+
+(* \hd{Polynomials with random variables and messages} *)
+
+type rmvar = V_M | V_V | V_W | V_R
+
+(* \ic{We fix this order of random variables for our vector representation.} *)
+let varorder = [V_V; V_W; V_R]
+
+let string_of_rmvar v = match v with
+  | V_M -> "M" | V_V -> "V" | V_W -> "W" | V_R -> "R"
+
+(*i*)
+let pp_rmvar fmt v = pp_string fmt (string_of_rmvar v)
+(*i*)
+
+(* \ic{Polynomials with random variables and messages.} *)
+module RMP = MakePoly(struct
+  type t = rmvar
+  let pp = pp_rmvar
+  let equal = (=)
+  let compare = compare
+end) (IntRing)
+
+type rmpoly = RMP.t
+
 (* \hd{Compute verification equation} *)
+
+(* \ic{Convert list of exponent vectors to [rmpoly].} *)
+let evecs_to_poly vs =
+  let evec_to_poly v =
+    L.combine v varorder
+    |> L.map (fun (e,v) -> RMP.pow (RMP.var v) e)
+    |> RMP.lmult
+  in
+  RMP.ladd (L.map evec_to_poly vs)
+
+let verif_eq s =
+
+  (* \ic{ input in $\group_1$: $[1,V,W,R,S,M]$ } *)
+  let inp_g1 =
+    [ (RMP.one,     RecipP.var One)
+    ; (RMP.var V_V, RecipP.var V)
+    ; (RMP.var V_W, RecipP.var W)
+    ; (RMP.var V_R, RecipP.var R)
+    ; (s,           RecipP.var S)
+    ; (RMP.var V_M, RecipP.var M)
+    ]
+  in
+
+  (* \ic{ input in $\group_2$: $[1,R,S,M]$ } *)
+  let inp_g2 =
+    [ (RMP.one,     RecipP.var One)
+    ; (RMP.var V_R, RecipP.var R)
+    ; (s,           RecipP.var S)
+    ; (RMP.var V_M, RecipP.var M)
+    ]
+  in
+
+  (* \ic{ input in $\group_T$: [inp_g1 * inp_g2] minus redundancies } *)
+  let rec remove_dups left right =
+    match right with
+    | []                -> L.rev left
+    | ((_,r1) as x)::xs ->
+      if L.exists (fun (_,r2) -> RecipP.equal r1 r2) left
+      then remove_dups left xs
+      else remove_dups (x::left) xs
+  in
+  let inp_gt =
+    inp_g1 @
+    conc_map
+      (fun (f2,r2) -> L.map (fun (f1,r1) -> (RMP.mult f1 f2, RecipP.mult r1 r2)) (L.tl inp_g1))
+      (L.tl inp_g2)
+  in
+  let inp_gt = remove_dups [] inp_gt in
+
+  (* F.printf "GT: %a\n" (pp_list ", " (pp_pair RMP.pp RecipP.pp)) inp_gt; *)
+  
+  let basis =
+    conc_map (fun (p,_) -> RMP.mons p) inp_gt
+    |> sorted_nub compare 
+  in
+  let coeff_vecs = L.map (fun (p,_) -> L.map (RMP.coeff p) basis) inp_gt in
+  let left_kernel,_,_,_ =
+    Sage_Solver.compare_kernel coeff_vecs coeff_vecs
+  in
+  (* F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; *)
+
+  let recip_of_kernel vker =
+    L.combine inp_gt vker
+    |> L.map (fun ((_,r),c) -> RecipP.(from_int c *@ r))
+    |> RecipP.ladd
+  in
+  L.map recip_of_kernel left_kernel
 
 (* \hd{Analyze Scheme} *)
 
-let pp_mon vars fmt v =
-  let ev =
-    L.filter (fun (e,_) -> e > 0) (L.combine v vars)
-  in
-  let pp_vp fmt (e,v) =
-    if e = 1 then F.fprintf fmt "%s" v
-    else F.fprintf fmt "%s^%i" v e
-  in
-  F.fprintf fmt "%a" (pp_list "*" pp_vp) ev
-
-let pp_poly vars fmt f =
-  F.fprintf fmt "%a" (pp_list " + " (pp_mon vars)) f
-
 let synth () =
-  let vars = ["v"; "w"; "r"] in
-  let bounds = [3; 3; 3] in
+  let bounds = [2; 2; 3] in
   let max_terms = 2 in
   let i = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
-    (pp_list ", " pp_string) vars
+    (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) bounds;
-  iter (-1)
-    (prod (pick_set max_terms (vecs_smaller bounds)))
+  let sigs =
+    prod (pick_set max_terms (vecs_smaller bounds)) >>= fun (f,g) ->
+    guard (f <> []) >>
+    ret (f,g)
+  in
+  iter (10)
+    sigs
     (fun (f,g) ->
-       incr i;
-       F.printf "%i. f = %a, g = %a\n" !i (pp_poly vars) f (pp_poly vars) g)
+       let f = evecs_to_poly f in
+       let g = evecs_to_poly g in
+       let s = RMP.(f *@ (var V_M) +@ g) in
+       let veqs = verif_eq s in
+       if veqs <> [] then (
+         incr i;
+         F.printf "%i. S = %a, verif: %a\n" !i RMP.pp s
+           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs))

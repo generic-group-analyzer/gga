@@ -147,6 +147,8 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let ladd  = L.fold_left (fun acc f -> add acc f) zero
 
+  let pow p i = lmult (replicate p i)
+
   let vars f =
     sorted_nub V.compare
       (conc_map (fun (m,_) -> sorted_nub V.compare m) f)

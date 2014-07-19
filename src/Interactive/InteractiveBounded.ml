@@ -171,7 +171,7 @@ let call_oracle o q st =
   loop st o.II.odef_return
 
 (* TODO: Add completion computation with respect to group setting *)
-let complete_gs gs st =
+let complete_gs _gs st =
   st
 
 let compute_completion st o bound gs =
@@ -251,7 +251,7 @@ let cgen s =
     i := !i+1;
     GP.var (Param (ChoiceCoeff (s, !i)))
 
-let get_gid tid = match tid.II.tid_ty with | Group s -> s | _ -> failwith "Uhh?"
+let get_gid tid = match tid.II.tid_ty with | II.Group s -> s | _ -> failwith "Uhh?"
 
 let nonquant_wp_to_gp st p =
   let cconv c = GP.const c in
