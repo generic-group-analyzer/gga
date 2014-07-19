@@ -76,12 +76,12 @@ let pp_param fmt p = pp_string fmt (string_of_param p)
 
 (* \ic{A variable is either a random variable or a parameter.} *)
 type var =
-  | RVar of rvar
+  | RVar  of rvar
   | Param of param
 
 (*i*)
 let pp_var fmt v = match v with
-  | RVar r -> pp_rvar fmt r
+  | RVar r  -> pp_rvar fmt r
   | Param p -> pp_param fmt p
 (*i*)
 
@@ -132,20 +132,21 @@ let state_update_hmaps keyvals st =
          list. Alternatively replace with a Map. i*)
 
 let state_app_group gid p st =
-  try let l =  L.assoc gid st.known
-      in
-      {st with known = (gid, p :: l) :: st.known}
+  try
+    let l =  L.assoc gid st.known in
+    {st with known = (gid, p :: l) :: st.known}
   with
-  | _ ->
-  (*i If the first element added is "1", don't add it twice i*)
-  if GP.is_const p
-  then {st with known = (gid, [p]) :: st.known}
-  else {st with known = (gid, p :: [GP.from_int 1]) :: st.known}
+    | Not_found ->
+      (*i If the first element added is "1", don't add it twice i*)
+      if GP.is_const p
+      then {st with known = (gid, [p]) :: st.known}
+      else {st with known = (gid, p :: [GP.from_int 1]) :: st.known}
 
 let lin_comb_of_gps ps cgen =
-  L.fold_left (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
-              GP.zero
-              ps
+  L.fold_left
+    (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
+    GP.zero
+    ps
 
 let make_fresh_var_gen s q =
   let i = ref 0 in
@@ -160,10 +161,8 @@ let make_fresh_var_gen s q =
 i*)
 let add_poly groups st gid p q =
   (*i Keep track of handle values defined to be added to state i*)
-  let hmap = ref []
-  in
-  let set_map id v = hmap := ((id, gid, q), v) :: !hmap
-  in  
+  let hmap = ref [] in
+  let set_map id v = hmap := ((id, gid, q), v) :: !hmap in
   let get_handle_value id =
     (*i First check if already stored in our old state i*)
     try L.assoc (id, gid, q) st.hmap with
@@ -250,22 +249,17 @@ module EP = MakePoly(struct
   let compare = compare
 end) (CPR)
 
-let gp_to_ep p =
-  let cconv i = EP.const (CP.const i) in
+let gp_to_ep =
   let vconv v = match v with
     | RVar r  -> EP.var r
     | Param p -> EP.const (CP.var p)
   in
-  GP.to_terms p |> EP.eval_generic cconv vconv
+  EP.eval_generic (EP.const << CP.const) vconv << GP.to_terms
 
-let extract_constraints p =
-  gp_to_ep p |> EP.to_terms |> L.map snd
+let extract_constraints = L.map snd << EP.to_terms << gp_to_ep
 
-let cp_to_rpoly p =
-  let cconv c = RP.const c in
-  let vconv v = RP.var (string_of_param v) in
-  CP.to_terms p |> RP.eval_generic cconv vconv
-
+let cp_to_rpoly =
+  RP.eval_generic RP.const (RP.var << string_of_param) << CP.to_terms
 
 (*i ********************************************************************* i*)
 (* \hd{Translation from winning condition to constraints} *)
