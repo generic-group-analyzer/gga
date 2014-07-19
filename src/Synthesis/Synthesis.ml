@@ -99,9 +99,9 @@ type rmpoly = RMP.t
 (* \ic{Simplify [inp] such that non-trivial linear relations are preserved:
        \begin{itemize}
        \item Remove duplicates
-       \item Remove polynomials $f = m$ (equal to a monomial) such that
-         $m$ does not occur in any other term. We know that they cannot
-         included in any non-linear relation.
+       \item Remove polynomials $f$ containing a monomial $m$ such that
+         $m$ does not occur in any other polynomial. We know that they cannot
+         be included in any non-trivial linear relation.
        \end{itemize}} *)
 let simp_inp inp =
   let rec remove_dups left right =
@@ -115,12 +115,15 @@ let simp_inp inp =
   let not_contains_monom m (p,_) =
     IR.equal (RMP.coeff p m) IR.zero
   in
+  let monom_unique ps m =
+    L.for_all (not_contains_monom m) ps
+  in
   let rec remove_unique_monom left right =
     match right with
     | []                  -> L.rev left
     | ((p,_) as x)::right ->
       begin match RMP.mons p with
-      | [m] when L.for_all (not_contains_monom m) (left@right) ->
+      | _::_ as ms when L.exists (monom_unique (left@right)) ms ->
         remove_unique_monom left right
       | _ ->
         remove_unique_monom (x::left) right
@@ -138,6 +141,7 @@ let evecs_to_poly vs =
   in
   RMP.ladd (L.map evec_to_poly vs)
 
+(* \ic{Compute verification equation.} *)
 let verif_eq ?sts s =
 
   (* \ic{ input in $\group_1$: $[1,V,W,R,S,M]$ } *)
