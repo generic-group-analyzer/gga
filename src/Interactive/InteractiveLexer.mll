@@ -14,7 +14,7 @@
 
 let blank = [' ' '\t' '\r' '\n']
 let newline = '\n'
-let idchars = ['a'-'z' 'A'-'Z' '0'-'9' '\'']
+let idchars = ['a'-'z' 'A'-'Z' '0'-'9']
 
 rule lex = parse
   | blank+  { lex lexbuf }
