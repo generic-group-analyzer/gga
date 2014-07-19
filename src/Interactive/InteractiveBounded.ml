@@ -1,5 +1,13 @@
-(*s Bounded analysis for interactive assumptions. *)
+(*s Bounded analysis for interactive assumptions. Consists of three
+    steps:
+    \begin{itemize}
+    \item Compute symbolic completion wrt. isos, maps, and oracle queries.
+    \item Make winning condition handle-free and extract constraints.
+    \item Call Sage to solve constraints.
+    \end{itemize}
+*)
 
+(*i*)
 open Util
 open Poly
 
@@ -7,42 +15,56 @@ module II = InteractiveInput
 module RP = II.RP
 module WP = II.WP
 module OP = II.OP
+(*i*)
 
+(*i ********************************************************************* i*)
+(* \hd{Polynomials with parameters and random variables} *)
+(*i ********************************************************************* i*)
+
+
+(* \ic{The index of an oracle query, between $1$ and the bound $q$.} *)
 type query_idx = int
 
-(*i Coefficient index: the $j$-th coefficient in linear combination of terms i*)
+(* \ic{Coefficient index: the $j$-th coefficient in linear combination of polynomials.} *)
 type coeff_idx = int
 
-(*i \begin{itemize}
-   \item for sampled shared variables: $V,W$
-   \item for variables sampled in oracles: $R_1,..,R_q$
-   \end{itemize}
-i*)
+(* \ic{Random variables:
+   \begin{itemize}
+   \item [SRVar(V)]: for sampled shared variable $V$
+   \item [ORVar(R,i)]: for variable $R_i$ sampled in $i$-th oracle query
+   \end{itemize}}
+*)
 type rvar =
   | SRVar of II.id
   | ORVar of II.id * query_idx
 
+(*i*)
 let string_of_rvar r = match r with
   | SRVar i      -> i
   | ORVar (i, q) -> F.sprintf "%s_%i" i q
 
 let pp_rvar fmt r = pp_string fmt (string_of_rvar r)
+(*i*)
 
-(*i \begin{itemize}
-   \item $m$ in LRSW
-   \item $\alpha^{M}_{i,j}$: coefficient of $j$-th element in the completion
-      (for the right group) before calling the oracle the $i$-time.
-  \item $mm$ in LRSW
-  \item $\beta^{M'}_j$: coefficient of $j$-th element in the completion
-      after performing the last oracle call.
-  \end{itemize}
-i*)
+(* \ic{Parameters:
+   \begin{itemize}
+   \item [FOParam(m,i)] $= m_i$: oracle parameter $m \in \field$ of $i$-th query
+   \item [OCoeff(M,i,j)]$= \alpha^{M}_{i,j}$: for the oracle argument $M \in \group_n$
+      in the $i$-query, this is the coefficient of the $j$-th element in
+      the completion for $\group_n$ before the oracle call.
+   \item [FChoice(m')] $=m'$: value $m' \in \field$ chosen by adversary for winning condition.
+   \item [ChoiceCoeff(M')]$=\beta^{M'}_j$: for the value $M' \in \group_n$ chosen by the
+      adversary for the winning condition, this is the coefficient of $j$-th element
+      in the completion for $\group_n$ after the last oracle call.
+   \end{itemize}}
+*)
 type param =
   | FOParam of II.id * query_idx
   | OCoeff  of II.id * query_idx * coeff_idx
   | FChoice of II.id
   | ChoiceCoeff of II.id * coeff_idx
 
+(*i*)
 let string_of_param p = match p with
   | FOParam (id, q)     -> F.sprintf "%s_%i" id q
   | OCoeff  (id, q, i)  -> F.sprintf "%s_%i_%i" id q i
@@ -50,21 +72,20 @@ let string_of_param p = match p with
   | ChoiceCoeff (id, i) -> F.sprintf "%s_%i" id i
 
 let pp_param fmt p = pp_string fmt (string_of_param p)
+(*i*)
 
-(*i
- ***************************************************
- *************** Compute completion ****************
- ***************************************************
-i*)
-
+(* \ic{A variable is either a random variable or a parameter.} *)
 type var =
   | RVar of rvar
   | Param of param
 
+(*i*)
 let pp_var fmt v = match v with
   | RVar r -> pp_rvar fmt r
   | Param p -> pp_param fmt p
+(*i*)
 
+(* \ic{Define polynomials $\ZZ[params,rvars]$ used to compute constraints.} *)
 module GP = MakePoly(struct
   type t      = var
   let pp      = pp_var
@@ -72,23 +93,32 @@ module GP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
-(*i State of the completion computation:
-   - groups: Contains a monomial basis for each group
+type gpoly = GP.t
 
-   - handle_values: During oracle queries, handles get replaced by
-     linear combinations. We store these for constraint generation
-i*)
+(*i ********************************************************************* i*)
+(* \hd{Symbolic completion} *)
+(*i ********************************************************************* i*)
 
+(* \ic{State of the completion computation:
+   \begin{itemize}
+   \item [groups]: Contains a monomial basis for each group
+   \item [handle_values]: During oracle queries, handles get replaced by
+     linear combinations. We store these for making the winning condition
+     handle-free.
+   \end{itemize}}
+*)
 type state = {
-  groups : (II.gid * GP.t list) list;
-  hmap : ((II.id * II.gid * query_idx) * GP.t) list
+  groups : (II.gid * gpoly list) list;
+  hmap : ((II.id * II.gid * query_idx) * gpoly) list
 }
 
+(*i*)
 let pp_state fmt st =
   F.fprintf fmt "---------- Group elements ----------\n";
   L.iter (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps) st.groups;
   F.fprintf fmt "\n------- Handle substitutions -------\n";
   L.iter (fun ((id, gid, q), p) -> F.fprintf fmt "\n%s_%i in G%s = %a\n" id q gid GP.pp p) st.hmap
+(*i*)
 
 let state_update_hmaps keyvals st =
   {st with hmap = keyvals @ st.hmap}
@@ -186,11 +216,9 @@ let compute_completion st o bound gs =
   in
   loop 1 st
 
-(*i
- ***************************************************
- *************** Extract coefficients **************
- ***************************************************
-i*)
+(*i ********************************************************************* i*)
+(* \hd{Parameter coefficient extraction} *)
+(*i ********************************************************************* i*)
 
 module CP = MakePoly(struct
   type t      = param
@@ -240,11 +268,10 @@ let cp_to_rpoly p =
   let vconv v = RP.var (string_of_param v) in
   CP.to_terms p |> RP.eval_generic cconv vconv
 
-(*i
- ***************************************************
- *************** Extract constraints ***************
- ***************************************************
-i*)
+
+(*i ********************************************************************* i*)
+(* \hd{Translation from winning condition to constraints} *)
+(*i ********************************************************************* i*)
 
 let rpoly_to_gp p =
   let cconv i = GP.const i in
