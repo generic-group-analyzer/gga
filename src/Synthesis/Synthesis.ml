@@ -4,6 +4,8 @@
 open Util
 open Nondet
 open Poly
+
+module IR = IntRing
 (*i*)
 
 (* \hd{Generate monomials} *)
@@ -94,6 +96,39 @@ type rmpoly = RMP.t
 
 (* \hd{Compute verification equation} *)
 
+(* \ic{Simplify [inp] such that non-trivial linear relations are preserved:
+       \begin{itemize}
+       \item Remove duplicates
+       \item Remove polynomials $f = m$ (equal to a monomial) such that
+         $m$ does not occur in any other term. We know that they cannot
+         included in any non-linear relation.
+       \end{itemize}} *)
+let simp_inp inp =
+  let rec remove_dups left right =
+    match right with
+    | []                -> L.rev left
+    | ((_,r1) as x)::xs ->
+      if L.exists (fun (_,r2) -> RecipP.equal r1 r2) left
+      then remove_dups left xs
+      else remove_dups (x::left) xs
+  in
+  let not_contains_monom m (p,_) =
+    IR.equal (RMP.coeff p m) IR.zero
+  in
+  let rec remove_unique_monom left right =
+    match right with
+    | []                  -> L.rev left
+    | ((p,_) as x)::right ->
+      begin match RMP.mons p with
+      | [m] when L.for_all (not_contains_monom m) (left@right) ->
+        remove_unique_monom left right
+      | _ ->
+        remove_unique_monom (x::left) right
+      end
+  in
+  let inp = remove_dups [] inp in
+  remove_unique_monom [] inp
+
 (* \ic{Convert list of exponent vectors to [rmpoly].} *)
 let evecs_to_poly vs =
   let evec_to_poly v =
@@ -126,21 +161,13 @@ let verif_eq ?sts s =
   in
 
   (* \ic{ input in $\group_T$: [inp_g1 * inp_g2] minus redundancies } *)
-  let rec remove_dups left right =
-    match right with
-    | []                -> L.rev left
-    | ((_,r1) as x)::xs ->
-      if L.exists (fun (_,r2) -> RecipP.equal r1 r2) left
-      then remove_dups left xs
-      else remove_dups (x::left) xs
-  in
   let inp_gt =
     inp_g1 @
     conc_map
       (fun (f2,r2) -> L.map (fun (f1,r1) -> (RMP.mult f1 f2, RecipP.mult r1 r2)) (L.tl inp_g1))
       (L.tl inp_g2)
   in
-  let inp_gt = remove_dups [] inp_gt in
+  let inp_gt = simp_inp inp_gt in
 
   (* F.printf "GT: %a\n" (pp_list ", " (pp_pair RMP.pp RecipP.pp)) inp_gt; *)
   
@@ -149,6 +176,8 @@ let verif_eq ?sts s =
     |> sorted_nub compare 
   in
   let coeff_vecs = L.map (fun (p,_) -> L.map (RMP.coeff p) basis) inp_gt in
+  (* F.printf "M:=\n";
+     F.printf "%a\n" (pp_list "\n" (pp_list " " RMP.pp_coeff)) coeff_vecs; *)
   let left_kernel = Sage_Solver.compute_kernel ?sts coeff_vecs in
   (* F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; *)
 

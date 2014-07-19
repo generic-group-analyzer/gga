@@ -94,6 +94,8 @@ module MakePoly (V : Var) (C : Ring) = struct
   let pp = pp_ false
 
   let pp_break = pp_ true
+
+  let pp_coeff = C.pp
   (*i*)
 
   (*********************************************************************)

@@ -34,6 +34,7 @@ module type Poly = sig
   val pp_term : Format.formatter -> term -> unit
   val pp : Format.formatter -> t -> unit
   val pp_break : Format.formatter -> t -> unit
+  val pp_coeff : Format.formatter -> coeff -> unit
   val add : t -> t -> t
   val opp : t -> t
   val minus : t -> t -> t
