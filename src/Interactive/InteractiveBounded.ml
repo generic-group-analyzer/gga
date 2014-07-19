@@ -250,8 +250,6 @@ module EP = MakePoly(struct
   let compare = compare
 end) (CPR)
 
-let is_rvar f = match f with | RVar _ -> true | _ -> false
-
 let gp_to_ep p =
   let cconv i = EP.const (CP.const i) in
   let vconv v = match v with
