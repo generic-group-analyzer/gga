@@ -16,15 +16,15 @@ type cond_type = Eq | InEq
        we have all information required to distinguish the different types
        of variables.
        \begin{itemize}
-       \item $AddIsos(isos)$: add isomorphisms to group setting.
-       \item $AddMaps(isos)$: add maps to group setting.
-       \item $AddInput(f)$: Add $f$ to adversary inputs.
-       \item $AddOracle(on, tids, ids, rps)$: Add the oracle where the name
+       \item [AddIsos(isos)]: add isomorphisms to group setting.
+       \item [AddMaps(isos)]: add maps to group setting.
+       \item [AddInput(f)]: Add $f$ to adversary inputs.
+       \item [AddOracle(on, tids, ids, rps)]: Add the oracle where the name
            is denoted by $on$,, the (typed) arguments are denoted by $tids$,
            the sampled random values are denoted by $ids$, and
            the returned polynomials together with the group identifier are
            denoted by $rps$.
-       \item $SetWinning(tids, wps)$:
+       \item [SetWinning(tids, wps)]:
          Set the winning condition where winning condition polynomials
          together with ineq or eq are denoted by $wps$ and (typed) values chosen by
          the adversary are denoted by $tids$.
@@ -91,24 +91,40 @@ let rpoly_to_wpoly choices oparams p =
   in
   RP.to_terms p |> WP.eval_generic WP.const (WP.var << conv_var)
 
+(* \ic{Interpreter state for evaluating commands.} *)
 type eval_state = {
-  es_gs      : group_setting;
-  es_inputs  : (rpoly * gid) list;
-  es_odefs   : odef list;
-  es_oparams : tid list;
-  es_orvars  : id list;
-  es_mwcond  : wcond option;
+  es_gs       : group_setting;
+  es_inputs   : (rpoly * gid) list;
+  es_varnames : id list;
+  es_odefs    : odef list;
+  es_oparams  : tid list;
+  es_mwcond   : wcond option;
 }
 
+(* \ic{Initial (empty) interpreter state.} *)
 let empty_eval_state = {
-  es_inputs  = [];
-  es_odefs   = [];
-  es_oparams = [];
-  es_orvars  = [];
-  es_gs      = { gs_isos = []; gs_emaps = [] };
-  es_mwcond  = None;
+  es_gs       = { gs_isos = []; gs_emaps = [] };
+  es_inputs   = [];
+  es_varnames = [];
+  es_odefs    = [];
+  es_oparams  = [];
+  es_mwcond   = None;
 }  
 
+(* \ic{Raise error if oracle definition invalid.} *)
+let ensure_oracle_valid estate ovarnames =
+  if not (unique ovarnames)
+    then failwith "Oracle reuses names for arguments/sampled variables.";
+  if estate.es_odefs <> []
+    then failwith "Oracle already defined, multiple oracles not supported."
+
+(* \ic{Raise error if oracle definition invalid.} *)
+let ensure_winning_valid estate choices =
+  let names = estate.es_varnames @ L.map (fun tid -> tid.tid_id) choices in
+  if not (unique names) then failwith "Winning condition reuses names."
+
+(* \ic{Evaluate [cmd] in the interpreter state [estate] and
+   return the update interpreter state.} *)
 let eval_cmd estate cmd =
   match cmd,estate.es_mwcond with
   | AddIsos(isos),None ->
@@ -116,26 +132,30 @@ let eval_cmd estate cmd =
   | AddMaps(emaps),None ->
     { estate with es_gs = { estate.es_gs with gs_emaps = estate.es_gs.gs_emaps@emaps } }
   | AddInput(fs,gid), None ->
-    { estate with es_inputs = estate.es_inputs@(L.map (fun p -> (p,gid)) fs) }
+    let varnames =
+      sorted_nub compare (estate.es_varnames @ conc_map RP.vars fs)
+    in
+    { estate with
+      es_varnames = varnames;
+      es_inputs = estate.es_inputs@(L.map (fun p -> (p,gid)) fs) }
   | AddOracle(oname,params,orvars,fs), None ->
-    if not (unique (L.map (fun tid -> tid.tid_id) params))
-      then failwith "Two arguments with the same name in oracle definition";
-    if not (unique orvars)
-      then failwith "Oracle samples two random variables with the same name";
-    if (L.exists (fun od -> od.odef_name = oname) estate.es_odefs)
-      then failwith ("Oracle name used twice: "^oname);
+    let varnames =
+      estate.es_varnames @ orvars @ L.map (fun tid -> tid.tid_id) params
+    in
+    ensure_oracle_valid estate varnames;
     F.printf "%a\n" pp_cmd cmd;
     let od =
       { odef_name = oname;
         odef_return = L.map (fun (p, gid) -> (rpoly_to_opoly params orvars p,gid)) fs }
     in
     { estate with
-      es_odefs   = estate.es_odefs@[od];
-      es_oparams = estate.es_oparams@params;
-      es_orvars  = estate.es_orvars@orvars
+      es_odefs    = [od];
+      es_oparams  = params;
+      es_varnames = varnames;
     }
   | SetWinning(choices,conds), None ->
-    let conv = rpoly_to_wpoly choices estate.es_oparams in 
+    ensure_winning_valid estate choices;
+    let conv = rpoly_to_wpoly choices estate.es_oparams in
     let eqs,ineqs =
       partition_either
         (function (f,Eq) -> Left (conv f) | (f,InEq) -> Right (conv f))
@@ -146,6 +166,8 @@ let eval_cmd estate cmd =
   | _, Some _ ->
     failwith "Setting the winning condition must be the last command."
 
+(* \ic{Evaluate the given commands and return the corresponding game
+   definition.} *)
 let eval_cmds cmds =
   let es =  List.fold_left eval_cmd empty_eval_state cmds in
   match es.es_mwcond with
