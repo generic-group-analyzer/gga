@@ -53,6 +53,8 @@ let mapi' f = L.mapi (fun i x -> f (i+1) x)
 (* \ic{Composition of [concat] and [map].} *)
 let conc_map f xs = L.concat (L.map f xs)
 
+let pair x y = (x,y)
+
 let catSome xs0 =
   let rec go xs acc =
     match xs with

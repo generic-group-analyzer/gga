@@ -19,6 +19,12 @@ type gid = string
 (* \ic{A type is either a field element or a (handle to) a group element.} *)
 type ty = Field | Group of gid
 
+(* \ic{Return [gid]s occuring in [ty].} *)
+let gids_in_ty ty =
+  match ty with
+  | Group gid -> [gid]
+  | _         -> []
+
 (* \ic{Typed identifier.} *)
 type tid = {
   tid_id : id;
@@ -34,6 +40,9 @@ let is_group_tid tid =
   match tid.tid_ty with
   | Group _ -> true
   | _       -> false
+
+(* \ic{Return [gid]s occuring in [tid].} *)
+let gids_in_tid tid = gids_in_ty tid.tid_ty
 
 (* \ic{An isomorphism has a domain and a codomain.} *)
 type iso = {
@@ -52,6 +61,11 @@ type group_setting = {
   gs_isos      : iso list;
   gs_emaps     : emap list;
 }
+
+let gids_in_gs gs =
+       (conc_map (fun iso -> [iso.iso_codom; iso.iso_dom]) gs.gs_isos)
+     @ (conc_map (fun em -> em.em_codom::em.em_dom) gs.gs_emaps)
+  |> sorted_nub compare
 
 (*i*)
 let pp_ty fmt ty = match ty with
@@ -103,11 +117,18 @@ type ovar =
   | SRVar  of id
   | ORVar  of id
 
+(* \ic{Return all [gid]s occuring in [ov].} *)
+let gids_in_ovar ov =
+  match ov with
+  | Param tid -> gids_in_tid tid
+  | _         -> []
+
+
+(*i*)
 let string_of_ovar v = match v with
   | Param i -> i.tid_id
   | SRVar s | ORVar s -> s
 
-(*i*)
 let pp_ovar fmt v = pp_string fmt (string_of_ovar v)
 (*i*)
 
@@ -141,6 +162,11 @@ type odef = {
   odef_name   : oname;
   odef_return : (opoly * gid) list;
 }
+
+let gids_in_odef odef =
+       (L.map snd odef.odef_return)
+     @ (conc_map gids_in_ovar (conc_map (OP.vars << fst) odef.odef_return))
+  |> sorted_nub compare
 
 (*i*)
 let pp_opoly fmt opolys_group =
@@ -191,6 +217,12 @@ type wvar =
   | RVar   of id
   | OParam of tid
   | Choice of tid
+
+(* \ic{Return [gid]s in [wv].} *)
+let gids_in_wvar wv =
+  match wv with
+  | Choice tid | OParam tid -> gids_in_tid tid
+  | RVar _                  -> []
 
 (*i*)
 let string_of_wvar v = match v with
@@ -278,6 +310,15 @@ type gdef = {
   gdef_wcond  : wcond;
 }
 
+(* \ic{Return all [gids] occuring in game definition} *)
+let gids_in_gdef gdef =
+  let wpolys = gdef.gdef_wcond.wcond_eqs @ gdef.gdef_wcond.wcond_ineqs in
+       (gids_in_gs gdef.gdef_gs)
+     @ (L.map snd gdef.gdef_inputs)
+     @ (conc_map gids_in_odef gdef.gdef_odefs)
+     @ (conc_map gids_in_wvar (conc_map WP.vars wpolys))
+  |> sorted_nub compare
+
 (* \ic{Simplify game definition by removing oracle outputs that are redundant
        because they can be computed from the oracle inputs and other outputs.
        For example in $o(x) = return\; [A,A*x]\; in\; \group_1$, $A*x$ is
@@ -328,7 +369,8 @@ let gchoices_of_gdef gdef =
 
 (*i*)
 let pp_gdef fmt gdef =
-  F.fprintf fmt "input [%a].\n\n%a\n\n%a"
+  F.fprintf fmt "%a\ninput [%a].\n\n%a\n\n%a"
+    pp_gs gdef.gdef_gs
     (pp_list ", " (fun fmt (p,gid) -> F.fprintf fmt "%a in %s" RP.pp p gid)) gdef.gdef_inputs
     (pp_list "\n" pp_odef) gdef.gdef_odefs
     pp_wcond gdef.gdef_wcond

@@ -108,108 +108,115 @@ type gpoly = GP.t
    \end{itemize}}
 *)
 type state = {
-  known : (II.gid * gpoly list) list;
-  hmap : ((II.id * II.gid * query_idx) * gpoly) list
+  known : (II.gid * gpoly) list;
+  hmap  : ((II.id * II.gid * query_idx) * gpoly) list
 }
+
+(* \ic{Return polys for [gid] in list.}*)
+let polys_for_gid gid known =
+  L.filter ((=) gid << fst) known
+  |> L.map snd
+
+(* \ic{Extract separate lists for each [gid] from common list.} *)
+let poly_gid_lists known =
+  let gids = L.map fst known |> sorted_nub compare in
+  let list_for_gid gid =
+    match L.filter ((=) gid << fst) known with
+    | []                  -> None
+    | ((gid,_)::_) as gps -> Some (gid,L.map snd gps)
+  in
+  catSome (L.map list_for_gid gids)
 
 (*i*)
 let pp_state fmt st =
   F.fprintf fmt "---------- Group elements ----------\n";
-  L.iter (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps) st.known;
+  L.iter
+    (fun (gid, ps) -> F.fprintf fmt "\nGroup G%s:\n%a\n" gid (pp_list "\n" GP.pp) ps)
+    (poly_gid_lists st.known);
   F.fprintf fmt "\n------- Handle substitutions -------\n";
   L.iter (fun ((id, gid, q), p) -> F.fprintf fmt "\n%s_%i in G%s = %a\n" id q gid GP.pp p) st.hmap
 (*i*)
 
-let state_update_hmaps keyvals st =
-  {st with hmap = keyvals @ st.hmap}
+(* \ic{Create linear combination of polynomials [ps]
+   such that the $j$-polynomial is multiplied by
+   coefficient polynomial [cgen j].}*)
+let lin_comb_of_gps ps cgen =
+  GP.(ladd (mapi' (fun i p -> cgen i *@ p) ps))
 
-(*i This adds a polynomial to the list for gid.
-   Note: We add the updated group list to the front of the list, since
-         assoc always returns the first most up-to-date list. Maybe replace
-         by better data structure in the future...??
-
-         The pretty printer needs to be fixed, since it prints the whole
-         list. Alternatively replace with a Map. i*)
-let state_app_group gid p st =
-  try
-    let l =  L.assoc gid st.known in
-    {st with known = (gid, p :: l) :: st.known}
-  with
-    | Not_found ->
-      (*i If the first element added is "1", don't add it twice i*)
-      if GP.is_const p
-      then {st with known = (gid, [p]) :: st.known}
-      else {st with known = (gid, p :: [GP.from_int 1]) :: st.known}
-
-
-let lin_comb_of_gps ps pgen  =
-  GP.(ladd (mapi' (fun i p -> pgen i *@ p) ps))
-
-(*i This function does the following:
-   1. Replaces all handles in given poly with a linear combination of computable monomials.
-   2. Adds the polynomial into the group it belongs to.
-   3. For each new handle record its value in the state. 
-i*)
-let add_poly groups st gid p q =
-  (*i Keep track of handle values defined to be added to state i*)
-  let hmap = ref [] in
-  let set_map id v = hmap := ((id, gid, q), v) :: !hmap in
-  let get_handle_value hid =
-    (*i First check if already stored in our old state i*)
-    try L.assoc (hid, gid, q) st.hmap with
-    | Not_found ->
-    try L.assoc (hid, gid, q) !hmap with
-    | Not_found -> begin
-                   let pgen i = GP.var (Param (OCoeff (hid, q, i))) in
-                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> [GP.from_int 1]) pgen in
-                   set_map hid v; v
-                   end
+(* \ic{Convert oracle polynomial to [gp] for given state [st] and query index [i].} *)
+let op_to_gp st i p =
+  let vconv v = match v with
+    | II.Param(tid) ->
+      begin match tid.II.tid_ty with
+      | II.Field ->
+        GP.var (Param (FOParam(tid.II.tid_id,i)))
+      | II.Group gid ->
+        L.assoc (tid.II.tid_id,gid,i) st.hmap
+      end
+    | II.SRVar(id) ->
+      GP.var (RVar (SRVar(id)))
+    | II.ORVar(id) ->
+      GP.var (RVar (ORVar(id,i)))
   in
-  (*i Convert ovars to GP polynomials and update hmap on each converted handle i*)
-  let ovar_to_gp v =
+  OP.to_terms p |> GP.eval_generic GP.const vconv
+
+
+(* \ic{Complete state [st] with return values from
+   call to [od] which is the [i]-th oracle call.} *)
+let complete_oracle od i st =
+
+  (* \ic{We first extend the handle map.} *)
+  let entry_of_handle (hid,gid) =
+    let p =
+      lin_comb_of_gps
+        (polys_for_gid gid st.known)
+        (fun j -> GP.var (Param (OCoeff(hid,i,j))))
+     in
+     ((hid,gid,i), p)
+  in
+  let get_handle v =
     match v with
-    | II.SRVar r -> GP.var (RVar (SRVar r))
-    | II.ORVar r -> GP.var (RVar (ORVar (r, q)))
-    | II.Param t -> if t.II.tid_ty = II.Field
-                  then GP.var (Param (FOParam (t.II.tid_id, q)))
-                  else get_handle_value t.II.tid_id
+    | II.Param tid ->
+      begin match tid.II.tid_ty with
+      | II.Group gid -> Some (tid.II.tid_id, gid)
+      | II.Field     -> None
+      end
+    | _ -> None
   in
-  (*i Adds polynomial to the group gid and adds handle value mappings i*)
-  let update_state p =
-    let st = state_app_group gid p st in
-    state_update_hmaps !hmap st
+  let handles =
+    conc_map OP.vars (L.map fst od.II.odef_return)
+    |> L.map get_handle
+    |> catSome
+    |> sorted_nub compare
   in
-  OP.to_terms p
-  |> GP.eval_generic GP.const ovar_to_gp
-  |> update_state
+  let hmap_new = L.map entry_of_handle handles in
+  let st = { st with hmap  = st.hmap @ hmap_new } in
 
-
-let call_oracle o q st =
-  let rec loop st' rvals =
-    match rvals with
-    | (p, gid) :: xs -> loop (add_poly st.known st' gid p q) xs
-    | []             -> st'
+  (* \ic{Add oracle return values to known values.} *)
+  let known_new =
+    L.map (fun (p,gid) -> (gid,op_to_gp st i p)) od.II.odef_return
   in
-  loop st o.II.odef_return
+  { st with known = st.known @ known_new }
 
-(*i TODO: Add completion computation with respect to group setting i*)
-let complete_gs _gs st =
-  st
+(* \ic{Complete state [st] with respect to group-setting [gs].}*)
+let complete_gs _gs st = st
 
-let compute_completion st o bound gs =
-  let rec loop q st =
-    if q > bound then st
-    else complete_gs gs st
-         |> call_oracle o q
-         |> complete_gs gs
-         |> loop (q+1)
-  in
-  loop 1 st
+(* \ic{Complete state [st] with respect to given group setting [gs]
+   and sequence of oracles calls [ocalls].} *)
+let rec complete_st gs ocalls st =
+  let st = complete_gs gs st in
+  match ocalls with
+  | [] ->
+    st
+  | (i,od)::ocalls ->
+    let st = complete_oracle od i st in
+    complete_st gs ocalls st
 
 (*i ********************************************************************* i*)
 (* \hd{Parameter coefficient extraction} *)
 (*i ********************************************************************* i*)
 
+(* \ic{Define polynomials $\ZZ[params]$.} *)
 module CP = MakePoly(struct
   type t      = param
   let pp      = pp_param
@@ -217,6 +224,7 @@ module CP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
+(* \ic{These polynomials constitute a ring.} *)
 module CPR = struct
   type t         = CP.t
   let pp         = CP.pp
@@ -233,6 +241,7 @@ module CPR = struct
   let use_parens = true
 end
 
+(* \ic{Define polynomial $(\ZZ[params])[rvars]$.} *)
 module EP = MakePoly(struct
   type t      = rvar
   let pp      = pp_rvar
@@ -240,6 +249,7 @@ module EP = MakePoly(struct
   let compare = compare
 end) (CPR)
 
+(* \ic{Convert [gp] to [ep].} *)
 let gp_to_ep =
   let vconv v = match v with
     | RVar r  -> EP.var r
@@ -247,56 +257,61 @@ let gp_to_ep =
   in
   EP.eval_generic (EP.const << CP.const) vconv << GP.to_terms
 
+(* \ic{Extract coefficients, these are the constraints.} *)
 let extract_constraints = L.map snd << EP.to_terms << gp_to_ep
 
+(* \ic{Convert [cp] to [rpoly].} *)
 let cp_to_rpoly =
   RP.eval_generic RP.const (RP.var << string_of_param) << CP.to_terms
 
 (*i ********************************************************************* i*)
-(* \hd{Translation from winning condition to constraints} *)
+(* \hd{Translation from winning conditions to constraints} *)
 (*i ********************************************************************* i*)
 
-let rpoly_to_gp p =
-  let cconv i = GP.const i in
-  let vconv v = GP.var (RVar (SRVar v)) in
-  RP.to_terms p |> GP.eval_generic cconv vconv
+(* \ic{Create coefficient for handle [hid] and index i.} *)
+let pgen_gchoice hid i = GP.var (Param (ChoiceCoeff (hid, i)))
 
-let get_gid tid = match tid.II.tid_ty with | II.Group s -> s | _ -> failwith "Uhh?"
-
-let pgen hid i = GP.var (Param (ChoiceCoeff (hid, i)))
-
+(* \ic{Convert (non-quantified) winning condition polynomial
+   to list of [gp].} *)
 let nonquant_wp_to_gp st p =
-  let cconv c = GP.const c in
   let vconv v = match v with
     | II.RVar id ->
       GP.var (RVar (SRVar id))
     | II.OParam _ ->
       failwith "nonquant_wp_to_qp: oracle parameter not allowed"
-    | II.Choice tid when II.is_field_tid tid ->
-      GP.var (Param (FChoice(tid.II.tid_id)))
     | II.Choice tid ->
-      let ps = L.assoc (get_gid tid) st.known in
-      lin_comb_of_gps ps (pgen tid.II.tid_id)
+      begin match tid.II.tid_ty with
+      | II.Field ->
+        GP.var (Param (FChoice(tid.II.tid_id)))
+      | II.Group gid ->
+        lin_comb_of_gps (polys_for_gid gid st.known) (pgen_gchoice tid.II.tid_id)
+      end
   in
-  WP.to_terms p |> GP.eval_generic cconv vconv
+  WP.to_terms p |> GP.eval_generic GP.const vconv
 
+(* \ic{Convert (implicitly) quantified winning condition polynomial
+   to list of [gp]s.} *)
 let quant_wp_to_gps st bound p =
   let ps = L.map (fun qidx -> (qidx,p)) (list_from_to 1 bound) in
-  let cconv c = GP.const c in
   let vconv qidx v = match v with
     | II.RVar id ->
       GP.var (RVar (SRVar id))
-    | II.OParam tid when II.is_field_tid tid ->
-      GP.var (Param (FOParam (tid.II.tid_id, qidx)))
     | II.OParam tid ->
-      L.assoc (tid.II.tid_id, get_gid tid, qidx) st.hmap
-    | II.Choice tid when II.is_field_tid tid ->
-      GP.var (Param (FChoice(tid.II.tid_id)))
+      begin match tid.II.tid_ty with
+      | II.Field ->
+        GP.var (Param (FOParam (tid.II.tid_id, qidx)))
+      | II.Group gid ->
+        L.assoc (tid.II.tid_id, gid, qidx) st.hmap
+      end
     | II.Choice tid ->
-      let ps = L.assoc (get_gid tid) st.known in
-      lin_comb_of_gps ps (pgen tid.II.tid_id)
+      begin match tid.II.tid_ty with
+      | II.Field ->
+        GP.var (Param (FChoice(tid.II.tid_id)))
+      | II.Group gid ->
+        lin_comb_of_gps (polys_for_gid gid st.known) (pgen_gchoice tid.II.tid_id)
+      end
   in
-  L.map (fun (qidx,p) -> WP.to_terms p |> GP.eval_generic cconv (vconv qidx)) ps
+  L.map (fun (qidx,p) -> WP.to_terms p |> GP.eval_generic GP.const (vconv qidx)) ps
 
 (* \ic{Returns [true] if winning polynomials is implicitly quantified,
    i.e., it contains an oracle parameters} *)
@@ -304,14 +319,33 @@ let is_quantified f =
   let is_qvar v = match v with II.OParam _ -> true | _ -> false in
   L.exists is_qvar (WP.vars f)
 
+(* \ic{Convert game definition to initial state. Ensure that every
+   input list contains $1$ exactly once.} *)
 let gdef_to_state gdef =
-  L.fold_left (fun acc (p, gid) -> state_app_group gid (rpoly_to_gp p) acc)
-              { known = []; hmap = [] }
-              gdef.II.gdef_inputs
-  
+  let rpoly_to_gp =
+    GP.eval_generic GP.const (fun v -> GP.var (RVar (SRVar v))) << RP.to_terms
+  in
+  let inputs_for gid =
+       L.filter ((=) gid << snd) gdef.II.gdef_inputs
+    |> L.map (rpoly_to_gp << fst)
+    |> sorted_nub compare
+    |> (fun gps -> (GP.from_int 1)::gps)
+    |> L.map (fun gp -> (gid,gp))
+  in
+  { known = conc_map inputs_for (II.gids_in_gdef gdef);
+    hmap = [] }
+
+(* \ic{Convert game definition to equality and inequality constraints.} *)
 let gdef_to_constrs b gdef =
+  let p_header h s = F.printf ("\n############ %s ###########\n%s") h s in
   let st = gdef_to_state gdef in
-  let st = compute_completion st (L.hd gdef.II.gdef_odefs) b gdef.II.gdef_gs in
+  let ocalls =
+    match gdef.II.gdef_odefs with
+    | [od] -> mapi' pair (replicate od b)
+    | []   -> []
+    | _    -> failwith "gdef_to_constrs: impossible, more than one oracle"
+  in
+  let st = complete_st gdef.II.gdef_gs ocalls  st in
 
   F.printf "%a" pp_state st;
 
@@ -320,40 +354,39 @@ let gdef_to_constrs b gdef =
   let (qeqs, eqs) = L.partition is_quantified eqs in
   let (qineqs, ineqs) = L.partition is_quantified ineqs in
 
-  F.printf "############ Equalities ###########\n";
-  F.printf "%a\n" (pp_list "\n" WP.pp) eqs;
-  F.printf "\n############ Quantified Equalities ###########\n";
-  F.printf "%a\n" (pp_list "\n" WP.pp) qeqs;
-  F.printf "\n############ Inequalities ###########\n";
-  F.printf "%a\n" (pp_list "\n" WP.pp) ineqs;
-  F.printf "\n############ Quantified Inequalities ###########\n";
-  F.printf "%a\n" (pp_list "\n" WP.pp) qineqs;
+  p_header "Equalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) eqs);
+  p_header "Quantified Equalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qeqs);
+  p_header "Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) ineqs);
+  p_header "Quantified Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qineqs);
 
   if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
 
-  F.printf "\n############ Unrolled Inequalities ###########\n";
   let qineqs = conc_map (quant_wp_to_gps st b) qineqs in
-  F.printf "%a\n" (pp_list "\n" GP.pp) qineqs;
+  p_header "Unrolled Inequalities" (fsprintf "%a\n" (pp_list "\n" GP.pp) qineqs);
 
   let eqs = L.map (nonquant_wp_to_gp st) eqs in
   let ineqs = L.map (nonquant_wp_to_gp st) ineqs in
 
-  F.printf "\n############ Equalities for constraint generation ###########\n";
-  F.printf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs);
+  p_header
+    "Equalities for constraint generation"
+    (fsprintf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs));
 
-  F.printf "\n############ Inequalities for constraint generation ###########\n";
-  F.printf "0 <> %a\n" (pp_list "\n\n0 <> " EP.pp) (L.map gp_to_ep ineqs);
+  p_header
+    "Inequalities for constraint generation"
+    (fsprintf "0 <> %a\n" (pp_list "\n\n0 <> " EP.pp) (L.map gp_to_ep ineqs));
 
   let eqs_constrs = conc_map extract_constraints eqs in
 
-  F.printf "\n############## Equality constraints ##############\n";
-  F.printf "0 = %a\n" (pp_list "\n\n0 = " RP.pp) (L.map cp_to_rpoly eqs_constrs);
+  p_header
+    "Equality constraints"
+    (fsprintf "0 = %a\n" (pp_list "\n\n0 = " RP.pp) (L.map cp_to_rpoly eqs_constrs));
 
   let ineqs_constrs = L.map extract_constraints (ineqs @ qineqs) in
 
-  F.printf "\n############## Inequality constraints ##############\n";
-  L.iter (fun fs ->
-         F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
-         (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
+  p_header "Inequality constraints" "";
+  L.iter
+    (fun fs ->
+       F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
+    (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
   
   (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)
