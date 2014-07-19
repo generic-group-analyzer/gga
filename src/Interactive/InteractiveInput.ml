@@ -25,6 +25,16 @@ type tid = {
   tid_ty : ty;
 }
 
+(* \ic{Return true if tid has [Field] type.} *)
+let is_field_tid tid =
+  tid.tid_ty = Field
+
+(* \ic{Return true if tid has [Group] type.} *)
+let is_group_tid tid =
+  match tid.tid_ty with
+  | Group _ -> true
+  | _       -> false
+
 (* \ic{An isomorphism has a domain and a codomain.} *)
 type iso = {
   iso_dom   : gid;
@@ -274,7 +284,7 @@ type gdef = {
        redundant.} *)
 
 let simp_gdef gdef =
-  let is_fparam = function Param(tid) when tid.tid_ty = Field -> true | _ -> false in
+  let is_fparam = function Param(tid) when is_field_tid tid -> true | _ -> false in
   let rec only_fparams_missing xs ys =
     match xs,ys with
     | [], _ ->
@@ -311,7 +321,7 @@ let gchoices_of_gdef gdef =
   let eqs = gdef.gdef_wcond.wcond_eqs in
   let ineqs = gdef.gdef_wcond.wcond_ineqs in  
   conc_map WP.vars (eqs@ineqs)
-  |> L.map (function Choice(tid) when tid.tid_ty <> Field -> Some(tid) | _ -> None)
+  |> L.map (function Choice(tid) when is_group_tid tid -> Some(tid) | _ -> None)
   |> catSome
   |> sorted_nub compare
 

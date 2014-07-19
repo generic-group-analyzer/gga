@@ -62,7 +62,7 @@ let pp_cmd fmt cmd =
 
 (* \ic{Convert the given [rpoly] to an oracle polynomial for
        parameters [params] and oracle random variables [orvars].} *)
-let rpoly_to_opoly (params : tid list) (orvars : id list) p =
+let rpoly_to_opoly params orvars p =
   let param_assoc = L.map (fun tid -> (tid.tid_id, tid)) params in
   let conv_var id =
     try
@@ -72,44 +72,24 @@ let rpoly_to_opoly (params : tid list) (orvars : id list) p =
         if L.mem id orvars then ORVar(id)
         else SRVar(id)
   in
-  RP.to_terms p
-  |> L.map (fun (m,c) -> (L.map conv_var m, c))
-  |> OP.from_terms
+  RP.to_terms p |> OP.eval_generic OP.const (OP.var << conv_var)
 
 (* \ic{Convert the given [rpoly] to a winning condition polynomial for
        choices [choices], oracle parameters [oparams], and polynomial [p].} *)
-let rpoly_to_wpoly (choices : tid list) (oparams : tid list) (p : rpoly) =
-  let param_assoc = L.map (fun tid -> (tid.tid_id, tid)) oparams in
-  let fchoices_assoc =
-    conc_map (fun tid -> if tid.tid_ty = Field then [(tid.tid_id, tid)] else []) choices
-  in
-  let gchoices_assoc =
-    conc_map (fun tid -> if tid.tid_ty <> Field then [(tid.tid_id, tid)] else []) choices
-  in
-  let has_group_choice = ref false in
-  let has_oparam       = ref false in
-  let conv_var v = (* FIXME: ugly *)
+let rpoly_to_wpoly choices oparams p =
+  let param_assoc   = L.map (fun tid -> (tid.tid_id, tid)) oparams in
+  let choices_assoc = L.map (fun tid -> (tid.tid_id, tid)) choices in
+  let conv_var v =
     try
-      let tid = L.assoc v param_assoc in
-      has_oparam := true;
-      OParam(tid)
+      OParam(L.assoc v param_assoc)
     with
       Not_found ->
-        try Choice(L.assoc v fchoices_assoc)
+        try
+          Choice(L.assoc v choices_assoc)
         with
-          Not_found ->
-          try
-            let tid = L.assoc v gchoices_assoc in
-            has_group_choice := true;
-            Choice(tid)
-          with
-            Not_found -> RVar(v)
+          Not_found -> RVar(v)
   in
-  if !has_oparam && !has_group_choice then
-    failwith "Polynomials that contain both oracle parameter and group choice not supported";
-  RP.to_terms p
-  |> L.map (fun (m,c) -> (L.map conv_var m, c))
-  |> WP.from_terms
+  RP.to_terms p |> WP.eval_generic WP.const (WP.var << conv_var)
 
 type eval_state = {
   es_gs      : group_setting;
@@ -156,8 +136,11 @@ let eval_cmd estate cmd =
     }
   | SetWinning(choices,conds), None ->
     let conv = rpoly_to_wpoly choices estate.es_oparams in 
-    let ineqs = conc_map (function (f,InEq) -> [ conv f ] | (_,Eq)   -> []) conds in
-    let eqs   = conc_map (function (f,Eq)   -> [ conv f ] | (_,InEq) -> []) conds in
+    let eqs,ineqs =
+      partition_either
+        (function (f,Eq) -> Left (conv f) | (f,InEq) -> Right (conv f))
+        conds
+    in
     { estate with
       es_mwcond = Some { wcond_ineqs = ineqs; wcond_eqs = eqs } }
   | _, Some _ ->

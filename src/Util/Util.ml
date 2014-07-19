@@ -163,6 +163,21 @@ let maximum xs0 =
 
 type ('a,'b) either = Left of 'a | Right of 'b
 
+(* \ic{Partition the list [xs] into lists [ls] and [rs]
+   with respect to the function [p] that transforms [x]
+   either into some [Left l] or some [Right r].} *)
+let partition_either p xs =
+  let rec go left right xs =
+    match xs with
+    | []    -> (L.rev left, L.rev right)
+    | x::xs ->
+      begin match p x with
+      | Left l  -> go (l::left) right      xs
+      | Right r -> go left      (r::right) xs
+      end
+  in
+  go [] [] xs
+
 let common_prefix eq xs ys =
   let rec go acc xs ys =
     match xs,ys with

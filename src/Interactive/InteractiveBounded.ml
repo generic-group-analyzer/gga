@@ -130,7 +130,6 @@ let state_update_hmaps keyvals st =
 
          The pretty printer needs to be fixed, since it prints the whole
          list. Alternatively replace with a Map. i*)
-
 let state_app_group gid p st =
   try
     let l =  L.assoc gid st.known in
@@ -142,17 +141,9 @@ let state_app_group gid p st =
       then {st with known = (gid, [p]) :: st.known}
       else {st with known = (gid, p :: [GP.from_int 1]) :: st.known}
 
-let lin_comb_of_gps ps cgen =
-  L.fold_left
-    (fun acc p -> GP.add acc (GP.mult (cgen ()) p))
-    GP.zero
-    ps
 
-let make_fresh_var_gen s q =
-  let i = ref 0 in
-  function () -> i := !i+1;
-                 GP.var (Param (OCoeff (s, q, !i)))
-
+let lin_comb_of_gps ps pgen  =
+  GP.(ladd (mapi' (fun i p -> pgen i *@ p) ps))
 
 (*i This function does the following:
    1. Replaces all handles in given poly with a linear combination of computable monomials.
@@ -163,15 +154,15 @@ let add_poly groups st gid p q =
   (*i Keep track of handle values defined to be added to state i*)
   let hmap = ref [] in
   let set_map id v = hmap := ((id, gid, q), v) :: !hmap in
-  let get_handle_value id =
+  let get_handle_value hid =
     (*i First check if already stored in our old state i*)
-    try L.assoc (id, gid, q) st.hmap with
+    try L.assoc (hid, gid, q) st.hmap with
     | Not_found ->
-    try L.assoc (id, gid, q) !hmap with
+    try L.assoc (hid, gid, q) !hmap with
     | Not_found -> begin
-                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> [GP.from_int 1])
-                              (make_fresh_var_gen (F.sprintf "C_%s" id) q)
-                   in set_map id v; v
+                   let pgen i = GP.var (Param (OCoeff (hid, q, i))) in
+                   let v = lin_comb_of_gps (try L.assoc gid groups with | _ -> [GP.from_int 1]) pgen in
+                   set_map hid v; v
                    end
   in
   (*i Convert ovars to GP polynomials and update hmap on each converted handle i*)
@@ -189,7 +180,7 @@ let add_poly groups st gid p q =
     state_update_hmaps !hmap st
   in
   OP.to_terms p
-  |> GP.eval_generic (fun i -> GP.const i) ovar_to_gp
+  |> GP.eval_generic GP.const ovar_to_gp
   |> update_state
 
 
@@ -270,55 +261,48 @@ let rpoly_to_gp p =
   let vconv v = GP.var (RVar (SRVar v)) in
   RP.to_terms p |> GP.eval_generic cconv vconv
 
-let cgen s =
-  let i = ref 0 in
-  function () ->
-    i := !i+1;
-    GP.var (Param (ChoiceCoeff (s, !i)))
-
 let get_gid tid = match tid.II.tid_ty with | II.Group s -> s | _ -> failwith "Uhh?"
+
+let pgen hid i = GP.var (Param (ChoiceCoeff (hid, i)))
 
 let nonquant_wp_to_gp st p =
   let cconv c = GP.const c in
   let vconv v = match v with
-    | II.RVar id    -> GP.var (RVar (SRVar id))
-    | II.OParam _   -> failwith "Called with quantified winning condition."
-    | II.Choice tid -> if tid.II.tid_ty = II.Field
-                       then GP.var (Param (FChoice(tid.II.tid_id)))
-                       else begin
-                              let gid = get_gid tid in
-                              let ps = L.assoc gid st.known in
-                              lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
-                            end
+    | II.RVar id ->
+      GP.var (RVar (SRVar id))
+    | II.OParam _ ->
+      failwith "nonquant_wp_to_qp: oracle parameter not allowed"
+    | II.Choice tid when II.is_field_tid tid ->
+      GP.var (Param (FChoice(tid.II.tid_id)))
+    | II.Choice tid ->
+      let ps = L.assoc (get_gid tid) st.known in
+      lin_comb_of_gps ps (pgen tid.II.tid_id)
   in
   WP.to_terms p |> GP.eval_generic cconv vconv
 
 let quant_wp_to_gps st bound p =
-  let ps = L.map (fun _ -> p) (list_from_to 1 bound) in
-  let q = ref 0 in
+  let ps = L.map (fun qidx -> (qidx,p)) (list_from_to 1 bound) in
   let cconv c = GP.const c in
-  let vconv v = match v with
-    | II.RVar id    -> GP.var (RVar (SRVar id))
-    | II.OParam tid -> if tid.II.tid_ty = II.Field
-                       then GP.var (Param (FOParam (tid.II.tid_id, !q)))
-                       else begin
-                              let gid = get_gid tid in
-                              L.assoc (tid.II.tid_id, gid, !q) st.hmap
-                            end
-    | II.Choice tid -> if tid.II.tid_ty = II.Field
-                       then GP.var (Param (FChoice(tid.II.tid_id)))
-                       else begin
-                              let gid = get_gid tid in
-                              let ps = L.assoc gid st.known in
-                              lin_comb_of_gps ps (cgen (F.sprintf "C_%s" tid.II.tid_id))
-                            end
-  in  
-  L.map (fun p -> q := !q + 1; WP.to_terms p |> GP.eval_generic cconv vconv) ps
+  let vconv qidx v = match v with
+    | II.RVar id ->
+      GP.var (RVar (SRVar id))
+    | II.OParam tid when II.is_field_tid tid ->
+      GP.var (Param (FOParam (tid.II.tid_id, qidx)))
+    | II.OParam tid ->
+      L.assoc (tid.II.tid_id, get_gid tid, qidx) st.hmap
+    | II.Choice tid when II.is_field_tid tid ->
+      GP.var (Param (FChoice(tid.II.tid_id)))
+    | II.Choice tid ->
+      let ps = L.assoc (get_gid tid) st.known in
+      lin_comb_of_gps ps (pgen tid.II.tid_id)
+  in
+  L.map (fun (qidx,p) -> WP.to_terms p |> GP.eval_generic cconv (vconv qidx)) ps
 
-(*i Checks if a wpoly is quantified, i.e. contains oracle parameters i*)
+(* \ic{Returns [true] if winning polynomials is implicitly quantified,
+   i.e., it contains an oracle parameters} *)
 let is_quantified f =
-  let is_qvar v = match v with | II.OParam _ -> true | _ -> false in
-  L.fold_left (fun acc v -> acc || is_qvar v) false (WP.vars f)
+  let is_qvar v = match v with II.OParam _ -> true | _ -> false in
+  L.exists is_qvar (WP.vars f)
 
 let gdef_to_state gdef =
   L.fold_left (fun acc (p, gid) -> state_app_group gid (rpoly_to_gp p) acc)
