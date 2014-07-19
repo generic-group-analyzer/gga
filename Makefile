@@ -22,9 +22,9 @@ INTERACTIVE_MODULES=Interactive/InteractiveInput.ml \
   Interactive/InteractiveEval.ml \
   Interactive/InteractiveParser.mly \
   Interactive/InteractiveLexer.mll \
-#  Interactive/InteractiveBounded.ml \
+  Interactive/InteractiveBounded.ml \
   Interactive/InteractiveFormalSum.ml \
-  Interactive/InteractiveUnbounded.ml \
+#  Interactive/InteractiveUnbounded.ml \
   Interactive/InteractiveAnalyze.ml \
   Interactive/InteractiveTest.ml
 
@@ -70,6 +70,7 @@ webdoc:
 	pandoc -s -S --toc -c buttondown.css README > web/help.html
 
 clean:
+	-rm doc/tool.pdf
 	$(OCAMLBUILD) -clean
 
 loc:

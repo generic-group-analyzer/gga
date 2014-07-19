@@ -10,14 +10,14 @@ module OP = II.OP
 
 type query_idx = int
 
-(* Coefficient index: the j-th coefficient in linear combination of terms *)
+(*i Coefficient index: the $j$-th coefficient in linear combination of terms i*)
 type coeff_idx = int
 
-(* \begin{itemize}
+(*i \begin{itemize}
    \item for sampled shared variables: $V,W$
    \item for variables sampled in oracles: $R_1,..,R_q$
    \end{itemize}
-*)
+i*)
 type rvar =
   | SRVar of II.id
   | ORVar of II.id * query_idx
@@ -28,7 +28,7 @@ let string_of_rvar r = match r with
 
 let pp_rvar fmt r = pp_string fmt (string_of_rvar r)
 
-(* \begin{itemize}
+(*i \begin{itemize}
    \item $m$ in LRSW
    \item $\alpha^{M}_{i,j}$: coefficient of $j$-th element in the completion
       (for the right group) before calling the oracle the $i$-time.
@@ -36,7 +36,7 @@ let pp_rvar fmt r = pp_string fmt (string_of_rvar r)
   \item $\beta^{M'}_j$: coefficient of $j$-th element in the completion
       after performing the last oracle call.
   \end{itemize}
-*)
+i*)
 type param =
   | FOParam of II.id * query_idx
   | OCoeff  of II.id * query_idx * coeff_idx
@@ -51,9 +51,11 @@ let string_of_param p = match p with
 
 let pp_param fmt p = pp_string fmt (string_of_param p)
 
-(****************************************************
- *************** Compute completion *****************
- ****************************************************)
+(*i
+ ***************************************************
+ *************** Compute completion ****************
+ ***************************************************
+i*)
 
 type var =
   | RVar of rvar
@@ -70,12 +72,12 @@ module GP = MakePoly(struct
   let compare = compare
 end) (IntRing)
 
-(* State of the completion computation:
+(*i State of the completion computation:
    - groups: Contains a monomial basis for each group
 
    - handle_values: During oracle queries, handles get replaced by
      linear combinations. We store these for constraint generation
-*)
+i*)
 
 type state = {
   groups : (II.gid * GP.t list) list;
@@ -91,13 +93,13 @@ let pp_state fmt st =
 let state_update_hmaps keyvals st =
   {st with hmap = keyvals @ st.hmap}
 
-(* This adds a polynomial to the list for gid.
+(*i This adds a polynomial to the list for gid.
    Note: We add the updated group list to the front of the list, since
          assoc always returns the first most up-to-date list. Maybe replace
          by better data structure in the future...??
 
          The pretty printer needs to be fixed, since it prints the whole
-         list. Alternatively replace with a Map. *)
+         list. Alternatively replace with a Map. i*)
 
 let state_app_group gid p st =
   try let l =  L.assoc gid st.groups
@@ -105,7 +107,7 @@ let state_app_group gid p st =
       {st with groups = (gid, p :: l) :: st.groups}
   with
   | _ ->
-  (* If the first element added is "1", don't add it twice *)
+  (*i If the first element added is "1", don't add it twice i*)
   if GP.is_const p
   then {st with groups = (gid, [p]) :: st.groups}
   else {st with groups = (gid, p :: [GP.from_int 1]) :: st.groups}
@@ -121,19 +123,19 @@ let make_fresh_var_gen s q =
                  GP.var (Param (OCoeff (s, q, !i)))
 
 
-(* This function does the following:
+(*i This function does the following:
    1. Replaces all handles in given poly with a linear combination of computable monomials.
    2. Adds the polynomial into the group it belongs to.
    3. For each new handle record its value in the state. 
-   *)
+i*)
 let add_poly groups st gid p q =
-  (* Keep track of handle values defined to be added to state *)
+  (*i Keep track of handle values defined to be added to state i*)
   let hmap = ref []
   in
   let set_map id v = hmap := ((id, gid, q), v) :: !hmap
   in  
   let get_handle_value id =
-    (* First check if already stored in our old state *)
+    (*i First check if already stored in our old state i*)
     try L.assoc (id, gid, q) st.hmap with
     | Not_found ->
     try L.assoc (id, gid, q) !hmap with
@@ -143,7 +145,7 @@ let add_poly groups st gid p q =
                    in set_map id v; v
                    end
   in
-  (* Convert ovars to GP polynomials and update hmap on each converted handle *)
+  (*i Convert ovars to GP polynomials and update hmap on each converted handle i*)
   let ovar_to_gp v =
     match v with
     | II.SRVar r -> GP.var (RVar (SRVar r))
@@ -152,7 +154,7 @@ let add_poly groups st gid p q =
                   then GP.var (Param (FOParam (t.II.tid_id, q)))
                   else get_handle_value t.II.tid_id
   in
-  (* Adds polynomial to the group gid and adds handle value mappings *)
+  (*i Adds polynomial to the group gid and adds handle value mappings i*)
   let update_state p =
     let st = state_app_group gid p st in
     state_update_hmaps !hmap st
@@ -170,7 +172,7 @@ let call_oracle o q st =
   in
   loop st o.II.odef_return
 
-(* TODO: Add completion computation with respect to group setting *)
+(*i TODO: Add completion computation with respect to group setting i*)
 let complete_gs _gs st =
   st
 
@@ -184,9 +186,11 @@ let compute_completion st o bound gs =
   in
   loop 1 st
 
-(****************************************************
- *************** Extract coefficients ***************
- ****************************************************)
+(*i
+ ***************************************************
+ *************** Extract coefficients **************
+ ***************************************************
+i*)
 
 module CP = MakePoly(struct
   type t      = param
@@ -236,9 +240,11 @@ let cp_to_rpoly p =
   let vconv v = RP.var (string_of_param v) in
   CP.to_terms p |> RP.eval_generic cconv vconv
 
-(****************************************************
- *************** Extract constraints ****************
- ****************************************************)
+(*i
+ ***************************************************
+ *************** Extract constraints ***************
+ ***************************************************
+i*)
 
 let rpoly_to_gp p =
   let cconv i = GP.const i in
@@ -290,7 +296,7 @@ let quant_wp_to_gps st bound p =
   in  
   L.map (fun p -> q := !q + 1; WP.to_terms p |> GP.eval_generic cconv vconv) ps
 
-(* Checks if a wpoly is quantified, i.e. contains oracle parameters *)
+(*i Checks if a wpoly is quantified, i.e. contains oracle parameters i*)
 let is_quantified f =
   let is_qvar v = match v with | II.OParam _ -> true | _ -> false in
   L.fold_left (fun acc v -> acc || is_qvar v) false (WP.vars f)

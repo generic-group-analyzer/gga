@@ -169,17 +169,17 @@ let verif_eq ?sts s =
   in
   let inp_gt = simp_inp inp_gt in
 
-  (* F.printf "GT: %a\n" (pp_list ", " (pp_pair RMP.pp RecipP.pp)) inp_gt; *)
+  (*i F.printf "GT: %a\n" (pp_list ", " (pp_pair RMP.pp RecipP.pp)) inp_gt; i*)
   
   let basis =
     conc_map (fun (p,_) -> RMP.mons p) inp_gt
     |> sorted_nub compare 
   in
   let coeff_vecs = L.map (fun (p,_) -> L.map (RMP.coeff p) basis) inp_gt in
-  (* F.printf "M:=\n";
-     F.printf "%a\n" (pp_list "\n" (pp_list " " RMP.pp_coeff)) coeff_vecs; *)
+  (*i F.printf "M:=\n";
+      F.printf "%a\n" (pp_list "\n" (pp_list " " RMP.pp_coeff)) coeff_vecs; i*)
   let left_kernel = Sage_Solver.compute_kernel ?sts coeff_vecs in
-  (* F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; *)
+  (*i F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; i*)
 
   let recip_of_kernel vker =
     L.combine inp_gt vker
