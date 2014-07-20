@@ -50,10 +50,10 @@ let p_cmds = wrap_error (InteractiveParser.cmds_t InteractiveLexer.lex)
 (*********************************************************************)
 (* \hd{Analyze game definitions} *)
 
-let analyze_bounded_from_string s bound = 
+let analyze_bounded_from_string ?(counter=true) ?(fmt=F.std_formatter) s bound = 
   let gdef = p_cmds s |> IE.eval_cmds in
-  F.printf "\n%a\n\n" II.pp_gdef gdef;
-  let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs bound gdef in
+  F.fprintf fmt "\n%a\n\n" II.pp_gdef gdef;
+  let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs fmt bound gdef in
   let zcs = L.map Z3_Solver.poly_to_json zero_constrs in
   let nzcs =
     L.map (fun disj -> `List (L.map Z3_Solver.poly_to_json disj)) nzero_constrs
@@ -70,7 +70,11 @@ let analyze_bounded_from_string s bound =
   if res
     then Z3_Solver.Valid
     else (
-      let res = Z3_Solver.find_counter (`List zcs) (`List nzcs) in
+      let res =
+        if counter
+        then Z3_Solver.find_counter (`List zcs) (`List nzcs)
+        else Z3_Solver.Unknown
+      in
       res
     )
 

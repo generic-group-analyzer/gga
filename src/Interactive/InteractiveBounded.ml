@@ -108,22 +108,22 @@ type gpoly = GP.t
    \end{itemize}}
 *)
 type state = {
-  known : (II.gid * gpoly) list;
+  known : (gpoly * II.gid) list;
   hmap  : ((II.id * II.gid * query_idx) * gpoly) list
 }
 
 (* \ic{Return polys for [gid] in list.}*)
 let polys_for_gid gid known =
-  L.filter ((=) gid << fst) known
-  |> L.map snd
+  L.filter ((=) gid << snd) known
+  |> L.map fst
 
 (* \ic{Extract separate lists for each [gid] from common list.} *)
 let poly_gid_lists known =
-  let gids = L.map fst known |> sorted_nub compare in
+  let gids = L.map snd known |> sorted_nub compare in
   let list_for_gid gid =
-    match L.filter ((=) gid << fst) known with
+    match L.filter ((=) gid << snd) known with
     | []                  -> None
-    | ((gid,_)::_) as gps -> Some (gid,L.map snd gps)
+    | ((_,gid)::_) as gps -> Some (gid,L.map fst gps)
   in
   catSome (L.map list_for_gid gids)
 
@@ -194,7 +194,7 @@ let complete_oracle od i st =
 
   (* \ic{Add oracle return values to known values.} *)
   let known_new =
-    L.map (fun (p,gid) -> (gid,op_to_gp st i p)) od.II.odef_return
+    L.map (fun (p,gid) -> (op_to_gp st i p,gid)) od.II.odef_return
   in
   { st with known = st.known @ known_new }
 
@@ -325,19 +325,16 @@ let gdef_to_state gdef =
   let rpoly_to_gp =
     GP.eval_generic GP.const (fun v -> GP.var (RVar (SRVar v))) << RP.to_terms
   in
-  let inputs_for gid =
-       L.filter ((=) gid << snd) gdef.II.gdef_inputs
-    |> L.map (rpoly_to_gp << fst)
-    |> sorted_nub compare
-    |> (fun gps -> (GP.from_int 1)::gps)
-    |> L.map (fun gp -> (gid,gp))
+  let known =
+      L.map (fun gid -> (GP.from_int 1, gid)) (II.gids_in_gdef gdef)
+    @ L.map (fun (rp,gid) -> (rpoly_to_gp rp, gid)) gdef.II.gdef_inputs
   in
-  { known = conc_map inputs_for (II.gids_in_gdef gdef);
+  { known = known ;
     hmap = [] }
 
 (* \ic{Convert game definition to equality and inequality constraints.} *)
-let gdef_to_constrs b gdef =
-  let p_header h s = F.printf ("\n############ %s ###########\n%s") h s in
+let gdef_to_constrs fmt b gdef =
+  let p_header h s = F.fprintf fmt ("\n############ %s ###########\n%s") h s in
   let st = gdef_to_state gdef in
   let ocalls =
     match gdef.II.gdef_odefs with
@@ -347,7 +344,7 @@ let gdef_to_constrs b gdef =
   in
   let st = complete_st gdef.II.gdef_gs ocalls  st in
 
-  F.printf "%a" pp_state st;
+  F.fprintf fmt "%a" pp_state st;
 
   let eqs = gdef.II.gdef_wcond.II.wcond_eqs in
   let ineqs = gdef.II.gdef_wcond.II.wcond_ineqs in
@@ -372,21 +369,21 @@ let gdef_to_constrs b gdef =
     (fsprintf "0 = %a\n" (pp_list "\n\n0 = " EP.pp) (L.map gp_to_ep eqs));
 
   p_header
-    "Inequalities for constraint generation"
-    (fsprintf "0 <> %a\n" (pp_list "\n\n0 <> " EP.pp) (L.map gp_to_ep ineqs));
+    "Inequalities for constraint generation:"
+    (fsprintf "%a\n" (pp_list "\n\n" EP.pp) (L.map gp_to_ep ineqs));
 
   let eqs_constrs = conc_map extract_constraints eqs in
 
   p_header
     "Equality constraints"
-    (fsprintf "0 = %a\n" (pp_list "\n\n0 = " RP.pp) (L.map cp_to_rpoly eqs_constrs));
+    (fsprintf "%a\n" (pp_list "\n\n" RP.pp) (L.map cp_to_rpoly eqs_constrs));
 
   let ineqs_constrs = L.map extract_constraints (ineqs @ qineqs) in
 
   p_header "Inequality constraints" "";
   L.iter
     (fun fs ->
-       F.printf "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
+       F.fprintf fmt "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
     (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
   
   (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)

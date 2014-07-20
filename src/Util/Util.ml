@@ -332,4 +332,6 @@ let map_opt f = function None -> None | Some x -> Some (f x)
 (* let fsprintf fm = Format.fprintf Format.str_formatter fm *)
 
 let fsget _ = Format.flush_str_formatter ()
+
+let null_formatter = Format.make_formatter (fun _ _ _ -> ()) (fun () -> ())
 (*i*)

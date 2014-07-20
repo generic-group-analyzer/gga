@@ -4,6 +4,8 @@
 open Util
 open Nondet
 open Poly
+open StringPoly
+open InteractiveAnalyze
 
 module IR = IntRing
 (*i*)
@@ -56,7 +58,7 @@ let vecs_smaller bvec =
 type recipvar = M | V | W | R | S | One
 
 let string_of_recipvar v = match v with
-  | M -> "M" | V -> "V" | W -> "W" | R -> "R" | S -> "S" | One -> "1"
+  | M -> "wM" | V -> "V" | W -> "W" | R -> "wR" | S -> "wS" | One -> "1"
 
 (*i*)
 let pp_recipvar fmt v = pp_string fmt (string_of_recipvar v)
@@ -194,17 +196,61 @@ let verif_eq ?sts s =
 
 (* \hd{Analyze Scheme} *)
 
+let to_gdef s veqs =
+  fsprintf
+    ("map G1 * G2 -> GT.\n"^^
+     "iso G2 -> G1.\n"^^
+     "input [V,W] in G1.\n"^^
+     "oracle o1(M:G2) =\n"^^
+     "  sample R;\n"^^
+     "  return [ R, %a ] in G2.\n"^^
+     "\n"^^
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %a).")
+    RMP.pp s
+    (pp_list "/\\" RecipP.pp) veqs
+
+let to_gdef_sigrand s veqs =
+  let rename v = match v with
+    | V_M -> SP.var "sM"
+    | V_R -> SP.var "sR"
+    | _   -> SP.var (string_of_rmvar v)
+  in
+  fsprintf
+    ("map G1 * G2 -> GT.\n"^^
+     "iso G2 -> G1.\n"^^
+     "input [V,W] in G1.\n"^^
+     "input [ sR, sM, %a ] in G2.\n"^^
+     "oracle o1(M:G2) =\n"^^
+     "  sample R;\n"^^
+     "  return [ R, %a ] in G2.\n"^^
+     "\n"^^
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %a).")
+    SP.pp (RMP.to_terms s |> SP.eval_generic SP.const rename)
+    RMP.pp s
+    (pp_list "/\\" RecipP.pp) veqs
+
 let synth () =
   let bounds = [2; 2; 3] in
-  let max_terms = 2 in
-  let i_verif = ref 0 in
-  let i_total = ref 0 in
+  let max_terms = 3 in
+  let i_verif  = ref 0 in
+  let i_total  = ref 0 in
+  let i_secure = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) bounds;
+  let sig_uses_sk f g =
+    L.exists (fun v -> L.nth v 0 + L.nth v 1 > 0) (f@g)
+  in
+  let sym_minimal f g =
+    let swap_v_w m = match m with
+      | [ x; y; z ] -> [ y; x; z]
+      | _ -> failwith "impossible"
+    in
+    compare (L.map swap_v_w f,L.map swap_v_w g) (f,g) >= 0
+  in
   let sigs =
     prod (pick_set max_terms (vecs_smaller bounds)) >>= fun (f,g) ->
-    guard (f <> []) >>
+    guard (f <> [] && sig_uses_sk f g && sym_minimal f g) >>
     ret (f,g)
   in
   let sts = Sage_Solver.start_sage () in
@@ -217,12 +263,22 @@ let synth () =
        let s = RMP.(f *@ (var V_M) +@ g) in
        let veqs = verif_eq ~sts s in
        if veqs = [] then (
-         F.printf ".%!";
+         F.printf "%i %!" !i_total;
        ) else (
          incr i_verif;
-         F.printf "\n%i. S = %a, verif: %a\n%!" !i_verif RMP.pp s
-           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs
+         let sgdef = to_gdef s veqs in
+         (* F.printf "%s\n" sgdef; *)
+         let res = analyze_bounded_from_string ~counter:false ~fmt:null_formatter sgdef 1 in
+         match res with
+         | Z3_Solver.Valid ->
+           incr i_secure;
+           F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
+             (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
+           output_file (F.sprintf "./gen/%i.ec" !i_secure) sgdef;
+           output_file (F.sprintf "./gen/%i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
+
+         | _ -> ()
        )
     );
   Sage_Solver.stop_sage sts;
-  F.printf "\nChecked %i signature schemes, %i have verification equations" !i_total !i_verif
+  F.printf "\nChecked %i signature schemes, %i have verification equations, %i are secure." !i_total !i_verif !i_secure
