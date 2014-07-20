@@ -2,7 +2,7 @@
     Also define [IntRing]. *)
 (*i*)
 open Util
-open PolyInterfaces2
+open LPolyInterfaces
 open Big_int
 (*i*)
 
@@ -152,6 +152,8 @@ module MakePoly (V : Var) (C : Ring) = struct
   
   let zero : t = []
 
+  let var_exp v n = [([(v,n)],C.one)]
+
   let rec ring_exp f n =
     if n > 0 then mult f (ring_exp f (n-1)) 
     else if n = 0 then one
@@ -175,13 +177,22 @@ module MakePoly (V : Var) (C : Ring) = struct
     let (t1s, t2s) = L.partition p f in
     (norm t1s, norm t2s)
 
+  let inst_var env (v,e) =
+    match e < 0, env v with
+    | true, [([(v',e')],c)] when C.equal c C.one ->
+      [([(v',e*e')],c)]
+    | true, _ ->
+      failwith "variables with negative exponent can only be instantiated with variables"
+    | false, f ->
+      ring_exp f e
+
   let eval env f =
-    let eval_monom m = lmult (L.map (fun (v,e) -> ring_exp (env v) e) m) in
+    let eval_monom m = lmult (L.map (inst_var env) m) in
     let eval_term (m,c) = mult (const c) (eval_monom m) in
     ladd (L.map eval_term f)
 
   let eval_generic cconv vconv terms =
-    let vars_to_poly ves = lmult (L.map (fun (v,e) -> ring_exp (vconv v) e) ves) in
+    let vars_to_poly ves = lmult (L.map (inst_var vconv) ves) in
     ladd (L.map (fun (ves, c) ->  mult (vars_to_poly ves) (cconv c)) terms)
 
   let to_terms f = f

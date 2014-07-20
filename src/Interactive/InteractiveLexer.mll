@@ -52,7 +52,8 @@ rule lex = parse
   | ['G']idchars* as s { GROUP (S.sub s 1 (S.length s - 1)) }
   | "Fp" { FIELD }
 
-  | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
+  | ['0'-'9']['0'-'9']* as s { INT(int_of_string(s)) }
+  | '-'['0'-'9']['0'-'9']* as s { INT(int_of_string(s)) }
   | ['A'-'F' 'H'-'Z' 'a'-'z']idchars* as s { VAR s }
 
 and comment = parse

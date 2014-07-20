@@ -1,5 +1,5 @@
 (*s Module types for variables, ring, and polynomials
-    shared between [Poly.ml] and [Poly.mli]. *)
+    shared between [LPoly.ml] and [LPoly.mli]. *)
 
 module type Var = sig
   type t
@@ -40,6 +40,7 @@ module type Poly = sig
   val minus : t -> t -> t
   val mult : t -> t -> t
   val ring_exp : t -> int -> t
+  val var_exp : var -> int -> t
   val one : t
   val zero : t
   val lmult : t list -> t

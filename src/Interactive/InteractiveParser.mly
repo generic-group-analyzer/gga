@@ -51,7 +51,7 @@
 %token PLUS
 %token MINUS
 
-%token <int> NAT
+%token <int> INT
 
 /************************************************************************/
 /* \hd{Priority and associativity} */
@@ -72,14 +72,19 @@
 /* \hd{Commands} */
 
 poly :
-| i = NAT                   { RP.from_int i }
+| i = INT                   { RP.from_int i }
 | v = VAR                   { RP.var v }
 | f = poly; PLUS; g = poly  { RP.add f g }
 | f = poly; STAR; g = poly  { RP.mult f g }
 | f = poly; MINUS; g = poly { RP.minus f g }
 | MINUS; f = poly           { RP.opp f }
 | LPAR;  f = poly; RPAR     { f }
-| f = poly; EXP; i = NAT    { RP.ring_exp f i }
+| v = VAR; EXP; i = INT
+{ RP.var_exp v i }
+| f = poly; EXP; i = INT
+{ if i < 0
+  then failwith "negative exponent only allowed for variables"
+  else RP.ring_exp f i }
 ;
 
 param_type :
