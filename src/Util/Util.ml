@@ -104,6 +104,14 @@ let list_compare cmp xs0 ys0 =
   else if d < 0 then -1
   else go xs0 ys0
 
+let pair_equal eq1 eq2 (x1,x2) (y1,y2) =
+  eq1 x1 y1 && eq2 x2 y2
+
+let pair_compare cmp1 cmp2 (x1,x2) (y1,y2) =
+  let r1 = cmp1 x1 y1 in
+  if r1 <> 0 then r1
+  else cmp2 x2 y2
+
 (* \ic{Return the the list consisting of [i] elements [a].} *)
 let replicate a i =
   let rec go i acc =
