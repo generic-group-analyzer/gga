@@ -2,7 +2,7 @@
     Also define [IntRing]. *)
 (*i*)
 open Util
-open PolyInterfaces
+open PolyInterfaces2
 open Big_int
 (*i*)
 
@@ -40,7 +40,7 @@ module MakePoly (V : Var) (C : Ring) = struct
      We represent polynomials as assoc lists from
      monomials to coefficents. See [norm] for invariants
      that we maintain.} *)
-  type monom = V.t list
+  type monom = (V.t * int) list
 
   type term = monom * C.t
 
@@ -49,9 +49,13 @@ module MakePoly (V : Var) (C : Ring) = struct
   (*********************************************************************)
   (* \ic{\bf Equality and comparison} *)
 
-  let mon_equal = list_equal V.equal
+  let vexp_equal = pair_equal V.equal (=)
 
-  let mon_compare = list_compare V.compare
+  let vexp_compare = pair_compare V.compare compare
+
+  let mon_equal = list_equal vexp_equal
+
+  let mon_compare = list_compare vexp_compare
 
   let equal =
     list_equal (fun (m1,c1) (m2,c2) -> C.equal c1 c2 && mon_equal m1 m2)
@@ -66,10 +70,14 @@ module MakePoly (V : Var) (C : Ring) = struct
   (*********************************************************************)
   (* \ic{\bf Pretty printing} *)
 
+  let pp_vpow fmt (v,e) =
+    if e = 1 then V.pp fmt v
+    else F.fprintf fmt "%a^%i" V.pp v e 
+
   let pp_monom fmt m =
     match m with
     | [] -> F.fprintf fmt "1"
-    | _  -> F.fprintf fmt "%a" (pp_list "*" V.pp) m
+    | _  -> F.fprintf fmt "%a" (pp_list "*" pp_vpow) m
 
   let pp_term fmt (m,c) =
     if m = [] then F.fprintf fmt "%a" C.pp c
@@ -101,14 +109,24 @@ module MakePoly (V : Var) (C : Ring) = struct
   (*********************************************************************)
   (* \ic{\bf Internal functions} *)
 
+  let norm_monom (ves : (V.t * int) list) =
+    let cmp_var (v1,_) (v2,_) = V.compare v1 v2 in
+    let equal_var (v1,_) (v2,_) = V.equal v1 v2 in
+    L.sort cmp_var ves
+    |> group equal_var
+    |> L.map (fun ves -> (fst (L.hd ves), sum (L.map snd ves)))
+    |> L.filter (fun (_,e) -> e <> 0)
+    |> L.sort vexp_compare
+
   (* \ic{The [norm] function ensures that:
      \begin{itemize}
+     \item Vexp entries 
      \item Each monomial is sorted.
      \item Each monomial with non-zero coefficient has exactly one entry.
      \item The list is sorted by the monomials (keys).
      \end{itemize} }*)
-  let norm f =
-    f |> L.map (fun (m,c) -> (L.sort V.compare m, c))
+  let norm (f : t) =
+    f |> L.map (fun (m,c) -> (norm_monom m,c))
       |> L.sort (fun (m1,_) (m2,_) -> mon_compare m1 m2)
       |> group  (fun (m1,_) (m2,_) -> mon_equal m1 m2)
       |> L.map (fun ys -> (fst (L.hd ys), C.ladd (L.map snd ys)))
@@ -116,7 +134,7 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let mult_term_poly (m,c) f =
     L.map (fun (m',c') -> (m @ m', C.mult c c')) f
-      |> norm
+    |> norm
 
   (*********************************************************************)
   (* \ic{\bf Ring operations on polynomials} *)
@@ -139,7 +157,7 @@ module MakePoly (V : Var) (C : Ring) = struct
     else if n = 0 then one
     else failwith "Negative exponent in polynomial"
   
-  let var v = [([v],C.one)]
+  let var v = [([(v,1)],C.one)]
   
   let const c = [([],c)]
 
@@ -149,24 +167,22 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let ladd  = L.fold_left (fun acc f -> add acc f) zero
 
-  let pow p i = lmult (replicate p i)
-
   let vars f =
     sorted_nub V.compare
-      (conc_map (fun (m,_) -> sorted_nub V.compare m) f)
+      (conc_map (fun (m,_) -> sorted_nub V.compare (L.map fst m)) f)
 
   let partition p f =
     let (t1s, t2s) = L.partition p f in
     (norm t1s, norm t2s)
 
   let eval env f =
-    let eval_monom m = lmult (L.map (fun v -> env v) m) in
+    let eval_monom m = lmult (L.map (fun (v,e) -> ring_exp (env v) e) m) in
     let eval_term (m,c) = mult (const c) (eval_monom m) in
     ladd (L.map eval_term f)
 
   let eval_generic cconv vconv terms =
-    let vars_to_poly vs = lmult (L.map vconv vs) in
-    ladd (L.map (fun (vs, c) ->  mult (vars_to_poly vs) (cconv c)) terms)
+    let vars_to_poly ves = lmult (L.map (fun (v,e) -> ring_exp (vconv v) e) ves) in
+    ladd (L.map (fun (ves, c) ->  mult (vars_to_poly ves) (cconv c)) terms)
 
   let to_terms f = f
 
@@ -176,7 +192,7 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let is_var = function [([_x],c)] when C.equal c C.one -> true | _ -> false
 
-  let mons (f : t) = sorted_nub (list_compare V.compare) (L.map fst f)
+  let mons (f : t) = sorted_nub (list_compare vexp_compare) (L.map fst f)
   let coeff f m = try L.assoc m f with Not_found -> C.zero
 
   let ( *@) = mult

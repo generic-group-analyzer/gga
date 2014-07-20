@@ -1,4 +1,4 @@
-open Poly
+open LPoly
 open Util
 
 (* \ic{We use strings as variables for constraint polyomials.} *)

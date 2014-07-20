@@ -1,6 +1,6 @@
 (*s [IntRing] implementation of [Ring] and [MakePoly] functor. *)
 
-open PolyInterfaces
+open PolyInterfaces2
 
 module IntRing : (Ring with type t = Big_int.big_int)
 

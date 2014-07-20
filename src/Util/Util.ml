@@ -197,6 +197,11 @@ let common_prefix eq xs ys =
   in
   go [] xs ys
 
+let sum xs =
+  match xs with
+  | []    -> 0
+  | x::xs -> L.fold_left (+) x xs
+
 (*******************************************************************)
 (* \newpage\hd{File IO} *)
 
