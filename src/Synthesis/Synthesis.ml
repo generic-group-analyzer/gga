@@ -205,7 +205,7 @@ let to_gdef s veqs =
      "  sample R;\n"^^
      "  return [ R, %a ] in G2.\n"^^
      "\n"^^
-     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %a).")
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %a).\n")
     RMP.pp s
     (pp_list "/\\" RecipP.pp) veqs
 
@@ -224,7 +224,7 @@ let to_gdef_sigrand s veqs =
      "  sample R;\n"^^
      "  return [ R, %a ] in G2.\n"^^
      "\n"^^
-     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %a).")
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %a).\n")
     SP.pp (RMP.to_terms s |> SP.eval_generic SP.const rename)
     RMP.pp s
     (pp_list "/\\" RecipP.pp) veqs
