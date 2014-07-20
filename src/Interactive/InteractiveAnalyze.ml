@@ -2,7 +2,10 @@
 
 (*i*)
 open Util
-open Poly
+open LPoly
+open Big_int
+
+module YS = Yojson.Safe
 
 (* open InteractiveUnbounded *)
 
@@ -50,13 +53,21 @@ let p_cmds = wrap_error (InteractiveParser.cmds_t InteractiveLexer.lex)
 (*********************************************************************)
 (* \hd{Analyze game definitions} *)
 
+(* \ic{[poly_to_json f] creates a JSON representation of the polynomial [f].} *)
+let poly_to_json f =
+  `List
+     (L.map
+        (fun (m,c) ->
+           `List [ `List (conc_map (fun (v,e) -> replicate (`String v) e) m); `Int (int_of_big_int c) ])
+        (RP.to_terms f))
+
 let analyze_bounded_from_string ?(counter=true) ?(fmt=F.std_formatter) s bound = 
   let gdef = p_cmds s |> IE.eval_cmds in
   F.fprintf fmt "\n%a\n\n" II.pp_gdef gdef;
   let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs fmt bound gdef in
-  let zcs = L.map Z3_Solver.poly_to_json zero_constrs in
+  let zcs = L.map poly_to_json zero_constrs in
   let nzcs =
-    L.map (fun disj -> `List (L.map Z3_Solver.poly_to_json disj)) nzero_constrs
+    L.map (fun disj -> `List (L.map poly_to_json disj)) nzero_constrs
   in
   let vars =
     (L.concat nzero_constrs)@zero_constrs

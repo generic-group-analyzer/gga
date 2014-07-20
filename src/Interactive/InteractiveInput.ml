@@ -1,8 +1,8 @@
 (*s Input for interactive assumptions. *)
 (*i*)
 open Util
-open Poly
-open StringPoly
+open LPoly
+open LStringPoly
 (*i*)
 
 exception InvalidAssumption of string
@@ -324,7 +324,7 @@ let gids_in_gdef gdef =
        For example in $o(x) = return\; [A,A*x]\; in\; \group_1$, $A*x$ is
        redundant.} *)
 
-let simp_gdef gdef =
+let simp_gdef gdef = gdef (*i
   let is_fparam = function Param(tid) when is_field_tid tid -> true | _ -> false in
   let rec only_fparams_missing xs ys =
     match xs,ys with
@@ -356,6 +356,7 @@ let simp_gdef gdef =
     { od with odef_return = simp_orcl [] od.odef_return }
   in
   { gdef with gdef_odefs = List.map simp_odef gdef.gdef_odefs }
+i*)
 
 (* \ic{Group elements chosen by adversary for winning condition.} *)
 let gchoices_of_gdef gdef =

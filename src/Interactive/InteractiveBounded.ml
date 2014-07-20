@@ -9,7 +9,7 @@
 
 (*i*)
 open Util
-open Poly
+open LPoly
 
 module II = InteractiveInput
 module RP = II.RP
