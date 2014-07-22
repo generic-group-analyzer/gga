@@ -1,6 +1,8 @@
-input [1,X, Y] in G.
+input [X, Y] in G.
 
-oracle o1(m:Fp) = A <-$ G; return (A, Y*A, X*A + m*X*Y*A).
+oracle o1(m:Fp) =
+  sample A;
+  return [A, Y*A, X*A + m*X*Y*A] in G.
 
 win (U:G, V:G, W:G, mm:Fp) =
   ( V - U*Y = 0 /\ W - U*X - mm*U*X*Y = 0 /\ U <> 0 /\ m <> mm /\ mm <> 0 /\ m <> 0).
