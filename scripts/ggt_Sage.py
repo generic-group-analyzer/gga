@@ -159,7 +159,6 @@ def interp(req):
     #K = span(K,base_ring=ZZ).basis()
 
     return { "ok": True
-           #, "K": []
            , "K": matrixToInt(K)
            }
 
