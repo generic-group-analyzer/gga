@@ -238,8 +238,9 @@ let synth () =
   let i_secure  = ref 0 in
   let i_unknown = ref 0 in
   let i_attack  = ref 0 in
-  F.printf "Polynomials for variables %a and bounds %a:\n"
+  F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
     (pp_list ", " pp_rmvar) varorder
+    (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
     (pp_list ", " pp_int) bounds;
   let sig_uses_sk f g =
     L.exists (fun v -> let v = offset v in L.nth v 0 + L.nth v 1 > 0) (f@g)
@@ -257,7 +258,7 @@ let synth () =
     guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
               vo <> [ 0; 0; 0 ]
               (*i Since V and W are in G1, V*W cannot be computed in GT i*)
-           && not (List.nth vo 0 = 1 && List.nth vo 1 = 1)
+           && not (List.nth vo 0 + List.nth vo 1 > 1)
           ) >>
     ret v
   in
@@ -270,11 +271,13 @@ let synth () =
               (* symmetry reduction, we choose (the smaller signature) in the
                  equivalence class obtained by renaming V to W *)
            && sym_minimal f g
-           && (* f cannot be of the form h + r since the smaller
-                 signature h is equivalent wrt. to security *)
-              List.for_all (fun v ->
+           (* M must be one argument of the pairing, so there is only degree 1 left *)
+           && List.for_all (fun v ->
                               let vo = offset v in
-                              vo <> [0;0;1]) f) >>
+                              not (List.nth vo 0 + List.nth vo 1 + List.nth vo 2 > 1)) f
+           && (* f cannot be of the form h + r since the smaller signature h
+                 is equivalent wrt. to security (adversary can add/remove R to S) *)
+              List.for_all (fun v -> let vo = offset v in vo <> [ 0; 0; 1]) g) >>
     ret (f,g)
   in
   let sts = Sage_Solver.start_sage () in
@@ -298,8 +301,8 @@ let synth () =
            incr i_secure;
            F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
              (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
-           output_file (F.sprintf "./gen/%i.ec" !i_secure) sgdef;
-           output_file (F.sprintf "./gen/%i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
+           output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
+           output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
          | Z3_Solver.Unknown -> 
            incr i_unknown
          | Z3_Solver.Attack _ ->
