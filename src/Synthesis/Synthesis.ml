@@ -3,8 +3,8 @@
 (*i*)
 open Util
 open Nondet
-open Poly
-open StringPoly
+open LPoly
+open LStringPoly
 open InteractiveAnalyze
 
 module IR = IntRing
@@ -50,7 +50,7 @@ let vecs_smaller bvec =
     | Some v -> mplus (ret v) (go (succ i))
     | None   -> mempty
   in
-  go 1
+  go 0
 
 (* \hd{Recipe polynomials} *)
 
@@ -138,7 +138,7 @@ let simp_inp inp =
 let evecs_to_poly vs =
   let evec_to_poly v =
     L.combine v varorder
-    |> L.map (fun (e,v) -> RMP.pow (RMP.var v) e)
+    |> L.map (fun (e,v) -> RMP.var_exp v ( e - 1 )) (* also generate negative exponents *)
     |> RMP.lmult
   in
   RMP.ladd (L.map evec_to_poly vs)
@@ -207,7 +207,7 @@ let to_gdef s veqs =
      "\n"^^
      "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %a).\n")
     RMP.pp s
-    (pp_list "/\\" RecipP.pp) veqs
+    (pp_list " /\\ 0 = " RecipP.pp) veqs
 
 let to_gdef_sigrand s veqs =
   let rename v = match v with
@@ -227,14 +227,16 @@ let to_gdef_sigrand s veqs =
      "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %a).\n")
     SP.pp (RMP.to_terms s |> SP.eval_generic SP.const rename)
     RMP.pp s
-    (pp_list "/\\" RecipP.pp) veqs
+    (pp_list " /\\ 0 = " RecipP.pp) veqs
 
 let synth () =
-  let bounds = [2; 2; 3] in
-  let max_terms = 3 in
+  let bounds = [3; 3; 4] in
+  let max_terms = 2 in
   let i_verif  = ref 0 in
   let i_total  = ref 0 in
   let i_secure = ref 0 in
+  let i_unknown = ref 0 in
+  let i_attack = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) bounds;
@@ -249,7 +251,7 @@ let synth () =
     compare (L.map swap_v_w f,L.map swap_v_w g) (f,g) >= 0
   in
   let sigs =
-    prod (pick_set max_terms (vecs_smaller bounds)) >>= fun (f,g) ->
+    prod (pick_set max_terms (vecs_smaller bounds >>= fun v -> guard (v <> [1;1;1]) >> ret v)) >>= fun (f,g) ->
     guard (f <> [] && sig_uses_sk f g && sym_minimal f g) >>
     ret (f,g)
   in
@@ -268,7 +270,7 @@ let synth () =
          incr i_verif;
          let sgdef = to_gdef s veqs in
          (* F.printf "%s\n" sgdef; *)
-         let res = analyze_bounded_from_string ~counter:false ~fmt:null_formatter sgdef 1 in
+         let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
          match res with
          | Z3_Solver.Valid ->
            incr i_secure;
@@ -276,9 +278,16 @@ let synth () =
              (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
            output_file (F.sprintf "./gen/%i.ec" !i_secure) sgdef;
            output_file (F.sprintf "./gen/%i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
-
-         | _ -> ()
+         | Z3_Solver.Unknown -> 
+           incr i_unknown
+         | Z3_Solver.Attack _ ->
+           incr i_attack;
+         | Z3_Solver.Error e ->
+           F.printf "Error: %s\n" e;
+           incr i_unknown
        )
     );
   Sage_Solver.stop_sage sts;
-  F.printf "\nChecked %i signature schemes, %i have verification equations, %i are secure." !i_total !i_verif !i_secure
+  F.printf
+    "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
+    !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown
