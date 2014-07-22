@@ -1,0 +1,33 @@
+produced by:
+for file in gen/*_sigrand.ec; do printf "analyzing $file: "; cat $file | grep return; printf "result: "; gtimeout 40 ./ggt.native interactive_1 $file | egrep -i "valid|attack found" ; done > gen/results
+
+analyzing gen/01_sigrand.ec:   return [ R, M*R^-1 + V*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/02_sigrand.ec:   return [ R, R^-1 + M*R^-1 + V*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/03_sigrand.ec:   return [ R, V + R^-1 + M*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/04_sigrand.ec:   return [ R, M*R^-1 + V*R^-1 + W*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/05_sigrand.ec:   return [ R, V + M*R^-1 + W*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/06_sigrand.ec:   return [ R, V*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/07_sigrand.ec:   return [ R, R^-1 + V*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/08_sigrand.ec:   return [ R, V + R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/09_sigrand.ec:   return [ R, V*R^-1 + W*R^-1 + M*W*R^-1 ] in G2.
+result: Assumption is valid.
+analyzing gen/10_sigrand.ec:   return [ R, V + M*W ] in G2.
+result: Attack found (see above).
+analyzing gen/11_sigrand.ec:   return [ R, V + W + M*W ] in G2.
+result: Attack found (see above).
+analyzing gen/12_sigrand.ec:   return [ R, V + R^2 + M*W ] in G2.
+result: Assumption is valid.
+analyzing gen/13_sigrand.ec:   return [ R, V + M*W + M*R ] in G2.
+result: Attack found (see above).
+analyzing gen/14_sigrand.ec:   return [ R, V + W + M*W + M*R ] in G2.
+result: Attack found (see above).
+analyzing gen/15_sigrand.ec:   return [ R, V + R^2 + M*W + M*R ] in G2.
+result: terminated
