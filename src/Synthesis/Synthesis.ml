@@ -232,16 +232,17 @@ let to_gdef_sigrand s veqs =
 let synth () =
   let bounds = [3; 3; 4] in
   let max_terms = 2 in
-  let i_verif  = ref 0 in
-  let i_total  = ref 0 in
-  let i_secure = ref 0 in
+  let offset v = List.map (fun x -> x - 1) v in
+  let i_verif   = ref 0 in
+  let i_total   = ref 0 in
+  let i_secure  = ref 0 in
   let i_unknown = ref 0 in
-  let i_attack = ref 0 in
+  let i_attack  = ref 0 in
   F.printf "Polynomials for variables %a and bounds %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) bounds;
   let sig_uses_sk f g =
-    L.exists (fun v -> L.nth v 0 + L.nth v 1 > 0) (f@g)
+    L.exists (fun v -> let v = offset v in L.nth v 0 + L.nth v 1 > 0) (f@g)
   in
   let sym_minimal f g =
     let swap_v_w m = match m with
@@ -250,9 +251,30 @@ let synth () =
     in
     compare (L.map swap_v_w f,L.map swap_v_w g) (f,g) >= 0
   in
+  let vecs = (*i we must account for the offset i*) 
+    vecs_smaller bounds >>= fun v ->
+    let vo = offset v in
+    guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
+              vo <> [ 0; 0; 0 ]
+              (*i Since V and W are in G1, V*W cannot be computed in GT i*)
+           && not (List.nth vo 0 = 1 && List.nth vo 1 = 1)
+          ) >>
+    ret v
+  in
   let sigs =
-    prod (pick_set max_terms (vecs_smaller bounds >>= fun v -> guard (v <> [1;1;1]) >> ret v)) >>= fun (f,g) ->
-    guard (f <> [] && sig_uses_sk f g && sym_minimal f g) >>
+    prod (pick_set max_terms vecs) >>= fun (f,g) ->
+    guard (   (* this is 0 *)
+              f <> []
+              (* the signature must use either V or W *)
+           && sig_uses_sk f g
+              (* symmetry reduction, we choose (the smaller signature) in the
+                 equivalence class obtained by renaming V to W *)
+           && sym_minimal f g
+           && (* f cannot be of the form h + r since the smaller
+                 signature h is equivalent wrt. to security *)
+              List.for_all (fun v ->
+                              let vo = offset v in
+                              vo <> [0;0;1]) f) >>
     ret (f,g)
   in
   let sts = Sage_Solver.start_sage () in
