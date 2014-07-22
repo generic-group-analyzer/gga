@@ -25,12 +25,12 @@ let start_sage () =
 let eval_sage sts cmd =
   if sts.sts_closed then failwith "sage process already closed";
   let (c_in, c_out) = sts.sts_cin, sts.sts_cout in
-  (* print_endline (">>> sent "^cmd); *)
+  (*i print_endline (">>> sent "^cmd); i*)
   output_string c_out cmd;
   flush c_out;
-  (* print_endline (">>> wait "); *)
+  (*i print_endline (">>> wait "); i*)
   let res = input_line c_in in
-  (* print_endline (">>> got "^res); *)
+  (*i print_endline (">>> got "^res); i*)
   res
 
 
