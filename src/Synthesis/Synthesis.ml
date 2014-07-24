@@ -238,6 +238,7 @@ let synth () =
   let i_secure  = ref 0 in
   let i_unknown = ref 0 in
   let i_attack  = ref 0 in
+  let deg_vec v = L.nth v 0 + L.nth v 1 + L.nth v 2 in
   F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
@@ -258,7 +259,7 @@ let synth () =
     guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
               vo <> [ 0; 0; 0 ]
               (*i Since V and W are in G1, V*W cannot be computed in GT i*)
-           && not (List.nth vo 0 + List.nth vo 1 > 1)
+           && not (L.nth vo 0 + L.nth vo 1 > 1)
           ) >>
     ret v
   in
@@ -266,6 +267,10 @@ let synth () =
     prod (pick_set max_terms vecs) >>= fun (f,g) ->
     guard (   (* this is 0 *)
               f <> []
+              (* We cannot check a signature with terms of degree > 1 for any
+                 of the variables since M consumes already one degree in the
+                 verification equation *)
+           && List.for_all (fun v -> let vo = offset v in deg_vec v < 2) f
               (* the signature must use either V or W *)
            && sig_uses_sk f g
               (* symmetry reduction, we choose (the smaller signature) in the
