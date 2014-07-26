@@ -15,25 +15,21 @@ let ret a = lazy (Cons (a, mempty))
 let guard pred =
   if pred then ret () else mempty
 
-(* Combine results returned by a with results
-   returned by b. Results from a and b are
+(* Combine results returned by [a] with results
+   returned by [b]. Results from [a] and [b] are
    interleaved. *)
 let rec mplus a b = from_fun (fun () ->
   match force a with
   | Cons (a1, a2) -> Cons (a1, mplus b a2)
-  | Nil           ->
-    begin match force b with
-    | Nil           -> Nil
-    | Cons (b1, b2) -> Cons (b1, mplus a b2)
-    end)
+  | Nil           -> force b)
 
 let rec bind m f = from_fun (fun () ->
   match force m with
   | Nil         -> Nil
   | Cons (a, b) -> force (mplus (f a) (bind b f)))
 
-(* Execute and get first n results as list,
-   use n = -1 to get all values. *)
+(* Execute and get first [n] results as list,
+   use [n = -1] to get all values. *)
 let run n m =
   let rec go n m acc =
     if n = 0 then List.rev acc
@@ -43,8 +39,8 @@ let run n m =
       | Cons (a, b) -> go (pred n) b (a::acc)
   in go n m []
 
-(* Apply function f to the first n values,
-   use n = -1 to apply f to all values. *)
+(* Apply function [f] to the first n values,
+   use [n = -1] to apply [f] to all values. *)
 let iter n m f =
   let rec go n m =
     if n = 0 then ()
