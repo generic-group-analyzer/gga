@@ -9,12 +9,12 @@ type dbidx = int
 type query_idx = int
 
 type var =
-  | RVar of string
-  | IRVar of string * dbidx
+  | RVar   of string
+  | IRVar  of string * dbidx
   | Coeff  of string
   | ICoeff of string * dbidx
-  | Poly of string
-  | IPoly of string * dbidx
+  | Poly   of string
+  | IPoly  of string * dbidx
 
 let pp_var fmt v =
   match v with
@@ -31,8 +31,6 @@ type term =
   | Sum of dbidx list * term
   | Add of term * term
   | Var of var
-
-(* Define recursive definition *)
 
 let test () =
   let v = Coeff("m") in

@@ -232,19 +232,18 @@ let to_gdef_sigrand s veqs =
 let synth () =
   let bounds = [3; 3; 4] in
   let max_terms = 2 in
-  let offset v = List.map (fun x -> x - 1) v in
+
   let i_verif   = ref 0 in
   let i_total   = ref 0 in
   let i_secure  = ref 0 in
   let i_unknown = ref 0 in
   let i_attack  = ref 0 in
+
+  let offset v = List.map (fun x -> x - 1) v in
   let deg_vec v = L.nth v 0 + L.nth v 1 + L.nth v 2 in
   let deg_vec_vw v = L.nth v 0 + L.nth v 1 in
 
-  F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
-    (pp_list ", " pp_rmvar) varorder
-    (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
-    (pp_list ", " pp_int) bounds;
+  (* \ic{Filters for search.} *)
   let sig_uses_sk f g =
     L.exists (fun v -> let v = offset v in deg_vec_vw v > 0) (f@g)
   in
@@ -296,40 +295,47 @@ let synth () =
            && sym_minimal f g) >>
     ret (f,g)
   in
+
+  (* \ic{Analyze a signature.} *)
+  let analyze_sig sts (f,g) =
+     incr i_total;
+     let f = evecs_to_poly f in
+     let g = evecs_to_poly g in
+     let s = RMP.(f *@ (var V_M) +@ g) in
+     let veqs = verif_eq ~sts s in
+     if veqs = [] then (
+       F.printf "%i %!" !i_total
+     ) else (
+       incr i_verif;
+       let sgdef = to_gdef s veqs in
+       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
+       match res with
+       | Z3_Solver.Valid ->
+         incr i_secure;
+         F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
+           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
+         output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
+         output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
+       | Z3_Solver.Unknown ->
+         F.printf "\n%i? %!\n" !i_total;
+         incr i_unknown
+       | Z3_Solver.Attack _ ->
+         output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
+         F.printf "\n%i! %!\n" !i_total;
+         incr i_attack;
+       | Z3_Solver.Error e ->
+         F.printf "Error: %s\n" e;
+         incr i_unknown
+     )
+  in
+
+  (* \ic{Search process.} *)
+  F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
+    (pp_list ", " pp_rmvar) varorder
+    (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
+     (pp_list ", " pp_int) bounds;
   let sts = Sage_Solver.start_sage () in
-  iter (-1)
-    sigs
-    (fun (f,g) ->
-       incr i_total;
-       let f = evecs_to_poly f in
-       let g = evecs_to_poly g in
-       let s = RMP.(f *@ (var V_M) +@ g) in
-       let veqs = verif_eq ~sts s in       
-       if veqs = [] then (
-         F.printf "%i %!" !i_total
-       ) else (
-         incr i_verif;
-         let sgdef = to_gdef s veqs in
-         let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
-         match res with
-         | Z3_Solver.Valid ->
-           incr i_secure;
-           F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
-             (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
-           output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
-           output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
-         | Z3_Solver.Unknown -> 
-           F.printf "\n%i? %!\n" !i_total;
-           incr i_unknown
-         | Z3_Solver.Attack _ ->
-           output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
-           F.printf "\n%i! %!\n" !i_total;
-           incr i_attack;
-         | Z3_Solver.Error e ->
-           F.printf "Error: %s\n" e;
-           incr i_unknown
-       )
-    );
+  iter (-1) sigs (analyze_sig sts);
   Sage_Solver.stop_sage sts;
   F.printf
     "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
