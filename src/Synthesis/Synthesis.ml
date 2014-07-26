@@ -239,12 +239,14 @@ let synth () =
   let i_unknown = ref 0 in
   let i_attack  = ref 0 in
   let deg_vec v = L.nth v 0 + L.nth v 1 + L.nth v 2 in
+  let deg_vec_vw v = L.nth v 0 + L.nth v 1 in
+
   F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
     (pp_list ", " pp_int) bounds;
   let sig_uses_sk f g =
-    L.exists (fun v -> let v = offset v in L.nth v 0 + L.nth v 1 > 0) (f@g)
+    L.exists (fun v -> let v = offset v in deg_vec_vw v > 0) (f@g)
   in
   let sym_minimal f g =
     let swap_v_w m = match m with
@@ -253,36 +255,45 @@ let synth () =
     in
     compare (L.map swap_v_w f,L.map swap_v_w g) (f,g) >= 0
   in
-  let vecs = (*i we must account for the offset i*) 
-    vecs_smaller bounds >>= fun v ->
-    let vo = offset v in
+  let vecs =
+    vecs_smaller bounds >>= fun vo ->
+    let v = offset vo in
     guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
-              vo <> [ 0; 0; 0 ]
+              v <> [ 0; 0; 0 ]
               (*i Since V and W are in G1, V*W cannot be computed in GT i*)
-           && not (L.nth vo 0 + L.nth vo 1 > 1)
+           && not (L.nth v 0 + L.nth v 1 > 1)
+          ) >>
+    ret vo
+  in
+  let vecs_f =
+    vecs >>= fun v ->
+    guard (   (* We cannot check a signature with terms of degree > 1 for any
+                 of the variables since M consumes already one degree in the
+                 verification equation *)
+              let v = offset v in deg_vec v < 2
+          ) >>
+    ret v
+  in
+  let vecs_g =
+    vecs >>= fun v ->
+    guard (  let v = offset v in 
+             (* g cannot be of the form h + r since the smaller signature h
+                is equivalent wrt. to security (adversary can add/remove R to S) *)
+              (v <> [ 0; 0; 1])
+              (* not completely clear: at most one one multiplication *)
+           && (deg_vec v <= 2)
           ) >>
     ret v
   in
   let sigs =
-    prod (pick_set max_terms vecs) >>= fun (f,g) ->
+    cart (pick_set max_terms vecs_f) (pick_set max_terms vecs_g) >>= fun (f,g) ->
     guard (   (* this is 0 *)
               f <> []
-              (* We cannot check a signature with terms of degree > 1 for any
-                 of the variables since M consumes already one degree in the
-                 verification equation *)
-           && List.for_all (fun v -> let vo = offset v in deg_vec v < 2) f
               (* the signature must use either V or W *)
            && sig_uses_sk f g
               (* symmetry reduction, we choose (the smaller signature) in the
                  equivalence class obtained by renaming V to W *)
-           && sym_minimal f g
-           (* M must be one argument of the pairing, so there is only degree 1 left *)
-           && List.for_all (fun v ->
-                              let vo = offset v in
-                              not (List.nth vo 0 + List.nth vo 1 + List.nth vo 2 > 1)) f
-           && (* f cannot be of the form h + r since the smaller signature h
-                 is equivalent wrt. to security (adversary can add/remove R to S) *)
-              List.for_all (fun v -> let vo = offset v in vo <> [ 0; 0; 1]) g) >>
+           && sym_minimal f g) >>
     ret (f,g)
   in
   let sts = Sage_Solver.start_sage () in
@@ -293,13 +304,12 @@ let synth () =
        let f = evecs_to_poly f in
        let g = evecs_to_poly g in
        let s = RMP.(f *@ (var V_M) +@ g) in
-       let veqs = verif_eq ~sts s in
+       let veqs = verif_eq ~sts s in       
        if veqs = [] then (
-         F.printf "%i %!" !i_total;
+         F.printf "%i %!" !i_total
        ) else (
          incr i_verif;
          let sgdef = to_gdef s veqs in
-         (* F.printf "%s\n" sgdef; *)
          let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
          match res with
          | Z3_Solver.Valid ->
@@ -309,8 +319,11 @@ let synth () =
            output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
            output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
          | Z3_Solver.Unknown -> 
+           F.printf "\n%i? %!\n" !i_total;
            incr i_unknown
          | Z3_Solver.Attack _ ->
+           output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
+           F.printf "\n%i! %!\n" !i_total;
            incr i_attack;
          | Z3_Solver.Error e ->
            F.printf "Error: %s\n" e;

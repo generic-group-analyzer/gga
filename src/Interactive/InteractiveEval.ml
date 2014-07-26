@@ -72,7 +72,7 @@ let rpoly_to_opoly params orvars p =
         if L.mem id orvars then ORVar(id)
         else SRVar(id)
   in
-  RP.to_terms p |> OP.eval_generic OP.const (OP.var << conv_var)
+  RP.to_terms p |> OP.eval_generic OP.const (OP.var % conv_var)
 
 (* \ic{Convert the given [rpoly] to a winning condition polynomial for
        choices [choices], oracle parameters [oparams], and polynomial [p].} *)
@@ -89,7 +89,7 @@ let rpoly_to_wpoly choices oparams p =
         with
           Not_found -> RVar(v)
   in
-  RP.to_terms p |> WP.eval_generic WP.const (WP.var << conv_var)
+  RP.to_terms p |> WP.eval_generic WP.const (WP.var % conv_var)
 
 (* \ic{Interpreter state for evaluating commands.} *)
 type eval_state = {

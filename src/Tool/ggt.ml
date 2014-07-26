@@ -12,8 +12,6 @@ let main_analyze () =
   else
     let scmds = Util.input_file Sys.argv.(2) in
     match Sys.argv.(1) with
-    | "synth" ->
-      Synthesis.synth ()
     | "param" ->
       let open Z3_Solver in
       begin try
@@ -60,6 +58,7 @@ let main_analyze () =
       F.printf "Invalid command: %s\n" s
 
 let main =
-  if Sys.argv.(1) = "synth"
-  then Synthesis.synth ()
-  else main_analyze ()
+  match Sys.argv.(1) with
+  | "synth" -> Synthesis.synth ()
+  | "test"  -> Unbounded.test ()
+  | _       -> main_analyze ()

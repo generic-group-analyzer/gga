@@ -165,7 +165,7 @@ type odef = {
 
 let gids_in_odef odef =
        (L.map snd odef.odef_return)
-     @ (conc_map gids_in_ovar (conc_map (OP.vars << fst) odef.odef_return))
+     @ (conc_map gids_in_ovar (conc_map (OP.vars % fst) odef.odef_return))
   |> sorted_nub compare
 
 (*i*)

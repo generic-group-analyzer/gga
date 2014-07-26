@@ -1,5 +1,4 @@
-(*s Bounded analysis for interactive assumptions. Consists of three
-    steps:
+(*s Bounded analysis for interactive assumptions. Consists of three steps:
     \begin{itemize}
     \item Compute symbolic completion wrt. isos, maps, and oracle queries.
     \item Make winning condition handle-free and extract constraints.
@@ -114,14 +113,14 @@ type state = {
 
 (* \ic{Return polys for [gid] in list.}*)
 let polys_for_gid gid known =
-  L.filter ((=) gid << snd) known
+  L.filter ((=) gid % snd) known
   |> L.map fst
 
 (* \ic{Extract separate lists for each [gid] from common list.} *)
 let poly_gid_lists known =
   let gids = L.map snd known |> sorted_nub compare in
   let list_for_gid gid =
-    match L.filter ((=) gid << snd) known with
+    match L.filter ((=) gid % snd) known with
     | []                  -> None
     | ((_,gid)::_) as gps -> Some (gid,L.map fst gps)
   in
@@ -255,14 +254,14 @@ let gp_to_ep =
     | RVar r  -> EP.var r
     | Param p -> EP.const (CP.var p)
   in
-  EP.eval_generic (EP.const << CP.const) vconv << GP.to_terms
+  EP.eval_generic (EP.const % CP.const) vconv % GP.to_terms
 
 (* \ic{Extract coefficients, these are the constraints.} *)
-let extract_constraints = L.map snd << EP.to_terms << gp_to_ep
+let extract_constraints = L.map snd % EP.to_terms % gp_to_ep
 
 (* \ic{Convert [cp] to [rpoly].} *)
 let cp_to_rpoly =
-  RP.eval_generic RP.const (RP.var << string_of_param) << CP.to_terms
+  RP.eval_generic RP.const (RP.var % string_of_param) % CP.to_terms
 
 (*i ********************************************************************* i*)
 (* \hd{Translation from winning conditions to constraints} *)
@@ -323,7 +322,7 @@ let is_quantified f =
    input list contains $1$ exactly once.} *)
 let gdef_to_state gdef =
   let rpoly_to_gp =
-    GP.eval_generic GP.const (fun v -> GP.var (RVar (SRVar v))) << RP.to_terms
+    GP.eval_generic GP.const (fun v -> GP.var (RVar (SRVar v))) % RP.to_terms
   in
   let known =
       L.map (fun gid -> (GP.from_int 1, gid)) (II.gids_in_gdef gdef)
