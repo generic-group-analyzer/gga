@@ -344,15 +344,143 @@ let synth2 () =
     !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown
 
 let synth () =
+  let i_verif   = ref 0 in
+  let i_total   = ref 0 in
+  let i_secure  = ref 0 in
+  let i_unknown = ref 0 in
+  let i_attack  = ref 0 in
+
+  let vec_to_string cs =
+    let cs = L.map Big_int.big_int_of_int cs in
+    let c1 = L.nth cs 0 in
+    let c2 = L.nth cs 1 in
+    let c3 = L.nth cs 2 in
+    let c4 = L.nth cs 3 in
+    let c5 = L.nth cs 4 in
+    let c6 = L.nth cs 5 in
+    let c7 = L.nth cs 6 in
+    let c8 = L.nth cs 7 in
+    let c9 = L.nth cs 8 in
+    let c10 = L.nth cs 9 in
+    let c11 = L.nth cs 10 in
+      
+    let f = SP.from_terms [ ([], c1); ([("R",1)], c2); ([("M",1)], c3); ([("V",1)], c4);
+                            ([("W",1)], c5) ] in
+    let g = SP.from_terms [ ([], c6); ([("R",1)], c7); ([("M",1)], c8) ] in
+    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    fsprintf "%a" SP.pp (SP.add (SP.mult f g) h)
+  in
+    
+  let vec_to_wstring cs =
+    let cs = L.map Big_int.big_int_of_int cs in
+    let c1 = L.nth cs 0 in
+    let c2 = L.nth cs 1 in
+    let c3 = L.nth cs 2 in
+    let c4 = L.nth cs 3 in
+    let c5 = L.nth cs 4 in
+    let c6 = L.nth cs 5 in
+    let c7 = L.nth cs 6 in
+    let c8 = L.nth cs 7 in
+    let c9 = L.nth cs 8 in
+    let c10 = L.nth cs 9 in
+    let c11 = L.nth cs 10 in
+      
+    let f = SP.from_terms [ ([], c1); ([("wR",1)], c2); ([("wM",1)], c3); ([("V",1)], c4);
+                            ([("W",1)], c5) ] in
+    let g = SP.from_terms [ ([], c6); ([("wR",1)], c7); ([("wM",1)], c8) ] in
+    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    let s = SP.from_terms [ ([("wS",1)], Big_int.big_int_of_int (-1)) ] in
+    fsprintf "%a" SP.pp (SP.add s (SP.add  (SP.mult f g) h))
+  in
+
+  let vec_to_rstring cs =
+    let cs = L.map Big_int.big_int_of_int cs in
+    let c1 = L.nth cs 0 in
+    let c2 = L.nth cs 1 in
+    let c3 = L.nth cs 2 in
+    let c4 = L.nth cs 3 in
+    let c5 = L.nth cs 4 in
+    let c6 = L.nth cs 5 in
+    let c7 = L.nth cs 6 in
+    let c8 = L.nth cs 7 in
+    let c9 = L.nth cs 8 in
+    let c10 = L.nth cs 9 in
+    let c11 = L.nth cs 10 in
+      
+    let f = SP.from_terms [ ([], c1); ([("sR",1)], c2); ([("sM",1)], c3); ([("V",1)], c4);
+                            ([("W",1)], c5) ] in
+    let g = SP.from_terms [ ([], c6); ([("sR",1)], c7); ([("sM",1)], c8) ] in
+    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    fsprintf "sR, sM, %a" SP.pp (SP.add (SP.mult f g) h)
+  in
+
+  let vec_to_gdef cs =
+    fsprintf
+    ("map G1 * G2 -> GT.\n"^^
+     "iso G2 -> G1.\n"^^
+     "input [V,W] in G1.\n"^^
+     "oracle o1(M:G2) =\n"^^
+     "  sample R;\n"^^
+     "  return [ R, %s ] in G2.\n"^^
+     "\n"^^
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %s).\n")
+     (vec_to_string cs)
+     (vec_to_wstring cs)
+  in
+
+  let vec_to_sgdef cs =
+    fsprintf
+    ("map G1 * G2 -> GT.\n"^^
+     "iso G2 -> G1.\n"^^
+     "input [V,W] in G1.\n"^^
+     "input [ %s ] in G2.\n"^^
+     "oracle o1(M:G2) =\n"^^
+     "  sample R;\n"^^
+     "  return [ R, %s ] in G2.\n"^^
+     "\n"^^
+     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %s).\n")
+     (vec_to_rstring cs)
+     (vec_to_string cs)
+     (vec_to_wstring cs)
+  in
+
   let i = ref 0 in
+  let analyze_sig cs =
+    incr i_total;
+    let s = vec_to_gdef cs in
+    let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter s 1 in
+    match res with
+       | Z3_Solver.Valid ->
+         incr i_secure;
+         F.printf "\n%i.\n%s\n!" !i_secure s;
+         output_file (F.sprintf "./gen2/%02i.ec" !i_secure) s;
+         output_file (F.sprintf "./gen2/%02i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
+       | Z3_Solver.Unknown ->
+         F.printf "\n%i? %!\n" !i_total;
+         incr i_unknown
+       | Z3_Solver.Attack _ ->
+         output_file (F.sprintf "./gen2/attack/%02i_attack.ec" !i_attack) s;
+         F.printf "\n%i! %!\n" !i_total;
+         incr i_attack;
+       | Z3_Solver.Error e ->
+         F.printf "Error: %s\n" e;
+         incr i_unknown
+  in
   let coeffs =
     nprod (mconcat [0; 1; -1]) 12 >>= fun cs ->
-    guard (L.nth cs 2 * L.nth cs 7 = 0) >>
+    guard (L.nth cs 2 * L.nth cs 7 = 0 && (* No M^2 term *)
+          (L.nth cs 2 + L.nth cs 7 <> 0) && (* M must be used *)
+          (L.nth cs 1 <> 0 || L.nth cs 2 <> 0) && (* isomorphism must be used *)
+          (L.nth cs 1 <> 0 || L.nth cs 6 <> 0) && (* R must be used *)
+          (L.nth cs 3 <> 0 || L.nth cs 9 <> 0) && (* V must be used *)
+          (L.nth cs 4 <> 0 || L.nth cs 10 <> 0) && (* W must be used *)
+          (L.nth cs 1 <> 0 || L.nth cs 2 <> 0 || L.nth cs 3 <> 0 || L.nth cs 4 <> 0) &&
+          (L.nth cs 6 <> 0 || L.nth cs 7 <> 0)
+    ) >>
     ret cs
   in
   iter (-1) coeffs
     (fun cs ->
-       incr i;
-       F.printf "[%a]\n" (pp_list "," pp_int) cs
+      analyze_sig cs
     );
   F.printf "done: %i choices\n%!" !i
