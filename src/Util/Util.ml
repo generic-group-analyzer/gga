@@ -236,8 +236,10 @@ let call_external script cmd linenum =
   output_string c_out cmd;
   flush c_out;
   let rec loop o linenum =
-    if linenum = 0 then o
-    else (
+    if linenum = 0 then (
+      ignore (Unix.close_process (c_in,c_out));
+      o
+    ) else (
       try
         let l = input_line c_in in
         loop (o @ [l]) (linenum - 1)
