@@ -107,3 +107,11 @@ let rec ncart ms =
     m >>= fun x ->
     ncart ms >>= fun xs ->
     ret (x::xs)
+
+(* \ic{Return the $n$-fold cartesian product of $m$.} *)
+let nprod m n =
+  let rec go n acc =
+    if n <= 0 then ret acc
+    else m >>= fun x -> go (n-1) (x::acc)
+  in
+  go n []

@@ -24,3 +24,4 @@ val pick_set : int -> 'a nondet -> ('a list) nondet
 val cart : 'a nondet -> 'b nondet -> ('a * 'b) nondet
 val prod : 'a nondet -> ('a * 'a) nondet
 val ncart : 'a nondet list -> ('a list) nondet
+val nprod : 'a nondet -> int -> ('a list) nondet

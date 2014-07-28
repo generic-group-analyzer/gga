@@ -229,7 +229,7 @@ let to_gdef_sigrand s veqs =
     RMP.pp s
     (pp_list " /\\ 0 = " RecipP.pp) veqs
 
-let synth () =
+let synth2 () =
   let bounds = [3; 3; 4] in
   let max_terms = 2 in
 
@@ -342,3 +342,17 @@ let synth () =
   F.printf
     "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
     !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown
+
+let synth () =
+  let i = ref 0 in
+  let coeffs =
+    nprod (mconcat [0; 1; -1]) 12 >>= fun cs ->
+    guard (L.nth cs 2 * L.nth cs 7 = 0) >>
+    ret cs
+  in
+  iter (-1) coeffs
+    (fun cs ->
+       incr i;
+       F.printf "[%a]\n" (pp_list "," pp_int) cs
+    );
+  F.printf "done: %i choices\n%!" !i
