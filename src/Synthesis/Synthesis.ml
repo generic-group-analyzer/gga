@@ -259,8 +259,8 @@ let synth () =
     let v = offset vo in
     guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
               v <> [ 0; 0; 0 ]
-              (*i Since V and W are in G1, V*W cannot be computed in GT i*)
-           && not (L.nth v 0 + L.nth v 1 > 1)
+              (*i Since V and W are in G1, V*W cannot be computed in GT => check, adapt for Laurent i*)
+           && L.nth v 0 + L.nth v 1 < 2
           ) >>
     ret vo
   in
@@ -286,8 +286,10 @@ let synth () =
   in
   let sigs =
     cart (pick_set max_terms vecs_f) (pick_set max_terms vecs_g) >>= fun (f,g) ->
-    guard (   (* this is 0 *)
+    guard (   (* this is 0, does not use M then *)
               f <> []
+              (* if g is 0, then signature malleable *)
+           && g <> []
               (* the signature must use either V or W *)
            && sig_uses_sk f g
               (* symmetry reduction, we choose (the smaller signature) in the
