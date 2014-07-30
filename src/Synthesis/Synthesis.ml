@@ -360,14 +360,11 @@ let synth () =
     let c6 = L.nth cs 5 in
     let c7 = L.nth cs 6 in
     let c8 = L.nth cs 7 in
-    let c9 = L.nth cs 8 in
-    let c10 = L.nth cs 9 in
-    let c11 = L.nth cs 10 in
       
-    let f = SP.from_terms [ ([], c1); ([("R",1)], c2); ([("M",1)], c3); ([("V",1)], c4);
-                            ([("W",1)], c5) ] in
-    let g = SP.from_terms [ ([], c6); ([("R",1)], c7); ([("M",1)], c8) ] in
-    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    let f = SP.from_terms [ ([("R",1)], c1); ([("M",1)], c2); ([("V",1)], c3);
+                            ([("W",1)], c4) ] in
+    let g = SP.from_terms [ ([("R",1)], c5); ([("M",1)], c6) ] in
+    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
     fsprintf "%a" SP.pp (SP.add (SP.mult f g) h)
   in
     
@@ -381,14 +378,11 @@ let synth () =
     let c6 = L.nth cs 5 in
     let c7 = L.nth cs 6 in
     let c8 = L.nth cs 7 in
-    let c9 = L.nth cs 8 in
-    let c10 = L.nth cs 9 in
-    let c11 = L.nth cs 10 in
       
-    let f = SP.from_terms [ ([], c1); ([("wR",1)], c2); ([("wM",1)], c3); ([("V",1)], c4);
-                            ([("W",1)], c5) ] in
-    let g = SP.from_terms [ ([], c6); ([("wR",1)], c7); ([("wM",1)], c8) ] in
-    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    let f = SP.from_terms [ ([("wR",1)], c1); ([("wM",1)], c2); ([("V",1)], c3);
+                            ([("W",1)], c4) ] in
+    let g = SP.from_terms [ ([("wR",1)], c5); ([("wM",1)], c6) ] in
+    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
     let s = SP.from_terms [ ([("wS",1)], Big_int.big_int_of_int (-1)) ] in
     fsprintf "%a" SP.pp (SP.add s (SP.add  (SP.mult f g) h))
   in
@@ -403,14 +397,11 @@ let synth () =
     let c6 = L.nth cs 5 in
     let c7 = L.nth cs 6 in
     let c8 = L.nth cs 7 in
-    let c9 = L.nth cs 8 in
-    let c10 = L.nth cs 9 in
-    let c11 = L.nth cs 10 in
       
-    let f = SP.from_terms [ ([], c1); ([("sR",1)], c2); ([("sM",1)], c3); ([("V",1)], c4);
-                            ([("W",1)], c5) ] in
-    let g = SP.from_terms [ ([], c6); ([("sR",1)], c7); ([("sM",1)], c8) ] in
-    let h = SP.from_terms [ ([], c9); ([("V",1)], c10); ([("W",1)], c11) ] in
+    let f = SP.from_terms [ ([("sR",1)], c1); ([("sM",1)], c2); ([("V",1)], c3);
+                            ([("W",1)], c4) ] in
+    let g = SP.from_terms [ ([("sR",1)], c5); ([("sM",1)], c6) ] in
+    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
     fsprintf "sR, sM, %a" SP.pp (SP.add (SP.mult f g) h)
   in
 
@@ -453,13 +444,13 @@ let synth () =
        | Z3_Solver.Valid ->
          incr i_secure;
          F.printf "\n%i.\n%s\n!" !i_secure s;
-         output_file (F.sprintf "./gen2/%02i.ec" !i_secure) s;
-         output_file (F.sprintf "./gen2/%02i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
+         output_file (F.sprintf "./gen3/%02i.ec" !i_secure) s;
+         output_file (F.sprintf "./gen3/%02i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
        | Z3_Solver.Unknown ->
          F.printf "\n%i? %!\n" !i_total;
          incr i_unknown
        | Z3_Solver.Attack _ ->
-         output_file (F.sprintf "./gen2/attack/%02i_attack.ec" !i_attack) s;
+         output_file (F.sprintf "./gen3/attack/%02i_attack.ec" !i_attack) s;
          F.printf "\n%i! %!\n" !i_total;
          incr i_attack;
        | Z3_Solver.Error e ->
@@ -467,20 +458,21 @@ let synth () =
          incr i_unknown
   in
   let coeffs =
-    nprod (mconcat [0; 1; -1]) 12 >>= fun cs ->
-    guard (L.nth cs 2 * L.nth cs 7 = 0 && (* No M^2 term *)
-          (L.nth cs 2 + L.nth cs 7 <> 0) && (* M must be used *)
-          (L.nth cs 1 <> 0 || L.nth cs 2 <> 0) && (* isomorphism must be used *)
-          (L.nth cs 1 <> 0 || L.nth cs 6 <> 0) && (* R must be used *)
-          (L.nth cs 3 <> 0 || L.nth cs 9 <> 0) && (* V must be used *)
-          (L.nth cs 4 <> 0 || L.nth cs 10 <> 0) && (* W must be used *)
-          (L.nth cs 1 <> 0 || L.nth cs 2 <> 0 || L.nth cs 3 <> 0 || L.nth cs 4 <> 0) &&
-          (L.nth cs 6 <> 0 || L.nth cs 7 <> 0)
+    nprod (mconcat [0; 1; -1]) 8 >>= fun cs ->
+    guard (L.nth cs 1 * L.nth cs 5 = 0 && (* No M^2 term *)
+          (L.nth cs 1 + L.nth cs 5 <> 0) && (* M must be used *)
+          (L.nth cs 0 <> 0 || L.nth cs 1 <> 0) && (* isomorphism must be used *)
+          (L.nth cs 0 <> 0 || L.nth cs 4 <> 0) && (* R must be used *)
+          (L.nth cs 2 <> 0 || L.nth cs 6 <> 0) && (* V must be used *)
+          (L.nth cs 3 <> 0 || L.nth cs 7 <> 0) && (* W must be used *)
+          (L.nth cs 0 <> 0 || L.nth cs 1 <> 0 || L.nth cs 2 <> 0 || L.nth cs 3 <> 0) &&
+          (L.nth cs 4 <> 0 || L.nth cs 5 <> 0)
     ) >>
     ret cs
   in
   iter (-1) coeffs
-    (fun cs ->
+    (fun cs -> i := !i + 1;
+      F.printf "%s\n" (vec_to_gdef cs);
       analyze_sig cs
     );
   F.printf "done: %i choices\n%!" !i
