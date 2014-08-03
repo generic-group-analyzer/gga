@@ -1,5 +1,5 @@
 OCAMLBUILD=ocamlbuild
-LIBFLAGS=
+LIBFLAGS=-lflags -cclib,-lpari -cflags -ccopt,-I/usr/local/include/pari
 MENHIRFLAGS=-use-menhir -menhir "menhir -v"
 FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
