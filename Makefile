@@ -42,7 +42,7 @@ TOOL_FILES=$(addprefix src/,$(TOOL_MODULES))
 
 .PHONY: native doc paramtest
 
-all: doc native # wsggt
+all: native # wsggt
 
 native:
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
