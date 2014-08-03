@@ -291,7 +291,7 @@ let nonquant_wp_to_gp st p =
 (* \ic{Convert (implicitly) quantified winning condition polynomial
    to list of [gp]s.} *)
 let quant_wp_to_gps st bound p =
-  let ps = L.map (fun qidx -> (qidx,p)) (list_from_to 1 bound) in
+  let ps = L.map (fun qidx -> (qidx,p)) (if bound < 1 then [] else (list_from_to 1 bound)) in
   let vconv qidx v = match v with
     | II.RVar id ->
       GP.var (RVar (SRVar id))
