@@ -1,5 +1,3 @@
-type 'a stream
-
 type 'a nondet
 
 val ret : 'a -> 'a nondet

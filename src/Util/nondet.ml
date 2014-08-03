@@ -2,31 +2,34 @@ open Lazy
 
 (* Nondeterminism Monad *)
 
-type 'a stream =
+type 'a nnode =
     Nil
-  | Cons of 'a * ('a stream) lazy_t
-
-type 'a nondet = 'a stream lazy_t
+  | Cons of 'a * 'a nondet
+and 'a nondet = 'a nnode Lazy.t
 
 let mempty = lazy Nil
 
 let ret a = lazy (Cons (a, mempty))
 
-let guard pred =
-  if pred then ret () else mempty
-
 (* Combine results returned by [a] with results
    returned by [b]. Results from [a] and [b] are
    interleaved. *)
-let rec mplus a b = from_fun (fun () ->
-  match force a with
-  | Cons (a1, a2) -> Cons (a1, mplus b a2)
-  | Nil           -> force b)
+let mplus (a : 'a nondet) (b : 'a nondet) : 'a nondet =
+  let rec go a b =
+    match force a with
+    | Nil           -> b
+    | Cons (a1, a2) -> lazy (Cons (a1, go a2 b))
+  in
+  go a b
 
-let rec bind m f = from_fun (fun () ->
-  match force m with
-  | Nil         -> Nil
-  | Cons (a, b) -> force (mplus (f a) (bind b f)))
+
+let bind (m : 'a nondet) (f : 'a -> 'b nondet) : 'b nondet =
+  let rec go m =
+    match force m with
+    | Nil         -> lazy Nil
+    | Cons (a, b) -> mplus (f a) (go b)
+  in
+  go m
 
 (* Execute and get first [n] results as list,
    use [n = -1] to get all values. *)
@@ -38,6 +41,9 @@ let run n m =
       | Nil         -> List.rev acc
       | Cons (a, b) -> go (pred n) b (a::acc)
   in go n m []
+
+let guard pred =
+  if pred then ret () else mempty
 
 (* Apply function [f] to the first n values,
    use [n = -1] to apply [f] to all values. *)
