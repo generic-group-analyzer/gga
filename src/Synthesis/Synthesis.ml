@@ -144,7 +144,7 @@ let evecs_to_poly vs =
   RMP.ladd (L.map evec_to_poly vs)
 
 (* \ic{Compute verification equation.} *)
-let verif_eq ?sts s =
+let verif_eq s =
 
   (* \ic{ input in $\group_1$: $[1,V,W,R,S,M]$ } *)
   let inp_g1 =
@@ -184,8 +184,13 @@ let verif_eq ?sts s =
   let coeff_vecs = L.map (fun (p,_) -> L.map (RMP.coeff p) basis) inp_gt in
   (*i F.printf "M:=\n";
       F.printf "%a\n" (pp_list "\n" (pp_list " " RMP.pp_coeff)) coeff_vecs; i*)
+  let left_kernel = Pari_Ker.kernel coeff_vecs in
+  (*
   let left_kernel = Sage_Solver.compute_kernel ?sts coeff_vecs in
-  (*i F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel; i*)
+  if left_kernel <> left_kernel' && L.map (L.map (fun x -> x * -1)) left_kernel <> left_kernel' then (
+    F.printf "ker:\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel;
+    F.printf "ker':\n%a\n" (pp_list ";\n " (pp_list ", " pp_int)) left_kernel'
+  );*)
 
   let recip_of_kernel vker =
     L.combine inp_gt vker
@@ -229,7 +234,7 @@ let to_gdef_sigrand s veqs =
     RMP.pp s
     (pp_list " /\\ 0 = " RecipP.pp) veqs
 
-let synth2 () =
+let synth () =
   let bounds = [3; 3; 4] in
   let max_terms = 2 in
 
@@ -240,8 +245,8 @@ let synth2 () =
   let i_attack  = ref 0 in
 
   let offset v = List.map (fun x -> x - 1) v in
-  let deg_vec v = L.nth v 0 + L.nth v 1 + L.nth v 2 in
   let deg_vec_vw v = L.nth v 0 + L.nth v 1 in
+  let sum_pos xs = L.fold_left (+) 0 (L.filter (fun i -> i > 0) xs) in
 
   (* \ic{Filters for search.} *)
   let sig_uses_sk f g =
@@ -257,19 +262,22 @@ let synth2 () =
   let vecs =
     vecs_smaller bounds >>= fun vo ->
     let v = offset vo in
-    guard (   (*i the monomial cannot be v^(0,0,0) = 1 i*)
+    guard (   (*i the monomial cannot be v^(0,0,0) = 1, for
+                  f this would correspond to the monomial M and for g to the monomial 1 *)
               v <> [ 0; 0; 0 ]
-              (*i Since V and W are in G1, V*W cannot be computed in GT => check, adapt for Laurent i*)
-           && L.nth v 0 + L.nth v 1 < 2
+              (*i Since V and W are in G1, V*W cannot be computed in GT i*)
+           && not (L.nth v 0 = 1 && L.nth v 1 = 1)
+              (* at most one value with negative exponent *)
+           && L.length (L.filter (fun i -> i < 0) v) < 2
           ) >>
     ret vo
   in
   let vecs_f =
     vecs >>= fun v ->
-    guard (   (* We cannot check a signature with terms of degree > 1 for any
-                 of the variables since M consumes already one degree in the
-                 verification equation *)
-              let v = offset v in deg_vec v < 2
+    guard (   (* We cannot check a signature with terms where the sum of positive
+                 degrees is > 1 for the variables since M consumes already one degree
+                 in the verification equation *)
+              let v = offset v in sum_pos v < 2
           ) >>
     ret v
   in
@@ -280,7 +288,7 @@ let synth2 () =
                 is equivalent wrt. to security (adversary can add/remove R to S) *)
               (v <> [ 0; 0; 1])
               (* not completely clear: at most one one multiplication *)
-           && (deg_vec v <= 2)
+           && (sum_pos v <= 2)
           ) >>
     ret v
   in
@@ -299,12 +307,12 @@ let synth2 () =
   in
 
   (* \ic{Analyze a signature.} *)
-  let analyze_sig sts (f,g) =
+  let analyze_sig (f,g) =
      incr i_total;
      let f = evecs_to_poly f in
      let g = evecs_to_poly g in
      let s = RMP.(f *@ (var V_M) +@ g) in
-     let veqs = verif_eq ~sts s in
+     let veqs = verif_eq s in
      if veqs = [] then (
        F.printf "%i %!" !i_total
      ) else (
@@ -332,19 +340,17 @@ let synth2 () =
   in
 
   (* \ic{Search process.} *)
+  Pari_Ker.pari_init ();
   F.printf "Polynomials for variables %a and bounds %a <= v < %a:\n"
     (pp_list ", " pp_rmvar) varorder
     (pp_list ", " pp_int) (offset [ 0; 0; 0 ])
      (pp_list ", " pp_int) bounds;
-  let sts = Sage_Solver.start_sage () in
-  iter (-1) sigs (analyze_sig sts);
-  Sage_Solver.stop_sage sts;
+  iter (-1) sigs analyze_sig;
   F.printf
     "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
     !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown
 
-let synth () =
-  let i_verif   = ref 0 in
+let synth2 () =
   let i_total   = ref 0 in
   let i_secure  = ref 0 in
   let i_unknown = ref 0 in
