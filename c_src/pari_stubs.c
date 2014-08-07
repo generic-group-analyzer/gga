@@ -1,4 +1,4 @@
-#include <pari.h>
+#include <pari/pari.h>
 #include <assert.h>
 #include <stdlib.h>
 
