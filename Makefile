@@ -1,5 +1,5 @@
 OCAMLBUILD=ocamlbuild
-LIBFLAGS=-lflags -cclib,-lpari -cflags -ccopt,-I/usr/local/include/pari -lflags -cclib,-force_load,c_src/libparistubs.a
+LIBFLAGS=-lflags -cclib,-Xlinker,-cclib,--no-as-needed,-cclib,-Lc_src,-cclib,-lpari,-cclib,-lparistubs
 MENHIRFLAGS=-use-menhir -menhir "menhir -v"
 FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
@@ -48,6 +48,7 @@ native:
 	test -d _build/c_src || mkdir -p _build/c_src
 	gcc -c c_src/pari_stubs.c -o _build/c_src/pari_stubs.o
 	ar rc _build/c_src/libparistubs.a _build/c_src/pari_stubs.o
+	gcc -shared -o _build/c_src/libparistubs.so _build/c_src/pari_stubs.o
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
 
 byte:
