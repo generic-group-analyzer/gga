@@ -6,7 +6,7 @@ ifeq ($(UNAME_S),Darwin)
   LIBFLAGS=-lflags -cclib,-Lc_src,-cclib,-lpari,-cclib,-lparistubs
 endif
 
-OCAMLBUILD=ocamlbuild
+OCAMLBUILD=LD_LIBRARY_PATH=_build/c_src/ ocamlbuild
 MENHIRFLAGS=-use-menhir -menhir "menhir -v"
 FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
