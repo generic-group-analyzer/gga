@@ -53,7 +53,7 @@ all: native # wsggt
 
 native:
 	test -d _build/c_src || mkdir -p _build/c_src
-	gcc -c c_src/pari_stubs.c -o _build/c_src/pari_stubs.o
+	gcc -fPIC -c c_src/pari_stubs.c -o _build/c_src/pari_stubs.o
 	ar rc _build/c_src/libparistubs.a _build/c_src/pari_stubs.o
 	gcc -shared -o _build/c_src/libparistubs.so _build/c_src/pari_stubs.o -lpari
 	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
