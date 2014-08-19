@@ -293,10 +293,10 @@ let synth mt_f mt_g =
     ret v
   in
   let sigs =
-    cart (pick_set mt_g vecs_f) (pick_set mt_f vecs_g) >>= fun (f,g) ->
+    cart (pick_set_exact mt_g vecs_f) (pick_set_exact mt_f vecs_g) >>= fun (f,g) ->
     guard (   (* this is 0, does not use M then *)
               f <> []
-              (* if g is 0, then signature malleable *)
+              (* if g is 0, then signature on M=0 is 0 *)
            && g <> []
               (* the signature must use either V or W *)
            && sig_uses_sk f g
