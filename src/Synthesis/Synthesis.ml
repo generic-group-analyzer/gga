@@ -324,8 +324,8 @@ let synth mt_f mt_g =
          incr i_secure;
          F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
            (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
-         output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
-         output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
+         output_file (F.sprintf "./gen/%i_%i_%i.ec" mt_f mt_g !i_secure) sgdef;
+         output_file (F.sprintf "./gen/%i_%i_%i_sigrand.ec" mt_f mt_g !i_secure) (to_gdef_sigrand s veqs)
        | Z3_Solver.Unknown ->
          if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
          incr i_unknown
@@ -450,13 +450,13 @@ let synth2 () =
        | Z3_Solver.Valid ->
          incr i_secure;
          F.printf "\n%i.\n%s\n!" !i_secure s;
-         output_file (F.sprintf "./gen3/%02i.ec" !i_secure) s;
-         output_file (F.sprintf "./gen3/%02i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
+         output_file (F.sprintf "./gen/%i.ec" !i_secure) s;
+         output_file (F.sprintf "./gen/%i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
        | Z3_Solver.Unknown ->
          if !i_total mod 100 = 0 then F.printf "\n%i? %!\n" !i_total;
          incr i_unknown
        | Z3_Solver.Attack _ ->
-         output_file (F.sprintf "./gen3/attack/%02i_attack.ec" !i_attack) s;
+         output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) s;
          F.printf "\n%i! %!\n" !i_total;
          incr i_attack;
        | Z3_Solver.Error e ->
