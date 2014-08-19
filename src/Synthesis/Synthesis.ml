@@ -308,35 +308,35 @@ let synth mt_f mt_g =
 
   (* \ic{Analyze a signature.} *)
   let analyze_sig (f,g) =
-     incr i_total;
-     let f = evecs_to_poly f in
-     let g = evecs_to_poly g in
-     let s = RMP.(f *@ (var V_M) +@ g) in
-     let veqs = verif_eq s in
-     if veqs = [] then (
-       if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
-     ) else (
-       incr i_verif;
-       let sgdef = to_gdef s veqs in
-       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
-       match res with
-       | Z3_Solver.Valid ->
-         incr i_secure;
-         F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
-           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
-         output_file (F.sprintf "./gen/%i_%i_%i.ec" mt_f mt_g !i_secure) sgdef;
-         output_file (F.sprintf "./gen/%i_%i_%i_sigrand.ec" mt_f mt_g !i_secure) (to_gdef_sigrand s veqs)
-       | Z3_Solver.Unknown ->
-         if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
-         incr i_unknown
-       | Z3_Solver.Attack _ ->
-         output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
-         F.printf "\n%i! %!\n" !i_total;
-         incr i_attack;
-       | Z3_Solver.Error e ->
-         F.printf "Error: %s\n" e;
-         incr i_unknown
-     )
+    incr i_total;
+    let f = evecs_to_poly f in
+    let g = evecs_to_poly g in
+    let s = RMP.(f *@ (var V_M) +@ g) in
+    let veqs = verif_eq s in
+    if veqs = [] then (
+      if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
+    ) else (
+      incr i_verif;
+      let sgdef = to_gdef s veqs in
+      let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
+      match res with
+      | Z3_Solver.Valid ->
+        incr i_secure;
+        F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
+          (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
+        output_file (F.sprintf "./gen/%i_%i_%i.ec" mt_f mt_g !i_secure) sgdef;
+        output_file (F.sprintf "./gen/%i_%i_%i_sigrand.ec" mt_f mt_g !i_secure) (to_gdef_sigrand s veqs)
+      | Z3_Solver.Unknown ->
+        if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
+        incr i_unknown
+      | Z3_Solver.Attack _ ->
+        output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
+        F.printf "\n%i! %!\n" !i_total;
+        incr i_attack;
+      | Z3_Solver.Error e ->
+        F.printf "Error: %s\n" e;
+        incr i_unknown
+    )
   in
 
   (* \ic{Search process.} *)
