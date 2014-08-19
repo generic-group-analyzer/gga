@@ -234,9 +234,9 @@ let to_gdef_sigrand s veqs =
     RMP.pp s
     (pp_list " /\\ 0 = " RecipP.pp) veqs
 
-let synth () =
+    
+let synth mt_f mt_g =
   let bounds = [3; 3; 4] in
-  let max_terms = 2 in
 
   let i_verif   = ref 0 in
   let i_total   = ref 0 in
@@ -293,7 +293,7 @@ let synth () =
     ret v
   in
   let sigs =
-    cart (pick_set max_terms vecs_f) (pick_set max_terms vecs_g) >>= fun (f,g) ->
+    cart (pick_set mt_g vecs_f) (pick_set mt_f vecs_g) >>= fun (f,g) ->
     guard (   (* this is 0, does not use M then *)
               f <> []
               (* if g is 0, then signature malleable *)
@@ -314,7 +314,7 @@ let synth () =
      let s = RMP.(f *@ (var V_M) +@ g) in
      let veqs = verif_eq s in
      if veqs = [] then (
-       F.printf "%i %!" !i_total
+       if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
      ) else (
        incr i_verif;
        let sgdef = to_gdef s veqs in
@@ -327,7 +327,7 @@ let synth () =
          output_file (F.sprintf "./gen/%02i.ec" !i_secure) sgdef;
          output_file (F.sprintf "./gen/%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs)
        | Z3_Solver.Unknown ->
-         F.printf "\n%i? %!\n" !i_total;
+         if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
          incr i_unknown
        | Z3_Solver.Attack _ ->
          output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
@@ -453,7 +453,7 @@ let synth2 () =
          output_file (F.sprintf "./gen3/%02i.ec" !i_secure) s;
          output_file (F.sprintf "./gen3/%02i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
        | Z3_Solver.Unknown ->
-         F.printf "\n%i? %!\n" !i_total;
+         if !i_total mod 100 = 0 then F.printf "\n%i? %!\n" !i_total;
          incr i_unknown
        | Z3_Solver.Attack _ ->
          output_file (F.sprintf "./gen3/attack/%02i_attack.ec" !i_attack) s;

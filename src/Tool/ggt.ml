@@ -59,6 +59,9 @@ let main_analyze () =
 
 let main =
   match Sys.argv.(1) with
-  | "synth" -> Synthesis.synth ()
+  | "synth" ->
+    Synthesis.synth
+      (try int_of_string Sys.argv.(2) with _ -> 2)
+      (try int_of_string Sys.argv.(3) with _ -> 2)
   | "test"  -> Unbounded.test ()
   | _       -> main_analyze ()
