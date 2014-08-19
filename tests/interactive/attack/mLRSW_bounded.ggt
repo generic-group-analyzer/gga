@@ -1,6 +1,6 @@
 input [1, A, B, U, V] in G.
 
-oracle o1(m:Fp) = R <-$ G; return (m*U*R + A*B, V*R + A*B, R).
+oracle o1(m:Fp) = sample R; return [m*U*R + A*B, V*R + A*B, R] in G.
 
 win (X:G, S1:G, S2:G, mm:Fp) =
   ( S1 = mm*U*X + A*B /\ S2 = V*X + A*B
