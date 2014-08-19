@@ -2,34 +2,31 @@ open Lazy
 
 (* Nondeterminism Monad *)
 
-type 'a nnode =
+type 'a stream =
     Nil
-  | Cons of 'a * 'a nondet
-and 'a nondet = 'a nnode Lazy.t
+  | Cons of 'a * ('a stream) lazy_t
+
+type 'a nondet = 'a stream lazy_t
 
 let mempty = lazy Nil
 
 let ret a = lazy (Cons (a, mempty))
 
+let guard pred =
+  if pred then ret () else mempty
+
 (* Combine results returned by [a] with results
    returned by [b]. Results from [a] and [b] are
    interleaved. *)
-let mplus (a : 'a nondet) (b : 'a nondet) : 'a nondet =
-  let rec go a b =
-    match force a with
-    | Nil           -> b
-    | Cons (a1, a2) -> lazy (Cons (a1, go a2 b))
-  in
-  go a b
+let rec mplus a b = from_fun (fun () ->
+  match force a with
+  | Cons (a1, a2) -> Cons (a1, mplus a2 b)
+  | Nil           -> force b)
 
-
-let bind (m : 'a nondet) (f : 'a -> 'b nondet) : 'b nondet =
-  let rec go m =
-    match force m with
-    | Nil         -> lazy Nil
-    | Cons (a, b) -> mplus (f a) (go b)
-  in
-  go m
+let rec bind m f = from_fun (fun () ->
+  match force m with
+  | Nil         -> Nil
+  | Cons (a, b) -> force (mplus (f a) (bind b f)))
 
 (* Execute and get first [n] results as list,
    use [n = -1] to get all values. *)
@@ -42,9 +39,6 @@ let run n m =
       | Cons (a, b) -> go (pred n) b (a::acc)
   in go n m []
 
-let guard pred =
-  if pred then ret () else mempty
-
 (* Apply function [f] to the first n values,
    use [n = -1] to apply [f] to all values. *)
 let iter n m f =
@@ -56,7 +50,7 @@ let iter n m f =
       | Cons (a, b) -> f a; go (pred n) b
   in go n m
 
-
+(* helper functions *)
 let sequence ms =
   let go m1 m2 =
     bind m1 (fun x ->
@@ -85,16 +79,32 @@ let (>>) m1 m2 = m1 >>= fun _ -> m2
 
 
 (* \ic{Return all subsets $S$ of $m$ such that $|S| \leq k$.} *)
-let pick_set k m =
-  let rec go k acc =
-    mplus
-      (ret acc)
-      (guard (k <> 0) >>
-       m >>= fun x ->
-       guard ((List.for_all (fun y -> y < x) acc)) >>
-       go (k-1) (x::acc))
+let pick_set k m0 =
+  let rec go m k acc =
+    guard (k <> 0) >>
+    match force m with
+    | Nil -> ret acc
+    | Cons(a,m') ->
+      msum [ ret (a::acc)
+           ; go m' (k-1) (a::acc)
+           ; go m' k     acc ]
   in
-  go k []
+  mplus (ret []) (go m0 k [])
+
+(* \ic{Return all subsets $S$ of $m$ such that $|S| = k$.} *)
+let pick_set_exact k m0 =
+  let rec go m k acc =
+    if k = 0
+    then ret acc
+    else
+      match force m with
+      | Nil -> mempty
+      | Cons(a,m') ->
+        mplus
+          (go m' (k-1) (a::acc))
+          (go m' k     acc)
+  in
+  go m0 k []
 
 (* \ic{Return the cartesian product of $m1$ and $m2$.} *)
 let cart m1 m2 =

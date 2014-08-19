@@ -1,3 +1,5 @@
+type 'a stream
+
 type 'a nondet
 
 val ret : 'a -> 'a nondet
@@ -19,6 +21,7 @@ val (>>=) : 'a nondet -> ('a -> 'b nondet) -> 'b nondet
 val (>>) : 'a nondet -> 'b nondet -> 'b nondet
 
 val pick_set : int -> 'a nondet -> ('a list) nondet
+val pick_set_exact : int -> 'a nondet -> ('a list) nondet
 val cart : 'a nondet -> 'b nondet -> ('a * 'b) nondet
 val prod : 'a nondet -> ('a * 'a) nondet
 val ncart : 'a nondet list -> ('a list) nondet
