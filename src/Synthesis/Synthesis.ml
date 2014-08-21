@@ -245,12 +245,16 @@ let synth mt_f mt_g =
   let i_attack  = ref 0 in
 
   let offset v = List.map (fun x -> x - 1) v in
-  let deg_vec_vw v = L.nth v 0 + L.nth v 1 in
+  (* let deg_vec_vw v = L.nth v 0 + L.nth v 1 in *)
+  let deg_vec_v  v = L.nth v 0 in
+  let deg_vec_w  v = L.nth v 1 in
+  let deg_vec_r  v = L.nth v 2 in
   let sum_pos xs = L.fold_left (+) 0 (L.filter (fun i -> i > 0) xs) in
 
   (* \ic{Filters for search.} *)
   let sig_uses_sk f g =
-    L.exists (fun v -> let v = offset v in deg_vec_vw v > 0) (f@g)
+       L.exists (fun v -> let v = offset v in deg_vec_v v <> 0) (f@g)
+    && L.exists (fun v -> let v = offset v in deg_vec_w v <> 0) (f@g)
   in
   let sym_minimal f g =
     let swap_v_w m = match m with
@@ -277,7 +281,8 @@ let synth mt_f mt_g =
     guard (   (* We cannot check a signature with terms where the sum of positive
                  degrees is > 1 for the variables since M consumes already one degree
                  in the verification equation *)
-              let v = offset v in sum_pos v < 2
+           let v = offset v in
+           sum_pos v < 2
           ) >>
     ret v
   in
@@ -298,6 +303,17 @@ let synth mt_f mt_g =
               f <> []
               (* if g is 0, then signature on M=0 is 0 *)
            && g <> []
+
+           (* at most one negative exponent and not positive and negative occurence ( > 1 occurence for r) *)
+           && not (L.exists (fun v -> let v = offset v in
+                              (deg_vec_v v < 0) && (deg_vec_w v < 0 || deg_vec_r v < 0 || deg_vec_v v > 0)) (f@g))
+
+            && not (L.exists (fun v -> let v = offset v in
+                              (deg_vec_w v < 0) && (deg_vec_v v < 0 || deg_vec_r v < 0 || deg_vec_w v > 0)) (f@g))
+
+            && not (L.exists (fun v -> let v = offset v in
+                              (deg_vec_r v < 0) && (deg_vec_v v < 0 || deg_vec_w v < 0 || deg_vec_r v > 1)) (f@g))
+            
               (* the signature must use either V or W *)
            && sig_uses_sk f g
               (* symmetry reduction, we choose (the smaller signature) in the
@@ -324,13 +340,13 @@ let synth mt_f mt_g =
         incr i_secure;
         F.printf "\n%i. S = %a, verif: %a\n%!" !i_secure RMP.pp s
           (pp_list " /\\ " (fun fmt p -> F.fprintf fmt "%a = 0" RecipP.pp p)) veqs;
-        output_file (F.sprintf "./gen/%i_%i_%i.ec" mt_f mt_g !i_secure) sgdef;
-        output_file (F.sprintf "./gen/%i_%i_%i_sigrand.ec" mt_f mt_g !i_secure) (to_gdef_sigrand s veqs)
+        output_file (F.sprintf "./gen/%02i_%02i_%02i.ec" mt_f mt_g !i_secure) sgdef;
+        output_file (F.sprintf "./gen/%02i_%02i_%02i_sigrand.ec" mt_f mt_g !i_secure) (to_gdef_sigrand s veqs)
       | Z3_Solver.Unknown ->
         if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
         incr i_unknown
       | Z3_Solver.Attack _ ->
-        output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) sgdef;
+        output_file (F.sprintf "./gen/attack/%02i_%02i_%02i_attack.ec" mt_f mt_g !i_attack) sgdef;
         F.printf "\n%i! %!\n" !i_total;
         incr i_attack;
       | Z3_Solver.Error e ->
@@ -348,7 +364,12 @@ let synth mt_f mt_g =
   iter (-1) sigs analyze_sig;
   F.printf
     "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
-    !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown
+    !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown;
+  output_file (F.sprintf "./gen/%02i_%02i_results" mt_f mt_g)
+    (fsprintf
+       "\n%10i;%04i;%04i;%04i;%04i\n"
+       !i_total !i_verif !i_secure !i_attack  !i_unknown)
+  
 
 let synth2 () =
   let i_total   = ref 0 in

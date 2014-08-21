@@ -100,5 +100,10 @@ doc:
 	mv doc/tool.tex.tmp doc/tool.tex
 	cd doc && latexmk -pv -pdf tool.tex
 
+cleangen:
+	rm -rf gen
+	mkdir gen
+	mkdir gen/attack
+
 %.inferred.mli:
 	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) src/$@ && cat _build/src/$@
