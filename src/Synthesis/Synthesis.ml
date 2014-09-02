@@ -390,7 +390,7 @@ type sps_scheme = {
   oracle_vars : string list
 }
 
-let completion sps : SPSPoly.t list =
+let completion sps =
   let left = match sps.setting with
     | TY1 | TY2 -> sorted_nub compare (sps.key_left @ sps.key_right @
                                        sps.msg_left @ sps.msg_right @
