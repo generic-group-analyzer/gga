@@ -563,17 +563,9 @@ let synth x y =
   let tmpl = completion sps in
   (* Substitute for actual value of s into the computed completion *)
   let c = L.map (SPSPoly.eval (make_eval_map sps)) tmpl in
-  F.printf "%a\n" (pp_list ", " SPSPoly.pp) c;
-  F.printf "%a\n" (pp_list ", " SPSPoly.pp) tmpl;
   let b = basis c in
-  F.printf "%a\n" (pp_list ", " SPSPoly.pp) (L.map SPSPoly.from_mon b);
   let m = poly_list_to_matrix c b in
-  pp_matrix m;
   Pari_Ker.pari_init ();
   let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
-  F.printf "\n\n";
-  pp_matrix left_kernel;
-  let s : string = make_game sps (kernel_to_eqns left_kernel tmpl) in
-  F.printf "%s" s;
-  F.printf "\n%a" (pp_list "\n" SPSPoly.pp) (kernel_to_eqns left_kernel tmpl);
-  F.printf "\n";
+  let s = make_game sps (kernel_to_eqns left_kernel tmpl) in
+  F.printf "%s" s
