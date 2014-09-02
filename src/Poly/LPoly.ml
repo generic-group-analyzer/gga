@@ -199,12 +199,35 @@ module MakePoly (V : Var) (C : Ring) = struct
 
   let from_terms f = norm f
 
+  let from_mon m = from_terms [(m, C.one)]
+
   let is_const = function [([],_c)] -> true | _ -> false
 
   let is_var = function [([_x],c)] when C.equal c C.one -> true | _ -> false
 
   let mons (f : t) = sorted_nub (list_compare vexp_compare) (L.map fst f)
   let coeff f m = try L.assoc m f with Not_found -> C.zero
+
+  (* b is the monomial basis, i.e. a list of monomials *)
+  let to_vector f b =
+    let m = mons f in
+    (* Make sure terms are ordered similarly as the monomials *)
+    let t = sorted_nub (fun x y -> list_compare vexp_compare (fst x) (fst y)) f in
+
+    (* Loop over each basis element to find its coefficient *)
+    let rec loop acc b =
+      match b with
+      | [] -> acc
+      | x :: xs -> begin
+                     (* Find index of x in monomial list of f *)
+                     let i = index m x in
+                     if i < 0 then loop (C.zero :: acc) xs
+                     (* Return coefficient from corresponding element of t *)
+                     else loop (coeff f x :: acc) xs
+                   end
+    in
+    L.rev (loop [] b)
+
 
   let ( *@) = mult
   let ( +@) = add

@@ -6,6 +6,7 @@ open Nondet
 open LPoly
 open LStringPoly
 open InteractiveAnalyze
+open SP
 
 module IR = IntRing
 (*i*)
@@ -19,6 +20,9 @@ module IR = IntRing
 
 (* \ic{[vec_to_int r v] for the radix $r$ and the vector $v$ returns
        $\Sigma_{i=1}^{|r|} v_i\,(\Pi_{j=1}^{i-1} r_i)$.} *)
+
+(*
+
 let vec_to_int radix v =
   let rec go bs rs i mult =
     match bs,rs with
@@ -369,137 +373,132 @@ let synth mt_f mt_g =
     (fsprintf
        "\n%10i;%04i;%04i;%04i;%04i\n"
        !i_total !i_verif !i_secure !i_attack  !i_unknown)
+*)
+
+module SPSPoly = SP
+
+type setting = TY1 | TY2 | TY3
+
+type sps_scheme = {
+  key_left  : SPSPoly.t list;
+  key_right : SPSPoly.t list;
+  msg_left    : SPSPoly.t list;
+  msg_right   : SPSPoly.t list;
+  sig_left    : SPSPoly.t list;
+  sig_right   : SPSPoly.t list;
+  setting     : setting;
+  oracle_vars : string list
+}
+
+let completion sps : SPSPoly.t list =
+  let left = match sps.setting with
+    | TY1 | TY2 -> sorted_nub compare (sps.key_left @ sps.key_right @
+                                       sps.msg_left @ sps.msg_right @
+                                       sps.sig_left @ sps.sig_right)
+    | TY3 -> sorted_nub compare (sps.key_left @ sps.msg_left @ sps.sig_left)
+  in
+  let right = match sps.setting with
+    | TY1 -> sorted_nub compare (sps.key_left @ sps.key_right @
+                                 sps.msg_left @ sps.msg_right @
+                                 sps.sig_left @ sps.sig_right)
+    | TY2 | TY3 -> sorted_nub compare (sps.key_right @ sps.msg_right @ sps.sig_right)
+  in
+  let total_left  = SPSPoly.one :: left in
+  let total_right = SPSPoly.one :: right in
   
+  conc_map (fun l -> L.map (fun r -> l *@ r) total_right) total_left
+  |> sorted_nub compare
 
-let synth2 () =
-  let i_total   = ref 0 in
-  let i_secure  = ref 0 in
-  let i_unknown = ref 0 in
-  let i_attack  = ref 0 in
+let basis sps =
+  conc_map SPSPoly.mons (completion sps)
+  |> sorted_nub (fun x y -> compare (SPSPoly.from_mon x) (SPSPoly.from_mon y))
 
-  let vec_to_string cs =
-    let cs = L.map Big_int.big_int_of_int cs in
-    let c1 = L.nth cs 0 in
-    let c2 = L.nth cs 1 in
-    let c3 = L.nth cs 2 in
-    let c4 = L.nth cs 3 in
-    let c5 = L.nth cs 4 in
-    let c6 = L.nth cs 5 in
-    let c7 = L.nth cs 6 in
-    let c8 = L.nth cs 7 in
-      
-    let f = SP.from_terms [ ([("R",1)], c1); ([("M",1)], c2); ([("V",1)], c3);
-                            ([("W",1)], c4) ] in
-    let g = SP.from_terms [ ([("R",1)], c5); ([("M",1)], c6) ] in
-    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
-    fsprintf "%a" SP.pp (SP.add (SP.mult f g) h)
+let poly_to_vector = SPSPoly.to_vector
+
+let vector_to_poly v b =
+  let rec loop acc v b =
+    match (v,b) with
+    | (x :: vs, y :: bs) -> loop (acc +@ ((SPSPoly.const x) *@ (SPSPoly.from_mon y)))
+                                 vs bs
+    | ([], []) -> acc
+    | _ -> failwith "Vector and basis do not match."
   in
-    
-  let vec_to_wstring cs =
-    let cs = L.map Big_int.big_int_of_int cs in
-    let c1 = L.nth cs 0 in
-    let c2 = L.nth cs 1 in
-    let c3 = L.nth cs 2 in
-    let c4 = L.nth cs 3 in
-    let c5 = L.nth cs 4 in
-    let c6 = L.nth cs 5 in
-    let c7 = L.nth cs 6 in
-    let c8 = L.nth cs 7 in
-      
-    let f = SP.from_terms [ ([("wR",1)], c1); ([("wM",1)], c2); ([("V",1)], c3);
-                            ([("W",1)], c4) ] in
-    let g = SP.from_terms [ ([("wR",1)], c5); ([("wM",1)], c6) ] in
-    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
-    let s = SP.from_terms [ ([("wS",1)], Big_int.big_int_of_int (-1)) ] in
-    fsprintf "%a" SP.pp (SP.add s (SP.add  (SP.mult f g) h))
-  in
+  loop SPSPoly.zero v b
 
-  let vec_to_rstring cs =
-    let cs = L.map Big_int.big_int_of_int cs in
-    let c1 = L.nth cs 0 in
-    let c2 = L.nth cs 1 in
-    let c3 = L.nth cs 2 in
-    let c4 = L.nth cs 3 in
-    let c5 = L.nth cs 4 in
-    let c6 = L.nth cs 5 in
-    let c7 = L.nth cs 6 in
-    let c8 = L.nth cs 7 in
-      
-    let f = SP.from_terms [ ([("sR",1)], c1); ([("sM",1)], c2); ([("V",1)], c3);
-                            ([("W",1)], c4) ] in
-    let g = SP.from_terms [ ([("sR",1)], c5); ([("sM",1)], c6) ] in
-    let h = SP.from_terms [ ([("V",1)], c7); ([("W",1)], c8) ] in
-    fsprintf "sR, sM, %a" SP.pp (SP.add (SP.mult f g) h)
-  in
+let poly_list_to_matrix ps b =
+  L.map (fun p -> poly_to_vector p b) ps
 
-  let vec_to_gdef cs =
-    fsprintf
-    ("map G1 * G2 -> GT.\n"^^
-     "iso G2 -> G1.\n"^^
-     "input [V,W] in G1.\n"^^
-     "oracle o1(M:G2) =\n"^^
-     "  sample R;\n"^^
-     "  return [ R, %s ] in G2.\n"^^
-     "\n"^^
-     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ 0 = %s).\n")
-     (vec_to_string cs)
-     (vec_to_wstring cs)
+let pp_matrix m =
+  L.map (fun l -> F.printf "| %a | \n" (pp_list ", " SPSPoly.pp_coeff) l) m
+
+let kernel_to_eqns vs c =
+  let vec_to_eqn v =
+    let rec loop acc i w =
+      match w with
+      | [] -> acc
+      | x :: ws -> loop (acc +@ ((SPSPoly.const x) *@ (L.nth c i))) (i+1) ws
+    in
+    loop SPSPoly.zero 0 v
+  in
+  L.map vec_to_eqn vs
+
+let make_eval_map vars vals =
+  let z = L.combine vars vals in
+  (fun x -> try L.assoc x z with _ -> SPSPoly.var x)
+ 
+let synth x y =
+  let v = SPSPoly.var "V" in
+  let w = SPSPoly.var "W" in
+  let r = SPSPoly.var "R" in
+  let m = SPSPoly.var "M" in
+  let s = SPSPoly.var "S" in
+  let vr = v *@ r in
+  let wr = w *@ r in
+  let rr = r *@ r in
+  let mr = m *@ r in
+  let vm = v *@ m in
+  let wm = w *@ m in
+  let mm = m *@ m in
+  let vv = v *@ v in
+  let wv = w *@ v in
+  let ww = w *@ w in
+
+  let sps = { 
+              key_left = [v; w];
+              key_right = [];
+              msg_left = [];
+              msg_right = [m];
+              sig_left  = [];
+              sig_right = [r; v +@ rr +@ wm];
+              setting = TY2;
+              oracle_vars = []
+            }
   in
 
-  let vec_to_sgdef cs =
-    fsprintf
-    ("map G1 * G2 -> GT.\n"^^
-     "iso G2 -> G1.\n"^^
-     "input [V,W] in G1.\n"^^
-     "input [ %s ] in G2.\n"^^
-     "oracle o1(M:G2) =\n"^^
-     "  sample R;\n"^^
-     "  return [ R, %s ] in G2.\n"^^
-     "\n"^^
-     "win (wM:G2, wR:G2, wS:G2) = (wM <> M /\\ wM <> sM /\\ 0 = %s).\n")
-     (vec_to_rstring cs)
-     (vec_to_string cs)
-     (vec_to_wstring cs)
+  let sps_template = { 
+              key_left = [v; w];
+              key_right = [];
+              msg_left = [];
+              msg_right = [m];
+              sig_left  = [];
+              sig_right = [r; s];
+              setting = TY2;
+              oracle_vars = []
+            }
   in
 
-  let i = ref 0 in
-  let analyze_sig cs =
-    incr i_total;
-    let s = vec_to_gdef cs in
-    let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter s 1 in
-    match res with
-       | Z3_Solver.Valid ->
-         incr i_secure;
-         F.printf "\n%i.\n%s\n!" !i_secure s;
-         output_file (F.sprintf "./gen/%i.ec" !i_secure) s;
-         output_file (F.sprintf "./gen/%i_sigrand.ec" !i_secure) (vec_to_sgdef cs)
-       | Z3_Solver.Unknown ->
-         if !i_total mod 100 = 0 then F.printf "\n%i? %!\n" !i_total;
-         incr i_unknown
-       | Z3_Solver.Attack _ ->
-         output_file (F.sprintf "./gen/attack/%02i_attack.ec" !i_attack) s;
-         F.printf "\n%i! %!\n" !i_total;
-         incr i_attack;
-       | Z3_Solver.Error e ->
-         F.printf "Error: %s\n" e;
-         incr i_unknown
-  in
-  let coeffs =
-    nprod (mconcat [0; 1; -1]) 8 >>= fun cs ->
-    guard (L.nth cs 1 * L.nth cs 5 = 0 && (* No M^2 term *)
-          (L.nth cs 1 + L.nth cs 5 <> 0) && (* M must be used *)
-          (L.nth cs 0 <> 0 || L.nth cs 1 <> 0) && (* isomorphism must be used *)
-          (L.nth cs 0 <> 0 || L.nth cs 4 <> 0) && (* R must be used *)
-          (L.nth cs 2 <> 0 || L.nth cs 6 <> 0) && (* V must be used *)
-          (L.nth cs 3 <> 0 || L.nth cs 7 <> 0) && (* W must be used *)
-          (L.nth cs 0 <> 0 || L.nth cs 1 <> 0 || L.nth cs 2 <> 0 || L.nth cs 3 <> 0) &&
-          (L.nth cs 4 <> 0 || L.nth cs 5 <> 0)
-    ) >>
-    ret cs
-  in
-  iter (-1) coeffs
-    (fun cs -> i := !i + 1;
-      F.printf "%s\n" (vec_to_gdef cs);
-      analyze_sig cs
-    );
-  F.printf "done: %i choices\n%!" !i
+  let tmp = completion sps_template in
+  let c = L.map (SPSPoly.eval (make_eval_map ["S"] [ v +@ rr +@ wm])) tmp in
+  let c2 = tmp in
+  F.printf "%a\n" (pp_list ", " SPSPoly.pp) c;
+  F.printf "%a\n" (pp_list ", " SPSPoly.pp) c2;
+  let b = basis sps in
+  F.printf "%a\n" (pp_list ", " SPSPoly.pp) (L.map SPSPoly.from_mon b);
+  let m = poly_list_to_matrix c b in
+  pp_matrix m;
+  Pari_Ker.pari_init ();
+  let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
+  F.printf "\n\n";
+  pp_matrix left_kernel;
+  F.printf "\n%a" (pp_list "\n" SPSPoly.pp) (kernel_to_eqns left_kernel c2);
+  F.printf "\n";

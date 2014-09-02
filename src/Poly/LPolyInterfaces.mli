@@ -61,11 +61,15 @@ module type Poly = sig
   val partition : (((var * int) list * coeff) -> bool) -> t -> (t * t)
   val to_terms : t -> ((var * int) list * coeff) list
   val from_terms : ((var * int) list * coeff) list -> t
+  val from_mon : monom -> t
   val is_const : t -> bool
   val is_var : t -> bool
 
   val mons : t -> monom list
   val coeff : t -> monom -> coeff
+
+  (* In tool we want to express a polynomial in terms of a monomial basis *)
+  val to_vector : t -> monom list -> coeff list
 
   val ( *@) : t -> t -> t
   val (+@)  : t -> t -> t

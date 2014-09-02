@@ -104,6 +104,14 @@ let list_compare cmp xs0 ys0 =
   else if d < 0 then -1
   else go xs0 ys0
 
+let index l p =
+  let rec help l n =
+    match l with
+    | x :: xs -> if x = p then n else help xs (n+1)
+    | [] -> -1
+  in
+  help l 0
+
 let pair_equal eq1 eq2 (x1,x2) (y1,y2) =
   eq1 x1 y1 && eq2 x2 y2
 
