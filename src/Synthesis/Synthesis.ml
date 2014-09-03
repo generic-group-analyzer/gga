@@ -389,11 +389,14 @@ type sps_scheme = {
   sig_right   : SPSPoly.t list;
   sig_right_t : SPSPoly.t list;
   setting     : setting;
-  oleft       : string list;
-  oright      : string list;
   osample     : string list;
   rename      : string list
 }
+
+let get_oparams sps =
+  let l = conc_map SPSPoly.vars sps.msg_left |> sorted_nub String.compare in
+  let r = conc_map SPSPoly.vars sps.msg_right |> sorted_nub String.compare in
+  (l,r)
 
 let completion sps =
   let left = match sps.setting with
@@ -471,12 +474,12 @@ let make_game sps vereqs : string =
     let ll = L.combine l (L.map (fun s -> SPSPoly.var ("w" ^ s)) l)
     in
     (fun x -> try L.assoc x ll with _ -> SPSPoly.var x)
-  in 
+  in
 
   let preamble = match sps.setting with
     | TY1 -> "map G1 * G2 -> GT.\niso G1 -> G2.\niso G2 -> G1."
     | TY2 -> "map G1 * G2 -> GT.\niso G2 -> G1."
-    | TY3 -> "map G1 * G1 -> GT."
+    | TY3 -> "map G1 * G2 -> GT."
   in
   let left = fsprintf "input [ %a ] in G1." (pp_list ", " SPSPoly.pp) sps.key_left in
   let right = fsprintf "input [ %a ] in G2." (pp_list ", " SPSPoly.pp) sps.key_right in
@@ -486,12 +489,14 @@ let make_game sps vereqs : string =
              else (if sps.key_right = [] then left
                    else left ^ "\n" ^ right)
   in
-  let opleft  = if sps.oleft = [] then ""
-                else fsprintf "%a" (pp_list ":G1, " pp_string) sps.oleft ^ ":G1" in
-  let opright = if sps.oright = [] then ""
-                else fsprintf "%a" (pp_list ":G2, " pp_string) sps.oright ^ ":G2" in
+  let (opl,opr) = get_oparams sps in
+  let opleft  = if opl = [] then ""
+                else fsprintf "%a" (pp_list ":G1, " pp_string) opl ^ ":G1" in
+  let opright = if opr = [] then ""
+                else fsprintf "%a" (pp_list ":G2, " pp_string) opr ^ ":G2" in
 
-  let oparam = if sps.oleft = [] then opright
+  
+  let oparam = if opl = [] then opright
                else opleft ^ ", " ^ opright in
   let osample = if sps.osample = [] then ""
                 else fsprintf "  sample %a" (pp_list ";\n  sample " pp_string) sps.osample ^ ";" in
@@ -553,13 +558,14 @@ let synth x y =
               sig_left_t  = [];
               sig_right   = [r; v +@ rr +@ wm];
               sig_right_t = [r; s];
-              setting     = TY2;
-              oleft       = [];
-              oright      = ["M"];
+              setting     = TY1;
               osample     = ["R"];
               rename      = ["R"; "M"; "S"]
             }
   in
+  let (l,r) = get_oparams sps in
+  F.printf "l: %a\n" (pp_list ", " pp_string) l;
+  F.printf "r: %a\n" (pp_list ", " pp_string) r;
 
   (* We follow our paper by computing a generic completion, then substitute for actual values *)
   let tmpl = completion sps in
