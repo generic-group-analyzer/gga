@@ -382,34 +382,51 @@ type setting = TY1 | TY2 | TY3
 type sps_scheme = {
   key_left    : SPSPoly.t list;
   key_right   : SPSPoly.t list;
-  msg_left    : SPSPoly.t list;
-  msg_right   : SPSPoly.t list;
+  msg_left    : string list;
+  msg_right   : string list;
   sig_left    : SPSPoly.t list;
   sig_left_t  : SPSPoly.t list;
   sig_right   : SPSPoly.t list;
   sig_right_t : SPSPoly.t list;
   setting     : setting;
-  osample     : string list;
-  rename      : string list
+  osample     : string list
 }
 
+let get_vars ps = conc_map SPSPoly.vars ps |> sorted_nub S.compare
+
 let get_oparams sps =
-  let l = conc_map SPSPoly.vars sps.msg_left |> sorted_nub String.compare in
-  let r = conc_map SPSPoly.vars sps.msg_right |> sorted_nub String.compare in
-  (l,r)
+  let (g1,g2) = match sps.setting with
+    | TY1 -> let s = ":G" in (s,s)
+    | TY2 | TY3 -> (":G1",":G2") in
+  let l = L.map (fun x -> (x,g1)) sps.msg_left in 
+  let r = L.map (fun x -> (x,g2)) sps.msg_right in
+  l @ r
+
+let get_wc_params sps = 
+  let (g1,g2) = match sps.setting with
+    | TY1 -> let s = ":G" in (s,s)
+    | TY2 | TY3 -> (":G1",":G2") in
+  let l = L.map (fun x -> ("w" ^ x,g1)) (sps.msg_left @ get_vars sps.sig_left_t) in
+  let r = L.map (fun x -> ("w" ^ x,g2)) (sps.msg_right @ get_vars sps.sig_right_t) in
+  l @ r
+
+let get_samples sps =
+  L.map (fun x -> ("  sample ", x ^ ";\n")) sps.osample
 
 let completion sps =
   let left = match sps.setting with
     | TY1 | TY2 -> sorted_nub compare (sps.key_left   @ sps.key_right @
-                                       sps.msg_left   @ sps.msg_right @
+                                       L.map SPSPoly.var sps.msg_left @
+                                       L.map SPSPoly.var sps.msg_right @
                                        sps.sig_left_t @ sps.sig_right_t)
-    | TY3 -> sorted_nub compare (sps.key_left @ sps.msg_left @ sps.sig_left_t)
+    | TY3 -> sorted_nub compare (sps.key_left @ L.map SPSPoly.var sps.msg_left @ sps.sig_left_t)
   in
   let right = match sps.setting with
     | TY1 -> sorted_nub compare (sps.key_left   @ sps.key_right @
-                                 sps.msg_left   @ sps.msg_right @
+                                 L.map SPSPoly.var sps.msg_left  @ 
+                                 L.map SPSPoly.var sps.msg_right @
                                  sps.sig_left_t @ sps.sig_right_t)
-    | TY2 | TY3 -> sorted_nub compare (sps.key_right @ sps.msg_right @ sps.sig_right_t)
+    | TY2 | TY3 -> sorted_nub compare (sps.key_right @ L.map SPSPoly.var sps.msg_right @ sps.sig_right_t)
   in
   let total_left  = SPSPoly.one :: left in
   let total_right = SPSPoly.one :: right in
@@ -417,6 +434,7 @@ let completion sps =
   conc_map (fun l -> L.map (fun r -> l *@ r) total_right) total_left
   |> sorted_nub compare
 
+(* Takes the completion of the inputs and returns a list of all monomials appearing in it *)
 let basis c =
   conc_map SPSPoly.mons c
   |> sorted_nub (fun x y -> compare (SPSPoly.from_mon x) (SPSPoly.from_mon y))
@@ -450,88 +468,82 @@ let kernel_to_eqns vs c =
   in
   L.map vec_to_eqn vs
 
+(* Creates the map that substitutes for labels S etc. in the signature their
+   expression in terms of keys, messages and random variables. *)
 let make_eval_map sps =
   let make_map vars vals =
     let z = L.combine vars vals in
     (fun x -> try L.assoc x z with _ -> SPSPoly.var x)
   in
-  let vars : SPSPoly.var list = L.map (fun f -> L.hd (SPSPoly.vars f)) (sps.sig_left_t @ sps.sig_right_t) in
+  let vars = L.map (fun f -> L.hd (SPSPoly.vars f)) (sps.sig_left_t @ sps.sig_right_t) in
   make_map vars (sps.sig_left @ sps.sig_right)
 
+
+(* Takes a polynomial and prepends "w" to each variable coming from an oracle query *)
+let wc_fix_var_names sps =
+  let labels = conc_map SPSPoly.vars (sps.sig_left_t @ sps.sig_right_t)
+               |> sorted_nub S.compare in
+  (* List of vars to remain *)
+  let l = sorted_nub S.compare (labels @ sps.msg_left @ sps.msg_right @ sps.osample) in
+  let vars = L.combine l (L.map (fun v -> SPSPoly.var ("w" ^ v)) l) in
+  (fun x -> try L.assoc x vars with _ -> SPSPoly.var x)
+
 let make_game sps vereqs : string =
+  let (g1, g2) = match sps.setting with
+    | TY1 -> ("G", "G")
+    | TY2 | TY3 -> ("G1", "G1") in
+
   let gen_wc1 vs =
     let rec loop acc l = match l with
-      | x :: xs -> let s = fsprintf "%a" SPSPoly.pp x in
-                   let acc = if acc = "" then acc ^ "w" else acc ^ " /\\ w" in
+      | s :: xs -> let acc = if acc = "" then acc ^ "w" else acc ^ " /\\ w" in
                    loop (acc ^ s ^ " <> " ^ s) xs
       | [] -> acc
     in
-    loop "" vs
-  in
-  (* Function for adding "w" in front of variables *)
-  let rename =
-    let l = sps.rename in
-    let ll = L.combine l (L.map (fun s -> SPSPoly.var ("w" ^ s)) l)
-    in
-    (fun x -> try L.assoc x ll with _ -> SPSPoly.var x)
-  in
-
-  let preamble = match sps.setting with
-    | TY1 -> "map G1 * G2 -> GT.\niso G1 -> G2.\niso G2 -> G1."
-    | TY2 -> "map G1 * G2 -> GT.\niso G2 -> G1."
-    | TY3 -> "map G1 * G2 -> GT."
-  in
-  let left = fsprintf "input [ %a ] in G1." (pp_list ", " SPSPoly.pp) sps.key_left in
-  let right = fsprintf "input [ %a ] in G2." (pp_list ", " SPSPoly.pp) sps.key_right in
-  let input = if sps.key_left = [] then
-               (if sps.key_right = [] then ""
-                else right)
-             else (if sps.key_right = [] then left
-                   else left ^ "\n" ^ right)
-  in
-  let (opl,opr) = get_oparams sps in
-  let opleft  = if opl = [] then ""
-                else fsprintf "%a" (pp_list ":G1, " pp_string) opl ^ ":G1" in
-  let opright = if opr = [] then ""
-                else fsprintf "%a" (pp_list ":G2, " pp_string) opr ^ ":G2" in
-
-  
-  let oparam = if opl = [] then opright
-               else opleft ^ ", " ^ opright in
-  let osample = if sps.osample = [] then ""
-                else fsprintf "  sample %a" (pp_list ";\n  sample " pp_string) sps.osample ^ ";" in
-  let left = fsprintf "  return [ %a ] in G1." (pp_list ", " SPSPoly.pp) sps.sig_left in
-  let right = fsprintf "  return [ %a ] in G2." (pp_list ", " SPSPoly.pp) sps.sig_right in
-  let osig = if sps.sig_left = [] then
-              (if sps.sig_right = [] then ""
-               else right)
-            else (if sps.sig_right = [] then left
-                  else left ^ "\n" ^ right)
-  in
-  (* wM:G1 for each M in G1 and same for G2 *)
-  let wpleft = if sps.msg_left = [] then ""
-               else fsprintf "w%a" (pp_list ":G1, w" SPSPoly.pp) sps.msg_left ^ ":G1" in
-  let wpright = if sps.msg_right = [] then ""
-               else fsprintf "w%a" (pp_list ":G2, w" SPSPoly.pp) sps.msg_right ^ ":G2" in
-  let wp_msg = if sps.msg_left = [] then wpright
-           else wpleft ^ ", " ^ wpright in
-  let wpleft = if sps.sig_left_t = [] then ""
-               else fsprintf "w%a" (pp_list ":G1, w" SPSPoly.pp) sps.sig_left_t ^ ":G1" in
-  let wpright = if sps.sig_right_t = [] then ""
-               else fsprintf "w%a" (pp_list ":G2, w" SPSPoly.pp) sps.sig_right_t ^ ":G2" in
-  let wp_sig = if sps.sig_left_t = [] then wpright
-           else wpleft ^ ", " ^ wpright in
-  let wp = if wp_msg = "" then wp_sig
-           else wp_msg ^ ", " ^ wp_sig in
-  
+    loop "" vs in
+  (* preamble *)
+  begin
+    match sps.setting with
+      | TY1 -> "map G * G -> GT.\n\n"
+      | TY2 -> "map G1 * G2 -> GT.\niso G2 -> G1.\n\n"
+      | TY3 -> "map G1 * G2 -> GT.\n\n"
+  end
+  ^
+  (* PP's in the generic group setting i.e. keys *)
+  begin
+    let left = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) sps.key_left g1 in
+    let right = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) sps.key_right g2 in
+    if sps.key_left = [] then
+      (if sps.key_right = [] then ""
+       else right)
+    else
+      (if sps.key_right = [] then left
+       else left ^ "\n" ^ right)
+  end
+  ^
+  (* oracle *)
+  begin
+    "\noracle o1(" ^ (fsprintf "%a" (pp_list ", " (pp_pair' pp_string pp_string)) (get_oparams sps)) ^ ") =\n" ^
+    fsprintf "%a" (pp_list "" (pp_pair' pp_string pp_string)) (get_samples sps) ^
+    let left = fsprintf "  return [ %a ] in %s." (pp_list ", " SPSPoly.pp) sps.sig_left g1 in
+    let right = fsprintf "  return [ %a ] in %s." (pp_list ", " SPSPoly.pp) sps.sig_right g2 in
+    if sps.sig_left = [] then
+     (if sps.sig_right = [] then ""
+      else right)
+    else
+     (if sps.sig_right = [] then left
+      else left ^ "\n" ^ right)
+  end
+  ^
+  (* winning condition *)
+  begin
+    "\n\nwin(" ^ fsprintf "%a" (pp_list ", " (pp_pair' pp_string pp_string)) (get_wc_params sps) ^ ") =\n" ^
   let wc1 = gen_wc1 (sps.msg_left @ sps.msg_right) in
-  let neqs = L.map (fun f -> SPSPoly.eval rename f) vereqs in
+  let neqs = L.map (fun f -> SPSPoly.eval (wc_fix_var_names sps) f) vereqs in
   let wc2 = fsprintf "0 = %a" (pp_list " /\\ 0 = " SPSPoly.pp) neqs in
-  preamble ^ "\n\n" ^
-  input ^
-  "\n\noracle o1(" ^ oparam ^ ") =\n" ^ osample ^ "\n" ^ osig ^
-  "\n\nwin(" ^ wp ^ ") =\n  (" ^ wc1 ^ " /\\ " ^ wc2 ^ ").\n"
- 
+  "  (" ^ wc1 ^ " /\\ " ^ wc2 ^ ").\n"
+  end
+
+
 let synth x y =
   let v = SPSPoly.var "V" in
   let w = SPSPoly.var "W" in
@@ -553,23 +565,19 @@ let synth x y =
               key_left    = [v; w];
               key_right   = [];
               msg_left    = [];
-              msg_right   = [m];
+              msg_right   = ["M"];
               sig_left    = [];
               sig_left_t  = [];
               sig_right   = [r; v +@ rr +@ wm];
               sig_right_t = [r; s];
-              setting     = TY1;
-              osample     = ["R"];
-              rename      = ["R"; "M"; "S"]
+              setting     = TY2;
+              osample     = ["R"]
             }
   in
-  let (l,r) = get_oparams sps in
-  F.printf "l: %a\n" (pp_list ", " pp_string) l;
-  F.printf "r: %a\n" (pp_list ", " pp_string) r;
 
   (* We follow our paper by computing a generic completion, then substitute for actual values *)
   let tmpl = completion sps in
-  (* Substitute for actual value of s into the computed completion *)
+  (* Substitute for actual value of S etc. into the computed completion *)
   let c = L.map (SPSPoly.eval (make_eval_map sps)) tmpl in
   let b = basis c in
   let m = poly_list_to_matrix c b in
