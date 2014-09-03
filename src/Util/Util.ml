@@ -329,6 +329,9 @@ let pp_string fmt s = Format.fprintf fmt "%s" s
 let pp_pair pp_a pp_b fmt (a,b) =
   Format.fprintf fmt "(%a,%a)" pp_a a pp_b b
 
+let pp_pair' pp_a pp_b fmt (a,b) =
+  Format.fprintf fmt "%a%a" pp_a a pp_b b
+
 let pp_option pp_some fmt o = match o with
   | Some(x) -> pp_some fmt x
   | None    -> Format.fprintf fmt " - "
