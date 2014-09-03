@@ -391,7 +391,8 @@ type sps_scheme = {
   setting     : setting;
   oleft       : string list;
   oright      : string list;
-  osample     : string list
+  osample     : string list;
+  rename      : string list
 }
 
 let completion sps =
@@ -466,7 +467,7 @@ let make_game sps vereqs : string =
   in
   (* Function for adding "w" in front of variables *)
   let rename =
-    let l = sps.oleft @ sps.oright @ sps.osample in
+    let l = sps.rename in
     let ll = L.combine l (L.map (fun s -> SPSPoly.var ("w" ^ s)) l)
     in
     (fun x -> try L.assoc x ll with _ -> SPSPoly.var x)
@@ -555,7 +556,8 @@ let synth x y =
               setting     = TY2;
               oleft       = [];
               oright      = ["M"];
-              osample     = ["R"; "T"];
+              osample     = ["R"];
+              rename      = ["R"; "M"; "S"]
             }
   in
 
@@ -568,4 +570,10 @@ let synth x y =
   Pari_Ker.pari_init ();
   let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
   let s = make_game sps (kernel_to_eqns left_kernel tmpl) in
-  F.printf "%s" s
+  F.printf "%s" s;
+  let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter s 1 in
+  match res with
+  | Z3_Solver.Valid -> F.printf "VALID\n"
+  | Z3_Solver.Unknown -> F.printf "UNKNOWN\n"
+  | Z3_Solver.Attack _ -> F.printf "ATTACK\n"
+  | Z3_Solver.Error e -> F.printf "Error: %s\n" e
