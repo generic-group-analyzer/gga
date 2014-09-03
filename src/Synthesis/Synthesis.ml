@@ -488,18 +488,10 @@ let wc_fix_var_names sps =
   let vars = L.combine l (L.map (fun v -> SPSPoly.var ("w" ^ v)) l) in
   (fun x -> try L.assoc x vars with _ -> SPSPoly.var x)
 
-let make_game sps vereqs : string =
+let make_game sps vereqs =
   let (g1, g2) = match sps.setting with
     | TY1 -> ("G", "G")
     | TY2 | TY3 -> ("G1", "G1") in
-
-  let gen_wc1 vs =
-    let rec loop acc l = match l with
-      | s :: xs -> let acc = if acc = "" then acc ^ "w" else acc ^ " /\\ w" in
-                   loop (acc ^ s ^ " <> " ^ s) xs
-      | [] -> acc
-    in
-    loop "" vs in
   (* preamble *)
   begin
     match sps.setting with
@@ -536,11 +528,18 @@ let make_game sps vereqs : string =
   ^
   (* winning condition *)
   begin
+    let gen_wc1 vs =
+      let rec loop acc l = match l with
+        | s :: xs -> let acc = if acc = "" then acc ^ "w" else acc ^ " /\\ w" in
+                     loop (acc ^ s ^ " <> " ^ s) xs
+        | [] -> acc
+      in
+      loop "" vs in
     "\n\nwin(" ^ fsprintf "%a" (pp_list ", " (pp_pair' pp_string pp_string)) (get_wc_params sps) ^ ") =\n" ^
-  let wc1 = gen_wc1 (sps.msg_left @ sps.msg_right) in
-  let neqs = L.map (fun f -> SPSPoly.eval (wc_fix_var_names sps) f) vereqs in
-  let wc2 = fsprintf "0 = %a" (pp_list " /\\ 0 = " SPSPoly.pp) neqs in
-  "  (" ^ wc1 ^ " /\\ " ^ wc2 ^ ").\n"
+    "  (" ^ gen_wc1 (sps.msg_left @ sps.msg_right) ^ " /\\ " ^
+    let ineqs = L.map (fun f -> SPSPoly.eval (wc_fix_var_names sps) f) vereqs in
+      fsprintf "0 = %a" (pp_list " /\\ 0 = " SPSPoly.pp) ineqs ^ ").\n"
+
   end
 
 
