@@ -385,9 +385,9 @@ type sps_scheme = {
   msg_left    : string list;
   msg_right   : string list;
   sig_left    : SPSPoly.t list;
-  sig_left_t  : SPSPoly.t list;
+  sig_left_t  : string list;
   sig_right   : SPSPoly.t list;
-  sig_right_t : SPSPoly.t list;
+  sig_right_t : string list;
   setting     : setting;
   osample     : string list
 }
@@ -407,8 +407,8 @@ let get_wc_params sps =
   let (g1,g2) = match sps.setting with
     | TY1 -> let s = ":G" in (s,s)
     | TY2 | TY3 -> (":G1",":G2") in
-  let l = L.map (fun x -> ("w" ^ x,g1)) (sps.msg_left @ get_vars sps.sig_left_t) in
-  let r = L.map (fun x -> ("w" ^ x,g2)) (sps.msg_right @ get_vars sps.sig_right_t) in
+  let l = L.map (fun x -> ("w" ^ x,g1)) (sps.msg_left @  sps.sig_left_t) in
+  let r = L.map (fun x -> ("w" ^ x,g2)) (sps.msg_right @ sps.sig_right_t) in
   l @ r
 
 let get_samples sps =
@@ -416,18 +416,15 @@ let get_samples sps =
 
 let completion sps =
   let left = match sps.setting with
-    | TY1 | TY2 -> sorted_nub compare (sps.key_left   @ sps.key_right @
-                                       L.map SPSPoly.var sps.msg_left @
-                                       L.map SPSPoly.var sps.msg_right @
-                                       sps.sig_left_t @ sps.sig_right_t)
-    | TY3 -> sorted_nub compare (sps.key_left @ L.map SPSPoly.var sps.msg_left @ sps.sig_left_t)
+    | TY1 | TY2 -> sorted_nub compare (sps.key_left   @ sps.key_right  @
+                                       L.map SPSPoly.var (sps.msg_left @ sps.msg_right @
+                                                          sps.sig_left_t @ sps.sig_right_t))
+    | TY3 -> sorted_nub compare (sps.key_left @ L.map SPSPoly.var (sps.msg_left @ sps.sig_left_t))
   in
   let right = match sps.setting with
     | TY1 -> sorted_nub compare (sps.key_left   @ sps.key_right @
-                                 L.map SPSPoly.var sps.msg_left  @ 
-                                 L.map SPSPoly.var sps.msg_right @
-                                 sps.sig_left_t @ sps.sig_right_t)
-    | TY2 | TY3 -> sorted_nub compare (sps.key_right @ L.map SPSPoly.var sps.msg_right @ sps.sig_right_t)
+                                 L.map SPSPoly.var (sps.msg_left @ sps.msg_right @ sps.sig_left_t @ sps.sig_right_t))
+    | TY2 | TY3 -> sorted_nub compare (sps.key_right @ L.map SPSPoly.var (sps.msg_right @ sps.sig_right_t))
   in
   let total_left  = SPSPoly.one :: left in
   let total_right = SPSPoly.one :: right in
@@ -476,13 +473,13 @@ let make_eval_map sps =
     let z = L.combine vars vals in
     (fun x -> try L.assoc x z with _ -> SPSPoly.var x)
   in
-  let vars = L.map (fun f -> L.hd (SPSPoly.vars f)) (sps.sig_left_t @ sps.sig_right_t) in
+  let vars = sps.sig_left_t @ sps.sig_right_t in
   make_map vars (sps.sig_left @ sps.sig_right)
 
 
 (* Takes a polynomial and prepends "w" to each variable coming from an oracle query *)
 let wc_fix_var_names sps =
-  let labels = conc_map SPSPoly.vars (sps.sig_left_t @ sps.sig_right_t)
+  let labels = sps.sig_left_t @ sps.sig_right_t
                |> sorted_nub S.compare in
   (* List of vars to remain *)
   let l = sorted_nub S.compare (labels @ sps.msg_left @ sps.msg_right @ sps.osample) in
@@ -597,7 +594,7 @@ let synth x y =
     sig_left    = [];
     sig_left_t  = [];
     sig_right   = [r; (c0 *@ v) +@ (c1 *@ w) +@ (c2 *@ vm) +@ (c3 *@ wm) +@ (c4 *@ mr) +@  (c5 *@ rr)];
-    sig_right_t = [r; s];
+    sig_right_t = ["R"; "S"];
     setting     = TY2;
     osample     = ["R"]
   } in
