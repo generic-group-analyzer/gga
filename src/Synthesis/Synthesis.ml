@@ -542,6 +542,17 @@ let make_game sps vereqs =
 
   end
 
+(* Takes an sps template and replaces the variables in vars with
+   the corresponding value in v *)
+let template_to_sps sps vars v =
+  let evalf x = 
+    let l = L.combine vars v in
+    try SPSPoly.from_int (L.assoc x l)
+    with _ -> SPSPoly.var x
+  in
+  { sps with
+    sig_left  = L.map (SPSPoly.eval evalf) sps.sig_left;
+    sig_right = L.map (SPSPoly.eval evalf) sps.sig_right }
 
 let synth x y =
   let v = SPSPoly.var "V" in
@@ -549,6 +560,14 @@ let synth x y =
   let r = SPSPoly.var "R" in
   let m = SPSPoly.var "M" in
   let s = SPSPoly.var "S" in
+  let c1 = SPSPoly.var "c1" in
+  let c2 = SPSPoly.var "c2" in
+  let c3 = SPSPoly.var "c3" in
+  let c4 = SPSPoly.var "c4" in
+  let c5 = SPSPoly.var "c5" in
+  let c6 = SPSPoly.var "c6" in
+  let c7 = SPSPoly.var "c7" in
+  let c8 = SPSPoly.var "c8" in
   let vr = v *@ r in
   let wr = w *@ r in
   let rr = r *@ r in
@@ -560,19 +579,21 @@ let synth x y =
   let wv = w *@ v in
   let ww = w *@ w in
 
-  let sps = { 
+  let sps_t = { 
               key_left    = [v; w];
               key_right   = [];
               msg_left    = [];
               msg_right   = ["M"];
               sig_left    = [];
               sig_left_t  = [];
-              sig_right   = [r; v +@ rr +@ wm];
+              sig_right   = [r; (c1 *@ v) +@ (c2 *@ w) +@ (c3 *@ vm) +@ (c4 *@ wm) +@ (c5 *@ mr) +@  (c6 *@ rr)];
               sig_right_t = [r; s];
               setting     = TY2;
               osample     = ["R"]
             }
   in
+
+  let sps = template_to_sps sps_t ["c1"; "c2"; "c3"; "c4"; "c5"; "c6"] [1; 0; 0; 1; 0; 1] in
 
   (* We follow our paper by computing a generic completion, then substitute for actual values *)
   let tmpl = completion sps in
