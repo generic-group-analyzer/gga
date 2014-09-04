@@ -300,7 +300,7 @@ let quant_wp_to_gps st bound p =
       | II.Field ->
         GP.var (Param (FOParam (tid.II.tid_id, qidx)))
       | II.Group gid ->
-        L.assoc (tid.II.tid_id, gid, qidx) st.hmap
+        try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ -> failwith "Unused oracle parameter!"
       end
     | II.Choice tid ->
       begin match tid.II.tid_ty with
@@ -356,7 +356,7 @@ let gdef_to_constrs fmt b gdef =
   p_header "Quantified Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qineqs);
 
   if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
-
+  
   let qineqs = conc_map (quant_wp_to_gps st b) qineqs in
   p_header "Unrolled Inequalities" (fsprintf "%a\n" (pp_list "\n" GP.pp) qineqs);
 
