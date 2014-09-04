@@ -617,14 +617,12 @@ let synth x y =
     ) else (
       incr i_verif;
       let sgdef = make_game sps (kernel_to_eqns left_kernel tmpl) in
-      F.printf "%s" sgdef;
       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
       (* let res = analyze_bounded_from_string  sgdef 1 in *)
       match res with
       | Z3_Solver.Valid ->
         incr i_secure;
         output_file (F.sprintf "./gen/sps_%02i.ec" !i_secure) sgdef;
-        (* output_file (F.sprintf "./gen/%02i_%02i_%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs) *)
       | Z3_Solver.Unknown ->
         if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
         incr i_unknown
