@@ -563,6 +563,7 @@ let synth x y =
   let r = SPSPoly.var "R" in
   let m = SPSPoly.var "M" in
   let s = SPSPoly.var "S" in
+  let c0 = SPSPoly.var "c0" in
   let c1 = SPSPoly.var "c1" in
   let c2 = SPSPoly.var "c2" in
   let c3 = SPSPoly.var "c3" in
@@ -595,17 +596,16 @@ let synth x y =
     msg_right   = ["M"];
     sig_left    = [];
     sig_left_t  = [];
-    sig_right   = [r; (c1 *@ v) +@ (c2 *@ w) +@ (c3 *@ vm) +@ (c4 *@ wm) +@ (c5 *@ mr) +@  (c6 *@ rr)];
+    sig_right   = [r; (c0 *@ v) +@ (c1 *@ w) +@ (c2 *@ vm) +@ (c3 *@ wm) +@ (c4 *@ mr) +@  (c5 *@ rr)];
     sig_right_t = [r; s];
     setting     = TY2;
     osample     = ["R"]
   } in
 
-  let vars = ["c1"; "c2"; "c3"; "c4"; "c5"; "c6"] in
+  let vars = ["c0"; "c1"; "c2"; "c3"; "c4"; "c5"] in
 
   let analyze_sig v =
     incr i_total;
-    F.printf "%a\n" (pp_list ", " pp_int) v;
     let sps = template_to_sps sps_t vars v in
     (* Compute the completion using the _t polynomials *)
     let tmpl = completion sps in
@@ -620,7 +620,9 @@ let synth x y =
     ) else (
       incr i_verif;
       let sgdef = make_game sps (kernel_to_eqns left_kernel tmpl) in
+      F.printf "%s" sgdef;
       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
+      (* let res = analyze_bounded_from_string  sgdef 1 in *)
       match res with
       | Z3_Solver.Valid ->
         incr i_secure;
@@ -643,7 +645,7 @@ let synth x y =
 
   let coeffs =
     nprod (mconcat [0; 1; -1]) (L.length vars) >>= fun cs ->
-    guard (L.exists (fun x -> x <> 0) cs) >> ret cs
+    guard (L.nth cs 2 <> 0 || L.nth cs 3 <> 0 || L.nth cs 4 <> 0) >> ret cs
   in
 
   iter (-1) coeffs
