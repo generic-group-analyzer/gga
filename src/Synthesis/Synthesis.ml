@@ -402,6 +402,7 @@ let get_oparams sps =
   let r = L.map (fun x -> (x,g2)) sps.msg_right in
   l @ r
 
+
 let get_wc_params sps = 
   let (g1,g2) = match sps.setting with
     | TY1 -> let s = ":G" in (s,s)
@@ -554,6 +555,8 @@ let template_to_sps sps vars v =
     sig_left  = L.map (SPSPoly.eval evalf) sps.sig_left;
     sig_right = L.map (SPSPoly.eval evalf) sps.sig_right }
 
+
+
 let synth x y =
   let v = SPSPoly.var "V" in
   let w = SPSPoly.var "W" in
@@ -579,35 +582,59 @@ let synth x y =
   let wv = w *@ v in
   let ww = w *@ w in
 
+  let i_total = ref 0 in
+  let i_secure = ref 0 in
+  let i_attack = ref 0 in
+  let i_unknown = ref 0 in
+  let i_verif = ref 0 in
+
   let sps_t = { 
-              key_left    = [v; w];
-              key_right   = [];
-              msg_left    = [];
-              msg_right   = ["M"];
-              sig_left    = [];
-              sig_left_t  = [];
-              sig_right   = [r; (c1 *@ v) +@ (c2 *@ w) +@ (c3 *@ vm) +@ (c4 *@ wm) +@ (c5 *@ mr) +@  (c6 *@ rr)];
-              sig_right_t = [r; s];
-              setting     = TY2;
-              osample     = ["R"]
-            }
+    key_left    = [v; w];
+    key_right   = [];
+    msg_left    = [];
+    msg_right   = ["M"];
+    sig_left    = [];
+    sig_left_t  = [];
+    sig_right   = [r; (c1 *@ v) +@ (c2 *@ w) +@ (c3 *@ vm) +@ (c4 *@ wm) +@ (c5 *@ mr) +@  (c6 *@ rr)];
+    sig_right_t = [r; s];
+    setting     = TY2;
+    osample     = ["R"]
+  } in
+
+  let analyze_sig sps =
+    incr i_total;
+
+    let tmpl = completion sps in
+    (* Substitute for actual value of S etc. into the computed completion *)
+    let c = L.map (SPSPoly.eval (make_eval_map sps)) tmpl in
+    let b = basis c in
+    let m = poly_list_to_matrix c b in
+    let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
+
+    if left_kernel = [] then (
+      if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
+    ) else (
+      incr i_verif;
+      let sgdef = make_game sps (kernel_to_eqns left_kernel tmpl) in
+      let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
+      match res with
+      | Z3_Solver.Valid ->
+        incr i_secure;
+        output_file (F.sprintf "./gen/sps_%02i.ec" !i_secure) sgdef;
+        (* output_file (F.sprintf "./gen/%02i_%02i_%02i_sigrand.ec" !i_secure) (to_gdef_sigrand s veqs) *)
+      | Z3_Solver.Unknown ->
+        if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
+        incr i_unknown
+      | Z3_Solver.Attack _ ->
+        output_file (F.sprintf "./gen/attack/sps_%02i_attack.ec" !i_attack) sgdef;
+        F.printf "\n%i! %!\n" !i_total;
+        incr i_attack;
+      | Z3_Solver.Error e ->
+        F.printf "Error: %s\n" e;
+        incr i_unknown
+    )
   in
 
-  let sps = template_to_sps sps_t ["c1"; "c2"; "c3"; "c4"; "c5"; "c6"] [1; 0; 0; 1; 0; 1] in
-
-  (* We follow our paper by computing a generic completion, then substitute for actual values *)
-  let tmpl = completion sps in
-  (* Substitute for actual value of S etc. into the computed completion *)
-  let c = L.map (SPSPoly.eval (make_eval_map sps)) tmpl in
-  let b = basis c in
-  let m = poly_list_to_matrix c b in
   Pari_Ker.pari_init ();
-  let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
-  let s = make_game sps (kernel_to_eqns left_kernel tmpl) in
-  F.printf "%s" s;
-  let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter s 1 in
-  match res with
-  | Z3_Solver.Valid -> F.printf "VALID\n"
-  | Z3_Solver.Unknown -> F.printf "UNKNOWN\n"
-  | Z3_Solver.Attack _ -> F.printf "ATTACK\n"
-  | Z3_Solver.Error e -> F.printf "Error: %s\n" e
+  let sps = template_to_sps sps_t ["c1"; "c2"; "c3"; "c4"; "c5"; "c6"] [1; 0; 0; 1; 0; 1] in
+  analyze_sig sps
