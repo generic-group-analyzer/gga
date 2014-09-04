@@ -607,31 +607,20 @@ let synth x y =
     incr i_total;
     F.printf "%a\n" (pp_list ", " pp_int) v;
     let sps = template_to_sps sps_t vars v in
-    F.printf "1?\n";
     (* Compute the completion using the _t polynomials *)
     let tmpl = completion sps in
-    F.printf "2?\n";
     (* Substitute for actual value of labels into the completion *)
     let c = L.map (SPSPoly.eval (make_eval_map sps)) tmpl in
-    F.printf "3?\n";
     let b = basis c in
-    F.printf "4?\n";
     let m = poly_list_to_matrix c b in
-    F.printf "5?\n";
     let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
 
-    F.printf "6?\n";
     if left_kernel = [] then (
-      F.printf "7?\n";
       if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
     ) else (
-      F.printf "8?\n";
       incr i_verif;
       let sgdef = make_game sps (kernel_to_eqns left_kernel tmpl) in
-      F.printf "9?\n";
-      F.printf "%s" sgdef;
       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
-      F.printf "10?\n";
       match res with
       | Z3_Solver.Valid ->
         incr i_secure;
@@ -657,7 +646,6 @@ let synth x y =
     guard (L.exists (fun x -> x <> 0) cs) >> ret cs
   in
 
-  let i = ref 0 in
   iter (-1) coeffs
-    (fun cs -> i := !i+1; F.printf "%i\n" !i; analyze_sig cs);
+    (fun cs -> analyze_sig cs);
   F.printf "done: %i choices\n" !i_total
