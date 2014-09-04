@@ -645,4 +645,7 @@ let synth x y =
 
   iter (-1) coeffs
     (fun cs -> analyze_sig cs);
-  F.printf "done: %i choices\n" !i_total
+    
+  F.printf
+    "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
+    !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown;
