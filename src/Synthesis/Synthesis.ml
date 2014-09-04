@@ -478,18 +478,18 @@ let make_eval_map sps =
 
 
 (* Takes a polynomial and prepends "w" to each variable coming from an oracle query *)
-let wc_fix_var_names sps =
+let prepend_ovar_names sps s =
   let labels = sps.sig_left_t @ sps.sig_right_t
                |> sorted_nub S.compare in
   (* List of vars to remain *)
   let l = sorted_nub S.compare (labels @ sps.msg_left @ sps.msg_right @ sps.osample) in
-  let vars = L.combine l (L.map (fun v -> SPSPoly.var ("w" ^ v)) l) in
+  let vars = L.combine l (L.map (fun v -> SPSPoly.var (s ^ v)) l) in
   (fun x -> try L.assoc x vars with _ -> SPSPoly.var x)
 
-let make_game sps vereqs =
+let make_game ?(rm=false) sps vereqs =
   let (g1, g2) = match sps.setting with
     | TY1 -> ("G", "G")
-    | TY2 | TY3 -> ("G1", "G1") in
+    | TY2 | TY3 -> ("G1", "G2") in
   (* preamble *)
   begin
     match sps.setting with
@@ -500,15 +500,25 @@ let make_game sps vereqs =
   ^
   (* PP's in the generic group setting i.e. keys *)
   begin
-    let left = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) sps.key_left g1 in
-    let right = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) sps.key_right g2 in
-    if sps.key_left = [] then
-      (if sps.key_right = [] then ""
+    let li = match rm with
+      | false -> sps.key_left
+      | true  -> sps.key_left @ (L.map (fun f -> SPSPoly.eval (prepend_ovar_names sps "s") f) sps.sig_left)
+                              @ L.map (fun s -> SPSPoly.var ("s" ^ s)) sps.msg_left
+    in let lr = match rm with
+      | false -> sps.key_right
+      | true  -> sps.key_right @ (L.map (fun f -> SPSPoly.eval (prepend_ovar_names sps "s") f) sps.sig_right)
+                               @ L.map (fun s -> SPSPoly.var ("s" ^ s)) sps.msg_right
+    in
+    let left = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) li g1 in
+    let right = fsprintf "input [ %a ] in %s.\n" (pp_list ", " SPSPoly.pp) lr g2 in
+    if li = [] then
+      (if lr = [] then ""
        else right)
     else
-      (if sps.key_right = [] then left
+      (if lr = [] then left
        else left ^ "\n" ^ right)
   end
+
   ^
   (* oracle *)
   begin
@@ -535,7 +545,7 @@ let make_game sps vereqs =
       loop "" vs in
     "\n\nwin(" ^ fsprintf "%a" (pp_list ", " (pp_pair' pp_string pp_string)) (get_wc_params sps) ^ ") =\n" ^
     "  (" ^ gen_wc1 (sps.msg_left @ sps.msg_right) ^ " /\\ " ^
-    let ineqs = L.map (fun f -> SPSPoly.eval (wc_fix_var_names sps) f) vereqs in
+    let ineqs = L.map (fun f -> SPSPoly.eval (prepend_ovar_names sps "w") f) vereqs in
       fsprintf "0 = %a" (pp_list " /\\ 0 = " SPSPoly.pp) ineqs ^ ").\n"
 
   end
@@ -616,13 +626,15 @@ let synth x y =
       if !i_total mod 10 = 0 then F.printf "%i %!" !i_total
     ) else (
       incr i_verif;
-      let sgdef = make_game sps (kernel_to_eqns left_kernel tmpl) in
+      let eqs = kernel_to_eqns left_kernel tmpl in
+      let sgdef = make_game sps eqs in
+      let srgdef = make_game ~rm:true sps eqs in
       let res = analyze_bounded_from_string ~counter:true ~fmt:null_formatter sgdef 1 in
-      (* let res = analyze_bounded_from_string  sgdef 1 in *)
       match res with
       | Z3_Solver.Valid ->
         incr i_secure;
         output_file (F.sprintf "./gen/sps_%02i.ec" !i_secure) sgdef;
+        output_file (F.sprintf "./gen/sps_%02i_sigrand.ec" !i_secure) srgdef
       | Z3_Solver.Unknown ->
         if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
         incr i_unknown
@@ -640,12 +652,17 @@ let synth x y =
 
   let coeffs =
     nprod (mconcat [0; 1; -1]) (L.length vars) >>= fun cs ->
-    guard (L.nth cs 2 <> 0 || L.nth cs 3 <> 0 || L.nth cs 4 <> 0) >> ret cs
+    guard (
+      (L.nth cs 2 <> 0 || L.nth cs 3 <> 0 || L.nth cs 4 <> 0) && (* M must be used *)
+      (L.nth cs 4 <> 0 || L.nth cs 5 <> 0) &&                    (* R must be used *)
+      (L.nth cs 0 <> 0 || L.nth cs 2 <> 0) &&                    (* V must be used *)
+      (L.nth cs 1 <> 0 || L.nth cs 3 <> 0)                       (* W must be used *)
+    ) >> ret cs
   in
 
   iter (-1) coeffs
     (fun cs -> analyze_sig cs);
-    
+
   F.printf
     "\n%i Checked: %i no verification equation / %i secure / %i attack / %i unknown\n"
     !i_total (!i_total - !i_verif) !i_secure !i_attack  !i_unknown;
