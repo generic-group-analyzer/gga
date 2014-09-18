@@ -76,3 +76,41 @@ For l1/r2 we get:
 
 Hence, the same test returns True on the left in at least half the
 cases and always returns False on the right.
+
+
+l1 vs r1
+
+1. Smallest attack:
+The following equality holds for left, but not for right (11 varieties explored so far):
+(-y2) * L[0] + (y2) * L[2] + (1) * L[4]
+
+(-y2) * L[0] + (y2) * L[2] + (1) * L[4]
+
+ [on the right] 
+ = (y2*U*R0 + (-y2)*X*R0) + (0) + ((-y2)*V*R1 + y2*X*R1) + (0) + ((-y2)*U*R0 + y2*V*R0)
+ = y2*V*R0 + (-y2)*X*R0 + (-y2)*V*R1 + y2*X*R1
+ [on the left] 
+ = (y2*U*R0 + (-y2)*X*R0) + (0) + ((-y2)*V*R0 + y2*X*R0) + (0) + ((-y2)*U*R0 + y2*V*R0)
+ = 0
+for choices of parameters in V(I) for I = [y3, y1 + y2, y0].
+
+Y = V/U
+y2 = 1
+y1 = -1
+
+
+
+l1 vs r2
+Other attacks:
+2. The following equality holds for left, but not for right (12 varieties explored so far):
+(-y2) * L[0] + (y2) * L[2] + (1) * L[4]
+ [on the right] 
+ = (y2*U*R1 + (-y2)*X*R1) + (0) + ((-y2)*V*R0 + y2*X*R0) + (0) + ((-y2)*U*R0 + y2*V*R0)
+ = (-y2)*U*R0 + y2*X*R0 + y2*U*R1 + (-y2)*X*R1
+ [on the left] 
+ = (y2*U*R0 + (-y2)*X*R0) + (0) + ((-y2)*V*R0 + y2*X*R0) + (0) + ((-y2)*U*R0 + y2*V*R0)
+ = 0
+for choices of parameters in V(I) for I = [y3, y1 + y2, y0]. 
+
+
+

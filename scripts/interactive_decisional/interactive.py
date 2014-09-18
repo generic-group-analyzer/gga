@@ -382,7 +382,7 @@ def CDDH1(left_string,right_string):
   r1_4 = (X - V)*Y*R1
   r1_5 = Y*R0
 
-  # r2: right /\ b0 = 1 /\ b0 = 0
+  # r2: right /\ b0 = 1 /\ b1 = 0
   r2_1 = (X - U)*R1
   r2_2 = (X - U)*Y*R1
   r2_3 = (X - V)*R0
@@ -391,7 +391,7 @@ def CDDH1(left_string,right_string):
 
   l1 = [l1_1,l1_2,l1_3,l1_4,l1_5]
   l2 = [l2_1,l2_2,l2_3,l2_4,l2_5]
-  r1 = [r1_1,r1_2,r1_3,r1_4,r1_4]
+  r1 = [r1_1,r1_2,r1_3,r1_4,r1_5]
   r2 = [r2_1,r2_2,r2_3,r2_4,r2_5]
 
   # check_decision(PR,l1,l2)
@@ -421,6 +421,6 @@ right_string = sys.argv[3]
 if prob == "1":
   CDDH1(left_string,right_string)
 elif prob == "2":
-  CDDH1(left_string,right_string)
+  CDDH2(left_string,right_string)
 else:
   usage()
