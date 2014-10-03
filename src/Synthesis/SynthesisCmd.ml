@@ -17,7 +17,11 @@ let synth_spec countonly spec specname =
   let i_verif = ref 0 in
   let mkdir s = try Unix.mkdir s 0o700 with _ -> () in
   let prefix = "gen/"^specname in
-  mkdir prefix; mkdir (prefix^"/noverif"); mkdir (prefix^"/attack");
+  mkdir prefix;
+  mkdir (prefix^"/noverif");
+  mkdir (prefix^"/attack");
+  mkdir (prefix^"/sigrand");
+  mkdir (prefix^"/error");
 
   let analyze_sig v =
     incr i_total;
@@ -56,15 +60,16 @@ let synth_spec countonly spec specname =
         | Z3_Solver.Valid ->
           incr i_secure;
           output_file (F.sprintf "./%s/sps_%02i.ec" prefix !i_secure) sgdef;
-          output_file (F.sprintf "./%s/sps_%02i_sigrand.ec" prefix !i_secure) srgdef
+          output_file (F.sprintf "./%s/sigrand/sps_%02i.ec" prefix !i_secure) srgdef
         | Z3_Solver.Unknown ->
           if !i_total mod 10 = 0 then F.printf "\n%i? %!\n" !i_total;
           incr i_unknown
         | Z3_Solver.Attack _ ->
-          output_file (F.sprintf "./%s/attack/sps_%02i_attack.ec" prefix !i_attack) sgdef;
+          output_file (F.sprintf "./%s/attack/sps_%02i.ec" prefix !i_attack) sgdef;
           F.printf "\n%i! %!\n" !i_total;
           incr i_attack;
         | Z3_Solver.Error e ->
+          output_file (F.sprintf "./%s/error/sps_%02i.ec" prefix !i_unknown) sgdef;
           F.printf "Error: %s\n" e;
           incr i_unknown
       )

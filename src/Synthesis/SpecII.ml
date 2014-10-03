@@ -46,10 +46,10 @@ let spec1 =
   in
 
   let nonzero_constrs =
-    [ [cS_vm;cS_wm;cS_rm]        (* m used *)
+    [ [cS_vm;cS_wm;cS_rm]        (* M used *)
+    ; [cS_rm;cS_rr;cS_rv;cS_rw]  (* R used *)
     (* ; [cS_v;cS_vm;cS_rv]      (* v used *)
        ; [cS_w;cS_wm;cS_rw]      (* w used *) *)
-    ; [cS_rm;cS_rr;cS_rv;cS_rw]  (* r used *)
     ]
   in
   let zero_constrs = [] in
@@ -61,7 +61,7 @@ let spec1 =
     zero_constrs = zero_constrs
   }
 
-(* spec for verification equation S*g(R,V,W) = f(R,V,W,M) *)
+(* spec for verification equation S*R = f(R,V,W,M), T=g(R,V,W) *)
 let spec2 = 
   let v = var "V" in
   let w = var "W" in
@@ -82,10 +82,10 @@ let spec2 =
   let cS_1   = gen () in
 
   (* choose R *)
-  let cR_rand = gen () in
-  let cR_plus_v = gen () in
-  let cR_plus_w = gen () in
-  let cR_plus_v_w = gen () in
+  let cT_rand = gen () in
+  let cT_plus_v = gen () in
+  let cT_plus_w = gen () in
+  let cT_plus_v_w = gen () in
 
   let s_poly =
     L.map mult_var
@@ -95,10 +95,10 @@ let spec2 =
   in
   let t_poly =
     L.map mult_var
-      [ (cR_rand, r)
-      ; (cR_plus_v, r +@ v)
-      ; (cR_plus_w, r +@ w)
-      ; (cR_plus_v_w, r +@ v +@ w)
+      [ (cT_rand, r)
+      ; (cT_plus_v, r +@ v)
+      ; (cT_plus_w, r +@ w)
+      ; (cT_plus_v_w, r +@ v +@ w)
       ]
   in
   let sps_t =
@@ -117,20 +117,20 @@ let spec2 =
 
   (* r always used since s = ... / r *)
   let nonzero_constrs =
-    [ [cS_vm;cS_wm;cS_rm;cS_m]                      (* m used *)
+    [ [cS_vm;cS_wm;cS_rm;cS_m]                    (* m used *)
+    ; [cT_rand;cT_plus_v;cT_plus_w;cT_plus_v_w]   (* one of the choices for T *)
     (* ; [cS_v;cS_vm;cS_rv;cR_plus_v;cR_plus_v_w]   (* v used *)
        ; [cS_w;cS_wm;cS_rw;cR_plus_w;cR_plus_v_w]   (* w used *) *)
-    ; [cR_rand;cR_plus_v;cR_plus_w;cR_plus_v_w]  (* one of the choices for R *)
     ]
   in
   (* not more than one of the choices for R *)
   let zero_constrs =
-    [ [cR_rand;cR_plus_v]
-    ; [cR_rand;cR_plus_w]
-    ; [cR_rand;cR_plus_v_w]
-    ; [cR_plus_v;cR_plus_w]
-    ; [cR_plus_v;cR_plus_v_w]
-    ; [cR_plus_w;cR_plus_v_w]
+    [ [cT_rand;cT_plus_v]
+    ; [cT_rand;cT_plus_w]
+    ; [cT_rand;cT_plus_v_w]
+    ; [cT_plus_v;cT_plus_w]
+    ; [cT_plus_v;cT_plus_v_w]
+    ; [cT_plus_w;cT_plus_v_w]
     ]
   in
   let symmetry = [ (cS_v,cS_w); (cS_vm,cS_wm) ] in
@@ -182,11 +182,11 @@ let spec3 =
     }
   in
 
-  (* r always used since s = / r *)
+  (* r always used since s = ... / r *)
   let nonzero_constrs =
     [ [cS_vm;cS_wm;cS_m]                               (* m used *)
     (* ; [cS_v;cS_vm;cS_rv;cR_plus_v;cR_plus_v_w]         (* v used *)
-    ; [cS_w;cS_wm;cS_rw;cS_ww;cR_plus_w;cR_plus_v_w]   (* w used *) *)
+       ; [cS_w;cS_wm;cS_rw;cS_ww;cR_plus_w;cR_plus_v_w]   (* w used *) *)
     ]
   in
   (* not more than one of the choices for R *)
@@ -257,7 +257,7 @@ let spec4 =
   let nonzero_constrs =
     [ [cS_vm;cS_wm;cS_m]                               (* m used *)
     (* ; [cS_v;cS_vm;cS_rv;cR_plus_v;cR_plus_v_w]         (* v used *)
-    ; [cS_w;cS_wm;cS_rw;cS_ww;cR_plus_w;cR_plus_v_w]   (* w used *) *)
+       ; [cS_w;cS_wm;cS_rw;cS_ww;cR_plus_w;cR_plus_v_w]   (* w used *) *)
     ; [cR_rand;cR_plus_v;cR_plus_w;cR_plus_v_w]        (* one of the choices for R *)
     ]
   in

@@ -15,7 +15,7 @@ let spec =
   let r = var "R" in
   let m = var "M" in
 
-  let rinv = var_exp "R" (-1) in 
+  let rinv = var_exp "R" (-1) in
 
   let (vars,gen) = var_gen () in
   let cS_v     = gen () in
@@ -31,7 +31,7 @@ let spec =
 
   let s_poly =
     L.map mult_var
-      [ (cS_v, v); (cS_w,w); (cS_vm, v *@ m); (cS_wm, w *@ m); (cS_rm, r *@ m)
+      [ (cS_v, v); (cS_w, w); (cS_vm, v *@ m); (cS_wm, w *@ m); (cS_rm, r *@ m)
       ; (cS_rr, r *@ r); (cS_rv, r *@ v); (cS_rw, r *@ w) ]
   in
   
@@ -43,7 +43,7 @@ let spec =
       msg_right_n = ["M"];
       sig_left    = [r];
       sig_left_n  = ["R1"];
-      sig_right   = [lmult r2_poly; lmult s_poly ];
+      sig_right   = [ladd r2_poly; ladd s_poly ];
       sig_right_n = ["R2"; "S"];
       setting     = TY3;
       osample     = ["R"]
