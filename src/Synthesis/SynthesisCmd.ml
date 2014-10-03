@@ -112,7 +112,9 @@ let synth countonly specname =
     ; ("II.2",SpecII.spec2)
     ; ("II.3",SpecII.spec3)
     ; ("II.4",SpecII.spec4)
-    ; ("III",SpecIII.spec) ]
+    ; ("III.1",SpecIII.spec1)
+    ; ("III.2",SpecIII.spec2)
+    ]
   in
   let spec = L.assoc specname specs in
   synth_spec countonly spec specname
