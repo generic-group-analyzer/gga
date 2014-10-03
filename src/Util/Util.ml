@@ -322,6 +322,12 @@ let rec pp_list sep pp_elt f l =
 let pp_list_c pe = (pp_list "," pe)
 let pp_list_s = pp_list_c (fun fmt -> Format.fprintf fmt "%s")
 
+let rec pp_list' sep pp_elt f l =
+  match l with
+  | [] -> ()
+  | [e] -> Format.fprintf f "%a%(%)" pp_elt e sep
+  | e::l -> Format.fprintf f "%a%(%)%a" pp_elt e sep (pp_list' sep pp_elt) l 
+
 let pp_int fmt i = Format.fprintf fmt "%i" i
 
 let pp_string fmt s = Format.fprintf fmt "%s" s
@@ -337,7 +343,7 @@ let pp_option pp_some fmt o = match o with
   | None    -> Format.fprintf fmt " - "
 
 let pp_tuple sep p fmt (a,b) =
-  F.fprintf fmt "%a %s %a" p a sep p b
+  F.fprintf fmt "%a%s%a" p a sep p b
 
 let fsprintf fmt =
   let buf  = Buffer.create 127 in
@@ -351,9 +357,19 @@ let fsprintf fmt =
 let pp_opt pp_v fmt m =
   match m with
   | None   -> F.fprintf fmt "None"
+
   | Some v -> F.fprintf fmt "%a" pp_v v
 
 let map_opt f = function None -> None | Some x -> Some (f x)
+
+let find_idx xs y =
+  let rec go i xs =
+    match xs with
+    | x::_ when x = y -> i
+    | _::xs           -> go (i+1) xs
+    | []              -> raise Not_found
+  in
+  go 0 xs
 
 (* let fsprintf fm = Format.fprintf Format.str_formatter fm *)
 

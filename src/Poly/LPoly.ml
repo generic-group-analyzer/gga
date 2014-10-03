@@ -212,7 +212,7 @@ module MakePoly (V : Var) (C : Ring) = struct
   let to_vector f b =
     let m = mons f in
     (* Make sure terms are ordered similarly as the monomials *)
-    let t = sorted_nub (fun x y -> list_compare vexp_compare (fst x) (fst y)) f in
+    let _t = sorted_nub (fun x y -> list_compare vexp_compare (fst x) (fst y)) f in
 
     (* Loop over each basis element to find its coefficient *)
     let rec loop acc b =
