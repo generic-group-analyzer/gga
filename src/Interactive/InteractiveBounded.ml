@@ -16,6 +16,8 @@ module WP = II.WP
 module OP = II.OP
 (*i*)
 
+exception InvalidGame of string
+
 (*i ********************************************************************* i*)
 (* \hd{Polynomials with parameters and random variables} *)
 (*i ********************************************************************* i*)
@@ -300,7 +302,8 @@ let quant_wp_to_gps st bound p =
       | II.Field ->
         GP.var (Param (FOParam (tid.II.tid_id, qidx)))
       | II.Group gid ->
-        try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ -> failwith "Unused oracle parameter!"
+        try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ ->
+          raise (InvalidGame "unused oracle parameter")
       end
     | II.Choice tid ->
       begin match tid.II.tid_ty with
