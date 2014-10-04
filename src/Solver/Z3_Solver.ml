@@ -38,15 +38,15 @@ let poly_to_json f =
 type result =
   | Attack of string
   | Valid
-  | Unknown
+  | Unknown of string
   | Error of string
 
 let pp_result fmt res =
   match res with
-  | Attack s -> F.fprintf fmt "Attack:\n%s\nAttack found (see above)." s
-  | Error  s -> F.fprintf fmt "Error: %s" s
-  | Valid    -> F.fprintf fmt "Assumption is valid."
-  | Unknown  -> F.fprintf fmt "Z3 returned unknown."
+  | Attack s  -> F.fprintf fmt "Attack:\n%s\nAttack found (see above)." s
+  | Error  s  -> F.fprintf fmt "Error: %s" s
+  | Valid     -> F.fprintf fmt "Assumption is valid."
+  | Unknown s -> F.fprintf fmt "Z3 returned unknown: %s" s
 
 (* \ic{[solve constrs] solves the given list of constraints using Z3.} *)
 let solve constrs =
@@ -67,7 +67,7 @@ let solve constrs =
     begin match get_assoc "res" mres |> get_string with
     | "sat"     -> Attack (get_assoc "model" mres |> get_string)
     | "unsat"   -> Valid
-    | "unknown" -> Unknown
+    | "unknown" -> Unknown ""
     | _         -> Error "Error communicating with Z3 wrapper, expected sat/unsat/unknown."
     end
   else
@@ -84,7 +84,7 @@ let check_sat constrs =
     begin match get_assoc "res" mres |> get_string with
     | "sat"     -> Attack (get_assoc "model" mres |> get_string)
     | "unsat"   -> Valid
-    | "unknown" -> Unknown
+    | "unknown" -> Unknown ""
     | _         -> Error "Error communicating with Z3 wrapper, expected sat/unsat/unknown."
     end
   else
@@ -101,7 +101,7 @@ let find_counter zero_constrs nzero_constrs  =
     begin match get_assoc "res" mres |> get_string with
     | "sat"     -> Attack (get_assoc "model" mres |> get_string)
     | "unsat"   -> Valid
-    | "unknown" -> Unknown
+    | "unknown" -> Unknown ""
     | _         -> Error "Error communicating with Z3 wrapper, expected sat/unsat/unknown."
     end
   else

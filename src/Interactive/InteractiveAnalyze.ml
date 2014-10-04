@@ -61,7 +61,7 @@ let poly_to_json f =
            `List [ `List (conc_map (fun (v,e) -> replicate (`String v) e) m); `Int (int_of_big_int c) ])
         (RP.to_terms f))
 
-let analyze_bounded_from_string ?(counter=true) ?(fmt=F.std_formatter) s bound = 
+let analyze_bounded_from_string ?(counter=true) ?(proof=true) ?(fmt=F.std_formatter) s bound = 
   let gdef = p_cmds s |> IE.eval_cmds in
   F.fprintf fmt "\n%a\n\n" II.pp_gdef gdef;
   let zero_constrs, nzero_constrs = InteractiveBounded.gdef_to_constrs fmt bound gdef in
@@ -76,18 +76,19 @@ let analyze_bounded_from_string ?(counter=true) ?(fmt=F.std_formatter) s bound =
     |> L.map (fun v -> `String v)
   in
   flush stdout;
-  let res = Sage_Solver.check_sat (`List zcs) (`List nzcs) (`List vars) in
-  flush stdout;
-  if res
-    then Z3_Solver.Valid
-    else (
-      let res =
-        if counter
-        then Z3_Solver.find_counter (`List zcs) (`List nzcs)
-        else Z3_Solver.Unknown
-      in
-      res
-    )
+  if not (counter || proof) then (
+    Z3_Solver.Unknown ""
+  ) else (
+    let res = if counter then Z3_Solver.find_counter (`List zcs) (`List nzcs) else Z3_Solver.Unknown "no counter" in
+    match res with
+    | Z3_Solver.Attack _ -> res
+    | _ when proof ->
+      if Sage_Solver.check_sat (`List zcs) (`List nzcs) (`List vars)
+      then Z3_Solver.Unknown "Sage returned unknown"
+      else Z3_Solver.Valid
+    | _ -> 
+      Z3_Solver.Unknown "no attack, proof disabled"
+  )
 
 let analyze_unbounded_from_string _s =
   (*i

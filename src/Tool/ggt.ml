@@ -49,11 +49,62 @@ let main_analyze () =
         F.printf "bound set to %i\n" bound;
 
         let res = analyze_bounded_from_string scmds bound in
-        F.printf "%a\n" Z3_Solver.pp_result res
+        F.printf "%a\n" Z3_Solver.pp_result res;
+        match res with
+        | Z3_Solver.Valid ->
+          exit 0
+        | Z3_Solver.Attack _ ->
+          exit 1
+        | _ ->
+          exit 2
       with
         InteractiveInput.InvalidAssumption err ->
           F.printf "Invalid assumption: %s\n" err
       end
+    | s when S.sub s 0 (S.length "interactivep_") = "interactivep_" ->
+      let pref = "interactivep_" in
+      let remainder = S.sub s (S.length pref) (S.length s - S.length pref) in
+      let bound = try int_of_string remainder with Failure _ -> 3 in
+      let open InteractiveAnalyze in
+      begin try
+        F.printf "bound set to %i\n" bound;
+
+        let res = analyze_bounded_from_string ~counter:false scmds bound in
+        F.printf "%a\n" Z3_Solver.pp_result res;
+        match res with
+        | Z3_Solver.Valid ->
+          exit 0
+        | Z3_Solver.Attack _ ->
+          exit 1
+        | _ ->
+          exit 2
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.printf "Invalid assumption: %s\n" err
+      end
+
+    | s when S.sub s 0 (S.length "interactivea_") = "interactivea_" ->
+      let pref = "interactivea_" in
+      let remainder = S.sub s (S.length pref) (S.length s - S.length pref) in
+      let bound = try int_of_string remainder with Failure _ -> 3 in
+      let open InteractiveAnalyze in
+      begin try
+        F.printf "bound set to %i\n" bound;
+
+        let res = analyze_bounded_from_string ~proof:false scmds bound in
+        F.printf "%a\n" Z3_Solver.pp_result res;
+        match res with
+        | Z3_Solver.Valid ->
+          exit 0
+        | Z3_Solver.Attack _ ->
+          exit 1
+        | _ ->
+          exit 2
+      with
+        InteractiveInput.InvalidAssumption err ->
+          F.printf "Invalid assumption: %s\n" err
+      end
+
     | s ->
       F.printf "Invalid command: %s\n" s
 

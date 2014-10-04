@@ -75,14 +75,14 @@ let poly_list_to_matrix ps b =
   L.map (fun p -> poly_to_vector p b) ps
 
 let pp_matrix m =
-  L.map (fun l -> F.printf "| %a | \n" (pp_list ", " SP.pp_coeff) l) m
+  L.iter (fun l -> F.printf "| %a | \n" (pp_list ",  \t" SP.pp_coeff) l) m
 
 let kernel_to_eqns vs c =
   let vec_to_eqn v =
     let rec loop acc i w =
       match w with
       | [] -> acc
-      | x :: ws -> SP.(loop (acc +@ ((SP.const x) *@ (L.nth c i))) (i+1) ws)
+      | x :: ws -> SP.(loop (acc +@ (const x *@ (L.nth c i))) (i+1) ws)
     in
     loop SP.zero 0 v
   in
@@ -124,7 +124,6 @@ let get_wc_params sps =
   let append_type t x = ("w" ^ x,t) in
      L.map (append_type g1) (sps.msg_left_n  @  sps.sig_left_n)
   @ L.map (append_type g2) (sps.msg_right_n @ sps.sig_right_n)
-
 
 (* Takes a polynomial and renames each variable by applying [ren]. *)
 let rename_vars sps ren poly =
@@ -198,11 +197,12 @@ let make_game ?(rma=false) sps vereqs =
 type coeff = string
 
 type synth_spec = {
-  sps_t : sps_scheme;
-  vars  : coeff list;
-  symmetry : (coeff * coeff) list;
-  nonzero_constrs : (coeff list) list;
-  zero_constrs : (coeff list) list
+  sps_t           : sps_scheme;
+  vars            : coeff list;
+  choices         : int list;
+  symmetries        : ((SP.t * SP.t) list) list;
+  nonzero_constrs : SP.t list;
+  zero_constrs    : SP.t list
 }
 
 let var_gen () =
@@ -210,6 +210,6 @@ let var_gen () =
   let ctr  = ref 0 in
   let gen () =
     let  v = F.sprintf "c%i" !ctr in
-    vars := !vars@[F.sprintf "c%i" !ctr]; incr ctr; v
+    vars := !vars@[F.sprintf "c%i" !ctr]; incr ctr; SP.var v
   in
   (vars, gen)
