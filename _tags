@@ -6,7 +6,8 @@ true: bin_annot
 <src/Tool/wsggt.*>: package(websocket), package(yojson)
 <src/Tool> or <src/Poly> or <src/Util> or <src/Param> or <src/Synthesis>: include
 <src/NonParam> or <src/Solver> or <src/Interactive>: include
-<src/Tool/ggt.*> or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix), package(ctypes.foreign)
+<src/Tool/ggt.*> or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix), package(ctypes.foreign), package(cryptokit)
+<src/Synthesis/*>: package(cryptokit)
 <src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(oUnit)
 <src/NonParam/NonParamTest.*>: package(num), package(oUnit), package(yojson),package(str)
 <src/Interactive/InteractiveTest.*>: package(num), package(oUnit), package(yojson),package(str)

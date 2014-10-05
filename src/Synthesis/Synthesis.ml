@@ -99,15 +99,18 @@ let make_eval_map sps =
   let z = L.combine vars vals in
   (fun x -> try L.assoc x z with _ -> SP.var x)
 
-(* Instantiates an sps template by applying subst *)
-let instantiate_template sps subst =
+let instantiate_poly subst p =
   let evalf x = 
     try SP.from_int (L.assoc x subst)
     with _ -> SP.var x
   in
+  SP.eval evalf p 
+
+(* Instantiates an sps template by applying subst *)
+let instantiate_template sps subst =
   { sps with
-    sig_left  = L.map (SP.eval evalf) sps.sig_left;
-    sig_right = L.map (SP.eval evalf) sps.sig_right
+    sig_left  = L.map (instantiate_poly subst) sps.sig_left;
+    sig_right = L.map (instantiate_poly subst) sps.sig_right
   }
 
 (*******************************************************************)
@@ -200,7 +203,7 @@ type synth_spec = {
   sps_t           : sps_scheme;
   vars            : coeff list;
   choices         : int list;
-  symmetries        : ((SP.t * SP.t) list) list;
+  symmetries      : (SP.t list) * ((SP.t * SP.t) list) list;
   nonzero_constrs : SP.t list;
   zero_constrs    : SP.t list
 }

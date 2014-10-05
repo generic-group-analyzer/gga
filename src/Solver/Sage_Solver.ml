@@ -110,7 +110,7 @@ let compute_kernel ?sts m =
          (get_assoc "error" mres |> get_string))
     )
 
-let check_sat ?sts zero_constrs nzero_constrs vars =
+let is_contradictory ?sts zero_constrs nzero_constrs vars =
   let req = 
     `Assoc [ ("cmd",`String "checkSat")
            ; ("zero",zero_constrs)

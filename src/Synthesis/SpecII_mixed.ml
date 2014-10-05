@@ -38,19 +38,21 @@ let (vars,gen) = var_gen ()
 let spec1 () =
   let cS_v  = gen () in
   let cS_vm = gen () in
+  let cS_vr = gen () in
+  let cS_vw = gen () in
+  let cS_wr = gen () in
   let cS_wm = gen () in
-  let cS_rm = gen () in
-  let cS_rw = gen () in
-  let cS_rv = gen () in
-  let cS_rr = gen () in
   let cS_ww = gen () in
-  let cS_wv = gen () in
+  let cS_rr = gen () in
+  let cS_rm = gen () in
 
   let s_poly =
-      (cS_v  * v)
-    + (cS_vm * v*m) + (cS_wm * w*m) + (cS_rm * r*m)
-    + (cS_rr * r*r) + (cS_rv * r*v) + (cS_rw * r*w)
-    + (cS_ww * w*w) + (cS_wv * w*v)
+                       (* e(-,H)        e(-,R)        e(-,M)         e(_,W) *)
+  (* e(V,-) *)        (cS_v  * v) + (cS_vr * v*r) + (cS_vm * v*m) + (cS_vw * v*w)
+  (* e(phi(W),-) *)   (* known *) + (cS_wr * w*r) + (cS_wm * w*m) + (cS_ww * w*w)
+  (* e(phi(R),-) *)   (* known *) + (cS_rr * r*r) + (cS_rm * r*m)   (* dupl.   *)
+  (* e(phi(M),-) *)   (* known *)   (*  dupl.  *)   (* nocomp *)    (* dupl.   *) 
+  (* e(G,-)      *)   (* known *)   (* known   *)   (* known  *)    (* known   *)
   in
   let sps_t =
     { sps_def with
@@ -64,12 +66,28 @@ let spec1 () =
   in
   let nonzero_constrs =
     [ cS_vm + cS_wm + cS_rm            (* M used *)
-    ; cS_rm + cS_rr + cS_rv + cS_rw ]  (* R used *)
+    ; cS_rm + cS_rr + cS_vr + cS_wr ]  (* R used *)
+  in
+  let symmetries =
+    ([ s_poly ],
+     [ [(m,m -@ one)]
+     ; [(v,v -@ one)]
+     ; [(w,w -@ one)]
+     ; [(r,r -@ one)]
+     ; [(r,r -@ w)]
+     ; [(m,m -@ w)]
+     ; [(r,r -@ w -@ m)]
+     ; [(r,r -@ w -@ one)]
+     ; [(r,r -@ w -@ one -@ m)]
+     ; [(m,m -@ w -@ one)]
+     ; [(v,v -@ w); (w,w)]  (* linear combinations *)
+     ; [(v,v +@ w); (w,w)]  (* linear combinations *)
+     ])
   in
   { sps_t           = sps_t;
     choices         = [0; 1];
     vars            = !vars;
-    symmetries      = []; (* V and W in different groups *)
+    symmetries      = symmetries;
     nonzero_constrs = nonzero_constrs;
     zero_constrs    = []
   }
@@ -80,22 +98,22 @@ let spec1 () =
 
 let spec2 () =
   let cS_v   = gen () in
-  let cS_w   = gen () in
+  let cS_vr  = gen () in
   let cS_vm  = gen () in
+  let cS_vw  = gen () in
+  let cS_w   = gen () in
   let cS_wm  = gen () in
-  let cS_rv  = gen () in
-  let cS_rrv = gen () in
-  let cS_rr  = gen () in
   let cS_ww  = gen () in
-  let cS_wv  = gen () in
+  let cS_m   = gen () in
   let cS_1   = gen () in
 
   let s_poly =
-      (cS_v  * v)   + (cS_w  * w)
-    + (cS_vm * v*m) + (cS_wm * w*m)
-    + (cS_rr * r*r) + (cS_rv * r*v)
-    + (cS_ww * w*w) + (cS_wv * w*v)
-    + (cS_1  * SP.from_int 1)
+                       (* e(-,H)        e(-,R)           e(-,M)         e(_,W) *)
+  (* e(V,-) *)        (cS_v * v)    + (cS_vr * v*r) + (cS_vm * v*m) + (cS_vw * v*w)
+  (* e(phi(W),-) *) + (cS_w * w)      (* W known *) + (cS_wm * w*m) + (cS_ww * w*w)
+  (* e(phi(R),-) *)   (* 1 known *)   (* R known *)   (* M known *)   (* W known *)
+  (* e(phi(M),-) *) + (cS_m * m)      (* M known *)   (* nocomp  *)   (* dupl.   *) 
+  (* e(G,-)      *) + (cS_1 * one)    (* 1 known *)   (* dupl.   *)   (* dupl.   *)
   in
   let sps_t =
     { sps_def with
@@ -107,12 +125,23 @@ let spec2 () =
       osample     = ["R"]
     }
   in
+  let symmetries =
+    ([ s_poly * ri ],
+     [ [(m,m -@ one)]
+     ; [(v,v -@ one)]
+     ; [(w,w -@ one)]
+     ; [(m,m -@ w)]
+     ; [(m,m -@ w -@ one)]
+     ; [(v,v -@ w); (w,w)]  (* linear combinations *)
+     ; [(v,v +@ w); (w,w)]  (* linear combinations *)
+     ])
+  in
   (* R is always used unless S = R*g where g does not contain R *)
   let nonzero_constrs = [ cS_vm + cS_wm ] in (* M used *)
   { sps_t           = sps_t;
     choices         = [0; 1];
     vars            = !vars;
-    symmetries      = []; (* V and W in different groups *)
+    symmetries      = symmetries; (* []; *) (* V and W in different groups *)
     nonzero_constrs = nonzero_constrs;
     zero_constrs    = []
   }
@@ -123,38 +152,55 @@ let spec2 () =
 
 let spec3 () =
   let cS_v  = gen () in
-  let cS_w  = gen () in
+  let cS_vt = gen () in
   let cS_vm = gen () in
+  let cS_vw = gen () in
+  let cS_w  = gen () in
+  let cS_wt = gen () in
   let cS_wm = gen () in
-  let cS_rv = gen () in
-  let cS_rr = gen () in
   let cS_ww = gen () in
-  let cS_wv = gen () in
+  let cS_t  = gen () in
+  let cS_tt = gen () in
+  let cS_tm = gen () in
+  let cS_m  = gen () in
   let cS_1  = gen () in
 
+  let t = r + v in
   let s_poly =
-      (cS_v  * v)   + (cS_w  * w)
-    + (cS_vm * v*m) + (cS_wm * w*m)
-    + (cS_rr * r*r) + (cS_rv * r*v)
-    + (cS_ww * w*w) + (cS_wv * w*v)
-    + (cS_1  * SP.from_int 1)
+                       (* e(-,H)        e(-,T)           e(-,M)         e(_,W) *)
+  (* e(V,-) *)        (cS_v * v)    + (cS_vt * v*t) + (cS_vm * v*m) + (cS_vw * v*w)
+  (* e(phi(W),-) *) + (cS_w * w)    + (cS_wt * w*t) + (cS_wm * w*m) + (cS_ww * w*w)
+  (* e(phi(T),-) *) + (cS_t * t)    + (cS_tt * t*t) + (cS_tm * t*m)   (* dupl    *)
+  (* e(phi(M),-) *) + (cS_m * m)      (* dupl.   *)   (* nocomp  *)   (* dupl.   *) 
+  (* e(G,-)      *) + (cS_1 * one)    (* dupl.   *)   (* dupl.   *)   (* dupl.   *)
   in
   let sps_t =
     { sps_def with
       key_left    = [v];
       key_right   = [w];
       msg_right_n = ["M"];
-      sig_right   = [r + v; s_poly * ri];
+      sig_right   = [t; s_poly * ri];
       sig_right_n = ["T"; "S"];
       osample     = ["R"]
     }
   in
+  let symmetries =
+    ([ t; s_poly * ri ],
+     [ [(m,m -@ one)]
+     ; [(v,v -@ one)]
+     ; [(w,w -@ one)]
+     ; [(m,m -@ w)]
+     ; [(m,m -@ w -@ one)]
+     ; [(v,v -@ w); (w,w)]  (* linear combinations *)
+     ; [(v,v +@ w); (w,w)]  (* linear combinations *)
+     ])
+  in
   (* R is nearly always used since S is divided by R *)
-  let nonzero_constrs = [ cS_vm + cS_wm ] in (* M used *)
+  let nonzero_constrs = [ cS_vm + cS_wm + cS_tm + cS_m ] in (* M used *)
   { sps_t           = sps_t;
     choices         = [0; 1];
     vars            = !vars;
-    symmetries      = []; (* V and W in different groups *)
+    symmetries      = symmetries;
     nonzero_constrs = nonzero_constrs;
     zero_constrs    = []
   }

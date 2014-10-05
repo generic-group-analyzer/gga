@@ -16,8 +16,12 @@ let synth_spec countonly spec specname =
   let i_error = ref 0 in
   let i_unknown = ref 0 in
   let i_verif = ref 0 in
+  let i_equiv = ref 0 in
+  let explored = ref [] in
   let mkdir s = try Unix.mkdir s 0o700 with _ -> () in
   let prefix = "gen/"^specname in
+  let cache = "cache/" in
+  mkdir cache;
   mkdir prefix;
   mkdir (prefix^"/noverif");
   mkdir (prefix^"/attack");
@@ -27,17 +31,18 @@ let synth_spec countonly spec specname =
   mkdir (prefix^"/tmp");
   mkdir (prefix^"/count");
 
-  let analyze gdef n tryproof tryattack () =
+  let analyze gdef n attack_not_proof () =
     try
-      analyze_bounded_from_string ~counter:tryattack ~proof:tryproof ~fmt:null_formatter gdef n
+      analyze_bounded_from_string
+        ~counter:attack_not_proof ~proof:(not attack_not_proof) ~fmt:null_formatter gdef n
     with
       InteractiveBounded.InvalidGame e -> Z3_Solver.Error e
   in
 
-  let analyze_external gdef n time tryproof tryattack () =
+  let analyze_external gdef n time attack_not_proof () =
     let fname = prefix^"/tmp/sps.ec" in
     output_file fname  gdef;
-    let aorp = if tryattack && tryproof then "" else if tryproof then "p" else "a" in
+    let aorp = if attack_not_proof then "a" else "p" in
     let res = Sys.command (F.sprintf "gtimeout %i ./ggt.native interactive%s_%i %s >/dev/null 2>&1" time aorp n fname) in
     if res = 0 then Z3_Solver.Valid
     else if res = 1 then Z3_Solver.Attack "attack not preserved"
@@ -45,8 +50,7 @@ let synth_spec countonly spec specname =
   in
   
   let refine_analz checks =
-    let rec go checks =
-      match checks with
+    let rec go = function
       | [] -> Z3_Solver.Unknown "no check returned result"
       | (name,check,proof_strongest)::checks ->
         F.printf "try %s\n%!" name;
@@ -61,9 +65,27 @@ let synth_spec countonly spec specname =
     go checks
   in
 
+  let hash_string s =
+    let open Cryptokit in
+    let h = Hash.sha256 () in
+    let bs = hash_string h s in
+    let t = Hexa.encode () in
+    transform_string t bs
+  in
+
+  let polys_equal p1s p2s =
+    list_equal SP.equal p1s p2s
+  in
+  let apply_symmetry sym p =
+    let f x = 
+      try snd (L.find (fun (v,_p) -> SP.equal (SP.var x) v) sym)
+      with _ -> SP.var x
+    in
+    SP.eval f p
+  in
+
   let analyze_sig v =
     incr i_total;
-
     let sps = instantiate_template spec.sps_t (L.combine spec.vars v) in
     (* Compute the completion using the _t polynomials *)
     let tmpl = completion sps in
@@ -71,6 +93,7 @@ let synth_spec countonly spec specname =
     let c = L.map (SP.eval (make_eval_map sps)) tmpl in
     let b = basis c in
     let m = poly_list_to_matrix c b in
+    let sig_ident = hash_string (make_game sps []) in
     (*
     F.printf "completion: %a\n\n" (pp_list "," SP.pp) tmpl;
     F.printf "basis:\n %a\n\n" (pp_list ",\t" SP.pp) (L.map SP.from_mon b);
@@ -96,23 +119,32 @@ let synth_spec countonly spec specname =
         let srgdef = make_game ~rma:true sps eqs in
         let checks1 =
           [ (* try to find fast attacks *)
-            ("0-CMA attack", analyze sgdef 0 false true)
-          ; ("1-RMA attack", analyze srgdef 0 false true)
-          ; ("1-CMA attack", analyze_external sgdef 1 30 false true)
+            ("0-CMA attack", analyze sgdef 0 true)
+          ; ("1-RMA attack", analyze srgdef 0 true)
+          ; ("1-CMA attack", analyze_external sgdef 1 30 true)
           (* try to find proofs, if we find a proof, we are done *)
-          ; ("2-CMA proof", analyze_external sgdef 2 30 true false) ]
+          ; ("2-CMA proof", analyze_external sgdef 2 30 false) ]
         in
         let check2 = 
-          [ ("(1-CM+1-RM)A proof", analyze_external srgdef 1 30 true false)
-          ; ("1-CMA", analyze_external sgdef 1 30 true false)
-          (* try to find attacks *)
-          ; ("(1-CM+1-RM)A attack", analyze_external srgdef 1 30 false true)
-          ; ("2-CMA attack", analyze_external sgdef 2 30 false true)
+          [ (* try to find attacks *)
+            ("(1-CM+1-RM)A attack", analyze_external srgdef 1 30 true)
+          ; ("2-CMA attack", analyze_external sgdef 2 30 true)
+          ; ("(1-CM+1-RM)A proof", analyze_external srgdef 1 30 false)
+          ; ("1-CMA proof", analyze_external sgdef 1 30 false)
           ]
         in
+        let cache_file = F.sprintf "./%s/%s" cache sig_ident in
         let res =
-          refine_analz
-            (L.map (fun (x,y) -> (x,y,true)) checks1 @ L.map  (fun (x,y) -> (x,y,false)) check2)
+          try
+            Marshal.from_string (input_file cache_file) 0
+          with
+            _ -> 
+              let res =
+                refine_analz
+                  (L.map (fun (x,y) -> (x,y,true)) checks1 @ L.map  (fun (x,y) -> (x,y,false)) check2)
+              in
+              output_file cache_file (Marshal.to_string res []);
+              res
         in
         match res with
         | Z3_Solver.Valid ->
@@ -136,20 +168,27 @@ let synth_spec countonly spec specname =
       )
     )
   in
+  let analyze_new v =
+    let subst = L.combine spec.vars v in
+    let sym_polys = L.map (instantiate_poly subst) (fst spec.symmetries) in
+    (* F.printf ">> analyze %a\n" (pp_list "," SP.pp) sym_polys; *)
+    let sym_explored sym =
+      let equiv_polys = L.map (apply_symmetry sym) sym_polys in
+      (* F.printf "equiv %a\n\n" (pp_list "," SP.pp) equiv_polys; *)
+      L.exists (fun explored_polys -> polys_equal explored_polys equiv_polys) !explored
+    in
+    if not (List.exists sym_explored (snd spec.symmetries)) then (
+      (* F.printf "KKKKKKEEEEEEEEEPPPPPPP\n"; *)
+      explored := (sym_polys)::!explored;
+      analyze_sig v
+    ) else (
+      incr i_equiv
+      (* F.printf "KKKKKKIIIIIIILLLLLLLLL\n"; *)
+    )
+  in
 
   Pari_Ker.pari_init ();
 
-  let vec_leq v1 v2 = 0 <= list_compare Pervasives.compare v1 v2 in
-  let apply_symmetry sym cs =
-    let get_var p =
-      match SP.vars p with
-      | [s] -> s 
-      | _ -> failwith "symmetry must be list of variable polynomials"
-    in
-    let sym = L.map (fun (p1,p2) -> (get_var p1,get_var p2)) sym in
-    let perm = sym @ L.map (fun (x,y) -> (y,x)) sym in
-    L.mapi (fun i c -> try L.nth cs (find_idx spec.vars (L.assoc (L.nth spec.vars i) perm)) with Not_found -> c) cs
-  in
   let lookup_var cs v = L.nth cs (find_idx spec.vars v) in
   let eval_poly p cs =
     SP.eval (fun v -> SP.from_int (lookup_var cs v)) p
@@ -158,19 +197,22 @@ let synth_spec countonly spec specname =
     nprod (mconcat spec.choices) (L.length spec.vars) >>= fun cs ->
     guard (
       L.for_all (fun constr -> not (SP.equal SP.zero (eval_poly constr cs))) spec.nonzero_constrs &&
-      L.for_all (fun constr -> (SP.equal SP.zero (eval_poly constr cs))) spec.zero_constrs &&
+      L.for_all (fun constr -> (SP.equal SP.zero (eval_poly constr cs))) spec.zero_constrs
       (* (vec_leq cs (L.map (fun v -> v*(-1)) cs)) &&   *)                     (* symmetry: adversary can multiply vector with -1 *)
-      L.for_all (fun sym -> vec_leq cs (apply_symmetry sym cs)) spec.symmetries (* symmetry, e.g., V and W might be equivalent *)
+      (* L.for_all
+        (fun sym -> polys_leq sym_polys (L.map (apply_symmetry sym) sym_polys))
+        (snd spec.symmetries) *)
+      (* symmetry, e.g., V and W might be equivalent *)
     ) >> ret cs
   in
 
   let t_before = Unix.time () in
-  iter (-1) coeffs analyze_sig;
+  iter (-1) coeffs analyze_new;
   let t_after = Unix.time () in
   let res =
     F.sprintf
-      "\n\n%i Checked in %.2fs: %i no verification equation / %i secure / %i attack / %i unknown / %i error\n"
-      !i_total (t_after -. t_before) (!i_total - !i_verif) !i_secure !i_attack !i_unknown !i_error
+      "\n\n%i checked in %.2fs (+ %i equivalent): %i no verification equation / %i secure / %i attack / %i unknown / %i error\n"
+      !i_total (t_after -. t_before) !i_equiv (!i_total - !i_verif) !i_secure !i_attack !i_unknown !i_error
   in
   output_file (F.sprintf "./%s/results" prefix) res;
   print_endline res
@@ -181,6 +223,7 @@ let synth countonly specname =
     ; ("II.2",SpecII.spec2)
     ; ("II.3",SpecII.spec3)
     ; ("II.4",SpecII.spec4)
+    ; ("II.5",SpecII.spec5)
     ; ("II_mixed.1",SpecII_mixed.spec1)
     ; ("II_mixed.2",SpecII_mixed.spec2)
     ; ("II_mixed.3",SpecII_mixed.spec3)

@@ -181,7 +181,7 @@ def interp(req):
     debug("pzero" + str(pzero))
     debug("pnzero " + str(pnzero))
 
-    #rabino_polys = []
+    rabino_polys = []
     g = 1
     for i in range(len(pnzero)):
       disj = pnzero[i]
@@ -189,19 +189,19 @@ def interp(req):
         f = disj[0]
       else:
         f = PR.sum( [ f*f for f in disj ])
-      #rabino_polys += [PR(1) - f * PR(rabvar(i)) ]
-      g = g*f
+      rabino_polys += [PR(1) - f * PR(rabvar(i)) ]
+      #g = g*f
 
     #debug("rabino_polys " + str(rabino_polys))
-    debug("g: " + str(g))
+    #debug("g: " + str(g))
 
-    J4 = PR.ideal(pzero)
-    J5 = J4.groebner_basis('singular')
+    #J4 = PR.ideal(pzero)
+    #J5 = J4.groebner_basis('singular')
     #debug("mem: " + str(f in J5))
 
-    #J = PR.ideal(pzero+rabino_polys)
-    #J2 = J.groebner_basis('libsingular')
-    if f in J5: #len(J2) == 1 and J2[0].is_constant:
+    J = PR.ideal(pzero+rabino_polys)
+    J2 = J.groebner_basis('libsingular')
+    if len(J2) == 1 and J2[0].is_constant:
       return { "ok" : True
              , "contradictory" : True }
     else:

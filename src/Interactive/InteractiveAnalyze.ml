@@ -83,9 +83,9 @@ let analyze_bounded_from_string ?(counter=true) ?(proof=true) ?(fmt=F.std_format
     match res with
     | Z3_Solver.Attack _ -> res
     | _ when proof ->
-      if Sage_Solver.check_sat (`List zcs) (`List nzcs) (`List vars)
-      then Z3_Solver.Unknown "Sage returned unknown"
-      else Z3_Solver.Valid
+      if Sage_Solver.is_contradictory (`List zcs) (`List nzcs) (`List vars)
+      then Z3_Solver.Valid
+      else Z3_Solver.Unknown "Sage returned unknown"
     | _ -> 
       Z3_Solver.Unknown "no attack, proof disabled"
   )

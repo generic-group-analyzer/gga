@@ -74,8 +74,6 @@ let main_analyze () =
         match res with
         | Z3_Solver.Valid ->
           exit 0
-        | Z3_Solver.Attack _ ->
-          exit 1
         | _ ->
           exit 2
       with
@@ -94,8 +92,6 @@ let main_analyze () =
         let res = analyze_bounded_from_string ~proof:false scmds bound in
         F.printf "%a\n" Z3_Solver.pp_result res;
         match res with
-        | Z3_Solver.Valid ->
-          exit 0
         | Z3_Solver.Attack _ ->
           exit 1
         | _ ->
