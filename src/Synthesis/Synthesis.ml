@@ -204,6 +204,7 @@ type synth_spec = {
   vars            : coeff list;
   choices         : int list;
   symmetries      : (SP.t list) * ((SP.t * SP.t) list) list;
+  equivsigs       : (SP.t list) list;
   nonzero_constrs : SP.t list;
   zero_constrs    : SP.t list
 }

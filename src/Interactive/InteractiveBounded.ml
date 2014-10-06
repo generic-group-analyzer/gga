@@ -302,8 +302,10 @@ let quant_wp_to_gps st bound p =
       | II.Field ->
         GP.var (Param (FOParam (tid.II.tid_id, qidx)))
       | II.Group gid ->
-        try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ ->
-          raise (InvalidGame "unused oracle parameter")
+        begin
+          try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ ->
+            raise (InvalidGame "unused oracle parameter")
+        end
       end
     | II.Choice tid ->
       begin match tid.II.tid_ty with

@@ -177,7 +177,11 @@ let synth_spec countonly spec specname =
       (* F.printf "equiv %a\n\n" (pp_list "," SP.pp) equiv_polys; *)
       L.exists (fun explored_polys -> polys_equal explored_polys equiv_polys) !explored
     in
-    if not (List.exists sym_explored (snd spec.symmetries)) then (
+    let equiv_explored polys =
+      let equiv_polys = L.map (instantiate_poly subst) polys  in
+      L.exists (fun explored_polys -> polys_equal explored_polys equiv_polys) !explored
+    in
+    if not (List.exists sym_explored (snd spec.symmetries)) && not (List.exists equiv_explored spec.equivsigs) then (
       (* F.printf "KKKKKKEEEEEEEEEPPPPPPP\n"; *)
       explored := (sym_polys)::!explored;
       analyze_sig v
@@ -223,10 +227,11 @@ let synth countonly specname =
     ; ("II.2",SpecII.spec2)
     ; ("II.3",SpecII.spec3)
     ; ("II.4",SpecII.spec4)
-    ; ("II.5",SpecII.spec5)
     ; ("II_mixed.1",SpecII_mixed.spec1)
     ; ("II_mixed.2",SpecII_mixed.spec2)
     ; ("II_mixed.3",SpecII_mixed.spec3)
+    ; ("II_mixed.4",SpecII_mixed.spec4)
+    ; ("II_mixed.5",SpecII_mixed.spec5)
     ; ("III.1",SpecIII.spec1)
     ; ("III.2",SpecIII.spec2)
     ; ("III.3",SpecIII.spec3)
