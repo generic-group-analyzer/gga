@@ -1,0 +1,180 @@
+################################################################
+Type II with both verification keys in G1
+
+----------------------------------------------------------------
+Results for II.1:
+
+57 checked in 0.00s (+ 155 equivalent): 0 no verification equation / 1 secure / 55 attack / 1 unknown / 0 error
+
+Secure for 2-CMA:
+01.ec:     [R, R^2 + W + M*V] in G2.
+
+No attack, proof failed:
+00.ec:     [R, R^2 + W + M*R + M*V] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II.2:
+
+67 checked in 0.00s (+ 157 equivalent): 0 no verification equation / 12 secure / 55 attack / 0 unknown / 0 error
+
+Secure for 2-CMA:
+01.ec:     [R, R^-1*W + M*R^-1*V] in G2.
+02.ec:     [R, M*R^-1 + R^-1*V + R^-1*W + M*R^-1*V] in G2.
+03.ec:     [R, M*R^-1 + R^-1*V + M*R^-1*V + M*R^-1*W] in G2.
+04.ec:     [R, W + M*R^-1 + R^-1*V + M*R^-1*V] in G2.
+05.ec:     [R, R^-1 + R^-1*V + R^-1*W + M*R^-1*V] in G2.
+06.ec:     [R, R^-1 + M*R^-1 + R^-1*W + M*R^-1*V] in G2.
+07.ec:     [R, R^-1 + R^-1*V + M*R^-1*V + M*R^-1*W] in G2.
+08.ec:     [R, R^-1 + W + M*R^-1*V] in G2.
+09.ec:     [R, R^-1 + W + R^-1*V + R^-1*W + M*R^-1*V + M*R^-1*W] in G2.
+10.ec:     [R, R^-1 + W + M*R^-1 + M*R^-1*V + M*R^-1*W] in G2.
+11.ec:     [R, R^-1 + V + W + R^-1*V + M*R^-1*V] in G2.
+12.ec:     [R, R^-1 + V + W + M*R^-1 + M*R^-1*V] in G2.
+
+No attack, proof failed:
+gen/II.2/unknown/*[0-9].ec: 
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II.3:
+
+774 checked in 4.00s (+ 570 equivalent): 651 no verification equation / 14 secure / 103 attack / 6 unknown / 0 error
+
+Secure for 2-CMA:
+01.ec:     [R + W, M*R^-1 + R^-1*V + M*R^-1*V] in G2.
+02.ec:     [R + W, V + M*R^-1 + R^-1*V + R^-1*W + M*R^-1*V + R^-1*V*W] in G2.
+03.ec:     [R + W, V + M*R^-1 + R^-1*V + R^-1*W + M*R^-1*W + R^-1*V*W] in G2.
+04.ec:     [R + W, V + W + M*R^-1 + R^-1*V + R^-1*W^2 + M*R^-1*W + R^-1*V*W] in G2.
+05.ec:     [R + W, R^-1 + M*R^-1*V] in G2.
+06.ec:     [R + W, R^-1 + V + M*R^-1*V + R^-1*V*W] in G2.
+07.ec:     [R + W, R^-1 + V + M*R^-1*W + R^-1*V*W] in G2.
+08.ec:     [R + W, R^-1 + R^-1*V + R^-1*W + M*R^-1*V + M*R^-1*W] in G2.
+09.ec:     [R + W, R^-1 + V + W + R^-1*W + R^-1*W^2 + M*R^-1*W + R^-1*V*W] in G2.
+10.ec:     [R + W, R^-1 + V + W + R^-1*V + R^-1*W + R^-1*W^2 + M*R^-1*V + M*R^-1*W + R^-1*V*W] in G2.
+11.ec:     [R + W, R^-1 + V + M*R^-1 + R^-1*W + M*R^-1*V + R^-1*V*W] in G2.
+12.ec:     [R + W, R^-1 + M*R^-1 + M*R^-1*V + M*R^-1*W] in G2.
+13.ec:     [R + W, R^-1 + V + M*R^-1 + R^-1*V + M*R^-1*W + R^-1*V*W] in G2.
+14.ec:     [R + W, R^-1 + V + W + M*R^-1 + R^-1*V + R^-1*W^2 + M*R^-1*W + R^-1*V*W] in G2.
+
+No attack, proof failed:
+00.ec:     [R + W, R^-1 + W + R^-1*W^2 + M*R^-1*V] in G2.
+01.ec:     [R + W, R^-1 + W + R^-1*W + R^-1*W^2 + M*R^-1*V] in G2.
+02.ec:     [R + W, R^-1 + W + R^-1*V + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+03.ec:     [R + W, R^-1 + W + R^-1*V + R^-1*W + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+04.ec:     [R + W, R^-1 + W + M*R^-1 + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+05.ec:     [R + W, R^-1 + W + M*R^-1 + R^-1*W + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II.4:
+
+126 checked in 0.00s (+ 98 equivalent): 0 no verification equation / 3 secure / 120 attack / 3 unknown / 0 error
+
+Secure for 2-CMA:
+01.ec:     [R, M*W^-1 + R*W^-1 + V*W^-1 + M*R*W^-1 + R*V*W^-1] in G2.
+02.ec:     [R, W^-1 + M*R*W^-1 + R*V*W^-1] in G2.
+03.ec:     [R, W^-1 + M*W^-1 + V*W^-1 + M*R*W^-1 + R*V*W^-1] in G2.
+
+No attack, proof failed:
+00.ec:     [R, W^-1 + R^2*W^-1 + M*V*W^-1] in G2.
+01.ec:     [R, W^-1 + R*W^-1 + R^2*W^-1 + M*V*W^-1] in G2.
+02.ec:     [R, W^-1 + R^2*W^-1 + M*R*W^-1 + M*V*W^-1 + R*V*W^-1] in G2.
+
+----------------------------------------------------------------
+
+################################################################
+Type II with mixed verification keys
+
+----------------------------------------------------------------
+Results for II_mixed.1:
+
+224 checked in 1.00s (+ 200 equivalent): 0 no verification equation / 0 secure / 212 attack / 12 unknown / 0 error
+
+Secure for 2-CMA:
+gen/II_mixed.1/*[0-9].ec: 
+
+No attack, proof failed:
+00.ec:     [R, R^2 + W^2 + M*V] in G2.
+01.ec:     [R, R^2 + W^2 + M*V + R*W] in G2.
+02.ec:     [R, R^2 + V + W^2 + M*V + M*W] in G2.
+03.ec:     [R, R^2 + V + W^2 + M*V + M*W + R*W] in G2.
+04.ec:     [R, R^2 + W^2 + M*R + M*V] in G2.
+05.ec:     [R, R^2 + V + W^2 + M*R + M*V] in G2.
+06.ec:     [R, R^2 + W^2 + M*R + M*V + V*W] in G2.
+07.ec:     [R, R^2 + V + W^2 + M*R + M*V + V*W] in G2.
+08.ec:     [R, R^2 + W^2 + M*R + M*V + R*W] in G2.
+09.ec:     [R, R^2 + V + W^2 + M*R + M*V + R*W] in G2.
+10.ec:     [R, R^2 + V + W^2 + M*R + M*V + M*W] in G2.
+11.ec:     [R, R^2 + V + W^2 + M*R + M*V + M*W + R*W] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II_mixed.2:
+
+176 checked in 1.00s (+ 208 equivalent): 0 no verification equation / 0 secure / 167 attack / 9 unknown / 0 error
+
+Secure for 2-CMA:
+gen/II_mixed.2/*[0-9].ec: 
+
+No attack, proof failed:
+00.ec:     [R, M*R^-1 + R^-1*V + R^-1*W + M*R^-1*V + M*R^-1*W + R^-1*V*W] in G2.
+01.ec:     [R, R^-1 + R^-1*W^2 + M*R^-1*V] in G2.
+02.ec:     [R, R^-1 + R^-1*W + R^-1*W^2 + M*R^-1*V] in G2.
+03.ec:     [R, R^-1 + R^-1*V + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+04.ec:     [R, R^-1 + R^-1*V + R^-1*W + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+05.ec:     [R, R^-1 + M*R^-1 + R^-1*W^2 + M*R^-1*V + R^-1*V*W] in G2.
+06.ec:     [R, R^-1 + M*R^-1 + R^-1*W + R^-1*W^2 + M*R^-1*V + R^-1*V*W] in G2.
+07.ec:     [R, R^-1 + M*R^-1 + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+08.ec:     [R, R^-1 + M*R^-1 + R^-1*W + R^-1*W^2 + M*R^-1*V + M*R^-1*W] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II_mixed.3:
+
+408 checked in 2.00s (+ 488 equivalent): 204 no verification equation / 0 secure / 202 attack / 2 unknown / 0 error
+
+Secure for 2-CMA:
+gen/II_mixed.3/*[0-9].ec: 
+
+No attack, proof failed:
+00.ec:     [R + V, V + M*R^-1 + R^-1*V + R^-1*V^2 + R^-1*W^2 + M*R^-1*W + R^-1*V*W] in G2.
+01.ec:     [R + V, R^-1 + V + M*R^-1 + R^-1*V^2 + R^-1*W^2 + M*R^-1*W + R^-1*V*W] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II_mixed.4:
+
+88 checked in 0.00s (+ 360 equivalent): 0 no verification equation / 0 secure / 87 attack / 1 unknown / 0 error
+
+Secure for 2-CMA:
+gen/II_mixed.4/*[0-9].ec: 
+
+No attack, proof failed:
+00.ec:     [R, V^-1 + M*V^-1 + R*V^-1 + R^2*V^-1 + V^-1*W^2 + M*R*V^-1 + M*V^-1*W + R*V^-1*W] in G2.
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+Results for II_mixed.5:
+
+118 checked in 1.00s (+ 330 equivalent): 0 no verification equation / 0 secure / 113 attack / 5 unknown / 0 error
+
+Secure for 2-CMA:
+gen/II_mixed.5/*[0-9].ec: 
+
+No attack, proof failed:
+00.ec:     [R, W^-1 + R^2*W^-1 + V*W^-1 + M*V*W^-1] in G2.
+01.ec:     [R, V + W^-1 + R^2*W^-1 + M*V*W^-1] in G2.
+02.ec:     [R, V + W^-1 + R*W^-1 + R^2*W^-1 + V*W^-1 + M*V*W^-1] in G2.
+03.ec:     [R, V + W^-1 + R^2*W^-1 + V*W^-1 + M*R*W^-1 + M*V*W^-1] in G2.
+04.ec:     [R, W^-1 + M*W^-1 + R^2*W^-1 + M*V*W^-1] in G2.
+
+----------------------------------------------------------------
+
