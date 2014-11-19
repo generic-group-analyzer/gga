@@ -250,7 +250,6 @@ def interp(req):
     #debug(str(s.sexpr()))
     #print(s.check())
     res = s.check()
-    #debug(str(res))
     if res == sat:
       return { "ok": True
              , "res": "sat"
@@ -276,9 +275,12 @@ def interp(req):
     res = s.check()
     #debug(str(res))
     if res == sat:
+      m = s.model()
+      res = "\n".join(list("  %s = %s"%(k,str(m[k])) for k in m if str(m[k]) != "0"))
+      #debug(str(list((k,m[k]) for k in m)))
       return { "ok": True
              , "res": "sat"
-             , "model": str(s.model())}
+	     , "model": "nonzero coefficients:\n"+res}
     elif res == unsat:
       return { "ok": True
              , "res": "unsat" }
