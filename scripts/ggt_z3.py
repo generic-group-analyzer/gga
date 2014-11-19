@@ -276,7 +276,8 @@ def interp(req):
     #debug(str(res))
     if res == sat:
       m = s.model()
-      res = "\n".join(list("  %s = %s"%(k,str(m[k])) for k in m if str(m[k]) != "0"))
+      res = sorted(((k,str(m[k])) for k in m if str(m[k]) != "0"), lambda x,y: cmp(str(x[0]),str(y[0])))
+      res = "\n".join(map(lambda x: "  %s = %s"%(x[0],x[1]),res))
       #debug(str(list((k,m[k]) for k in m)))
       return { "ok": True
              , "res": "sat"

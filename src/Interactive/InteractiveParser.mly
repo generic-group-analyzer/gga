@@ -27,6 +27,8 @@
 %token INEQ
 %token SAMP
 %token SEMICOLON
+%token UNDERSCORE
+%token FORALL
 
 /************************************************************************/
 /* \hd{Tokens for Commands} */
@@ -71,20 +73,26 @@
 /************************************************************************/
 /* \hd{Commands} */
 
+pvar :
+| v = VAR { NIVar(v) }
+| v = VAR UNDERSCORE idx = VAR
+  { if idx <> "i" then failwith "index must be equal to i"
+    else IVar(v) }
+
 poly :
-| i = INT                   { RP.from_int i }
-| v = VAR                   { RP.var v }
-| f = poly; PLUS; g = poly  { RP.add f g }
-| f = poly; STAR; g = poly  { RP.mult f g }
-| f = poly; MINUS; g = poly { RP.minus f g }
-| MINUS; f = poly           { RP.opp f }
+| i = INT                   { IP.from_int i }
+| v = pvar                  { IP.var v }
+| f = poly; PLUS; g = poly  { IP.add f g }
+| f = poly; STAR; g = poly  { IP.mult f g }
+| f = poly; MINUS; g = poly { IP.minus f g }
+| MINUS; f = poly           { IP.opp f }
 | LPAR;  f = poly; RPAR     { f }
-| v = VAR; EXP; i = INT
-{ RP.var_exp v i }
+| v = pvar; EXP; i = INT
+{ IP.var_exp v i }
 | f = poly; EXP; i = INT
 { if i < 0
   then failwith "negative exponent only allowed for variables"
-  else RP.ring_exp f i }
+  else IP.ring_exp f i }
 ;
 
 param_type :
@@ -92,7 +100,13 @@ param_type :
 | FIELD { Field }
 ;
 
-samp_vars : SAMP; vs = separated_nonempty_list(COMMA,VAR); SEMICOLON
+samp_vars :
+| SAMP; vs = separated_nonempty_list(COMMA,VAR)
+  { vs }
+;
+
+samp_vars_orcl :
+| SAMP; vs = separated_nonempty_list(COMMA,VAR); SEMICOLON
   { vs }
 ;
 
@@ -103,11 +117,16 @@ typed_var :
 
 cond :
 | p1 = poly; EQ; p2 = poly;
-  { (RP.minus p1 p2, Eq) }
+  { (IP.minus p1 p2, Eq) }
 | p1 = poly; INEQ; p2 = poly;
-  { (RP.minus p1 p2, InEq) }
-;
+  { (IP.minus p1 p2, InEq) }
+| FORALL idx = VAR COLON p1 = poly; INEQ; p2 = poly;
+  {if idx <> "i" then failwith "index must be equal to i";
+   (IP.minus p1 p2, InEq) }
+| FORALL VAR COLON poly; EQ; poly;
+  { failwith "forall-quantified equalities not supported, only inequalities" }
 
+;
 
 polys_group:
 | LBRACK; ps = separated_list(COMMA,poly); RBRACK; IN; g = GROUP
@@ -127,11 +146,12 @@ cmd :
   { AddMaps emaps }
 | ISOS; isos = separated_nonempty_list(COMMA,iso); DOT
   { AddIsos isos }
-
+| vs = samp_vars; DOT
+  { AddSamplings(vs) }
 | INP; LBRACK; ps = separated_nonempty_list(COMMA,poly); RBRACK; IN; g = GROUP; DOT
   { AddInput(ps,g) }
 | ORACLE; oname = VAR; LPAR; params = separated_list(COMMA,typed_var); RPAR;
-  EQ; orvar = list(samp_vars);
+  EQ; orvar = list(samp_vars_orcl);
   RETURN; ps = separated_list(COMMA,polys_group); DOT
   { AddOracle(oname,params,List.concat orvar,List.concat ps) }
 | WIN; LPAR; params = separated_list(COMMA,typed_var); RPAR;

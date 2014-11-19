@@ -161,7 +161,6 @@ let op_to_gp st i p =
   in
   OP.to_terms p |> GP.eval_generic GP.const vconv
 
-
 (* \ic{Complete state [st] with return values from
    call to [od] which is the [i]-th oracle call.} *)
 let complete_oracle od i st =
@@ -398,5 +397,13 @@ let gdef_to_constrs fmt b gdef =
     (fun fs ->
        F.fprintf fmt "%a\n" (pp_list " \\/ " (fun fmt f -> F.fprintf fmt "%a <> 0" RP.pp f)) fs)
     (L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs);
-  
+
+  L.iter
+    (fun gid ->
+      p_header (fsprintf "polynomials in completion for G%s (indices correspond to coefficient indices in attack)" gid) "";
+      L.iteri (fun i f -> F.fprintf fmt "%i: %a\n" (i+1) GP.pp f) (polys_for_gid gid st.known))
+    (II.gids_in_gdef gdef);
+
+  p_header "NOTE: completion computed only as required" "";
+
   (L.map cp_to_rpoly eqs_constrs, L.map (fun f -> L.map cp_to_rpoly f) ineqs_constrs)

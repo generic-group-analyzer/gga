@@ -1,0 +1,21 @@
+map G1 * G2 -> GT.
+
+iso G2 -> G1.
+
+sample A. (* only used to state the winning condition *)
+
+sample V,W.
+
+input [V,W] in G1.
+
+oracle o1(M:G2) =
+  sample R;
+  return [ R, M*V + R^2 + W ] in G2.
+
+win (wM:G2, wR:G2, wS:G2) = (
+  (* must satisfy the verification equation, and *)
+     wS = V*wM + wR^2 + W
+  (* must be a new forgery, i.e., forall i: (wR <> R_i) \/ (wS <> S_i).
+     we can only encode this with the help of a fresh auxiliary variable A:
+        f <> g \/ f' <> g' iff (f - f') + A*(g - g') <> 0. *)
+  /\ forall i: (wS - M_i*V + R_i^2 + W) + A*(wR - R_i) <> 0).

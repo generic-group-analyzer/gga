@@ -42,6 +42,8 @@ rule lex = parse
   | "isos"   { ISOS }
   | "map"    { EMAPS }
   | "iso"    { ISOS }
+  | "forall" { FORALL }
+  | "_" { UNDERSCORE }
 
   | "return" { RETURN }
   | "input"  { INP }
