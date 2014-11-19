@@ -76,18 +76,17 @@ let rpoly_to_opoly params orvars p =
 
 (* \ic{Convert the given [rpoly] to a winning condition polynomial for
        choices [choices], oracle parameters [oparams], and polynomial [p].} *)
-let rpoly_to_wpoly choices oparams p =
+let rpoly_to_wpoly choices oparams orvars p =
   let param_assoc   = L.map (fun tid -> (tid.tid_id, tid)) oparams in
   let choices_assoc = L.map (fun tid -> (tid.tid_id, tid)) choices in
   let conv_var v =
-    try
-      OParam(L.assoc v param_assoc)
-    with
-      Not_found ->
-        try
-          Choice(L.assoc v choices_assoc)
-        with
-          Not_found -> RVar(v)
+    try  OParam(L.assoc v param_assoc)
+    with Not_found ->
+    try  Choice(L.assoc v choices_assoc)
+    with Not_found ->
+    if L.mem v orvars
+    then RVar(v,Oracle)
+    else RVar(v,Global)
   in
   RP.to_terms p |> WP.eval_generic WP.const (WP.var % conv_var)
 
@@ -98,6 +97,7 @@ type eval_state = {
   es_varnames : id list;
   es_odefs    : odef list;
   es_oparams  : tid list;
+  es_orvars   : id list;
   es_mwcond   : wcond option;
 }
 
@@ -108,6 +108,7 @@ let empty_eval_state = {
   es_varnames = [];
   es_odefs    = [];
   es_oparams  = [];
+  es_orvars   = [];
   es_mwcond   = None;
 }  
 
@@ -147,14 +148,16 @@ let eval_cmd estate cmd =
       { odef_name = oname;
         odef_return = L.map (fun (p, gid) -> (rpoly_to_opoly params orvars p,gid)) fs }
     in
+    if estate.es_odefs <> [] then failwith "At most one oracle definition supported";
     { estate with
       es_odefs    = [od];
       es_oparams  = params;
+      es_orvars   = orvars;
       es_varnames = varnames;
     }
   | SetWinning(choices,conds), None ->
     ensure_winning_valid estate choices;
-    let conv = rpoly_to_wpoly choices estate.es_oparams in
+    let conv = rpoly_to_wpoly choices estate.es_oparams estate.es_orvars in
     let eqs,ineqs =
       partition_either
         (function (f,Eq) -> Left (conv f) | (f,InEq) -> Right (conv f))

@@ -276,10 +276,12 @@ let pgen_gchoice hid i = GP.var (Param (ChoiceCoeff (hid, i)))
    to list of [gp].} *)
 let nonquant_wp_to_gp st p =
   let vconv v = match v with
-    | II.RVar id ->
+    | II.RVar(id,II.Global) ->
       GP.var (RVar (SRVar id))
     | II.OParam _ ->
       failwith "nonquant_wp_to_qp: oracle parameter not allowed"
+    | II.RVar(_,II.Oracle) ->
+      failwith "nonquant_wp_to_qp: oracle random variable not allowed"
     | II.Choice tid ->
       begin match tid.II.tid_ty with
       | II.Field ->
@@ -295,16 +297,17 @@ let nonquant_wp_to_gp st p =
 let quant_wp_to_gps st bound p =
   let ps = L.map (fun qidx -> (qidx,p)) (if bound < 1 then [] else (list_from_to 1 bound)) in
   let vconv qidx v = match v with
-    | II.RVar id ->
+    | II.RVar(id,II.Global) ->
       GP.var (RVar (SRVar id))
+    | II.RVar(id,II.Oracle) ->
+      GP.var (RVar (ORVar(id,qidx)))
     | II.OParam tid ->
       begin match tid.II.tid_ty with
       | II.Field ->
         GP.var (Param (FOParam (tid.II.tid_id, qidx)))
       | II.Group gid ->
-        begin
-          try L.assoc (tid.II.tid_id, gid, qidx) st.hmap with _ ->
-            raise (InvalidGame "unused oracle parameter")
+        begin try L.assoc (tid.II.tid_id, gid, qidx) st.hmap
+        with Not_found -> raise (InvalidGame "unused oracle parameter")
         end
       end
     | II.Choice tid ->
@@ -320,7 +323,11 @@ let quant_wp_to_gps st bound p =
 (* \ic{Returns [true] if winning polynomials is implicitly quantified,
    i.e., it contains an oracle parameters} *)
 let is_quantified f =
-  let is_qvar v = match v with II.OParam _ -> true | _ -> false in
+  let is_qvar v =
+    match v with
+    | II.OParam _ | II.RVar(_,II.Oracle) -> true
+    | _ -> false
+  in
   L.exists is_qvar (WP.vars f)
 
 (* \ic{Convert game definition to initial state. Ensure that every
@@ -359,8 +366,10 @@ let gdef_to_constrs fmt b gdef =
   p_header "Quantified Equalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qeqs);
   p_header "Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) ineqs);
   p_header "Quantified Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qineqs);
+  p_header "Quantified Inequalities" (fsprintf "%a\n" (pp_list "\n" WP.pp) qineqs);
 
-  if qeqs <> [] then failwith "Only inequalities can contain oracle parameters.";
+  if qeqs <> [] then
+    failwith "Only inequalities can contain oracle parameters/oracle random variables.";
   
   let qineqs = conc_map (quant_wp_to_gps st b) qineqs in
   p_header "Unrolled Inequalities" (fsprintf "%a\n" (pp_list "\n" GP.pp) qineqs);

@@ -8,7 +8,6 @@ open Big_int
 
 (* \hd{[Ring] instance for [int]} *)
 
-
 module IntRing = struct
   type t = big_int
   let pp fmt i = F.fprintf fmt "%s" (string_of_big_int i)

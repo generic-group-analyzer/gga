@@ -209,12 +209,15 @@ let pp_odef fmt od =
    variables~$m$ (or $h$) is interpreted as
    $\forall i \in [q]: f(\ldots,m_i,\ldots) \neq 0$ (resp. $=$).} i*)
 
+(* \ic{Scope for random variables} *)
+type rvar_scope = Global | Oracle
+
 (* \ic{Variables in winning condition polynomials ar either (shared)
        random variables, oracle parameters (field elements or handles),
        or values chosen by the adversary for the winning condition
        (field elements or handles).} *)
 type wvar = 
-  | RVar   of id
+  | RVar   of id * rvar_scope
   | OParam of tid
   | Choice of tid
 
@@ -227,7 +230,7 @@ let gids_in_wvar wv =
 (*i*)
 let string_of_wvar v = match v with
   | Choice i -> i.tid_id
-  | RVar s   -> s
+  | RVar(s,_sco) -> s
   | OParam i -> i.tid_id ^"_i"
 
 let pp_wvar fmt v = pp_string fmt (string_of_wvar v)
@@ -262,10 +265,10 @@ let pp_wpoly fmt wp =
          values referenced by the corresponding handle.
        \item Polynomials containing oracle parameters
           $m \in \field$ are interpreted as
-          $\forall i \in [q].\, f(\ldots,m_i,\ldots) = 0$ (or $\neq$).
+          $\forall i \in [q].\, f(\ldots,m_i,\ldots) \neq 0$ (or $=$).
        \item Polynomials containing oracle parameters
           $h$ for $\group_j$ are interpreted as
-          $\forall i \in [q].\, f(\ldots,L_{j,h_i},\ldots) = 0$.
+          $\forall i \in [q].\, f(\ldots,L_{j,h_i},\ldots) \neq 0$.
        \end{itemize}
        } *) 
 type wcond = {
