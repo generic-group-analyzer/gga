@@ -1,0 +1,8 @@
+(* Doesn't work, since tool requires challenge to be monomial *)
+setting symmetric.
+problem_type decisional.
+
+input [ 1, X, Y, V1, V2, V1*R1, V2*R2] @ 1.
+  
+
+challenge X*Y*R1 @ k.
