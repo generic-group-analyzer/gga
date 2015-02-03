@@ -1,5 +1,3 @@
-maps G1 * G1 -> GT.
-
 input [ a1, a1*r1 ] in G1.
 input_left [ r1 ] in G1.
 input_right [ z ] in G1.

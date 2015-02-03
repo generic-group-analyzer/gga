@@ -33,10 +33,13 @@ echo "Parametric Assumptions"
 echo "======================"
 echo
 echo "=== l-DHE ==="
-time ./ggt.native nonparam cryptoexamples/parametric/DHE.ggt | tail -1
+time ./ggt.native param cryptoexamples/parametric/DHE.ggt | tail -1
 echo
 echo "=== l-DHI ==="
-time ./ggt.native nonparam cryptoexamples/parametric/DHI.ggt | tail -1
+time ./ggt.native param cryptoexamples/parametric/DHI.ggt | tail -1
+echo
+echo "=== (l,k)-MMDHE ==="
+time ./ggt.native param cryptoexamples/parametric/mmdhe_simplified.ggt | tail -1
 echo
 echo "======================"
 echo "Generalized Extraction"
