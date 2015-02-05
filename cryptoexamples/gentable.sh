@@ -66,3 +66,10 @@ time ./ggt.native interactive_4 cryptoexamples/interactive/strong-LRSW.ggt | tai
 echo
 echo "=== s-LRSW (q=4) ==="
 time ./ggt.native interactive_4 cryptoexamples/interactive/s-LRSW.ggt | tail -1
+echo
+echo "==========================="
+echo "Composite-Order Assumptions"
+echo "==========================="
+echo
+echo "=== KSW, Assumption 1 ==="
+time ./ggt.native nonparam cryptoexamples/composite/KSW1.ggt | tail -1
