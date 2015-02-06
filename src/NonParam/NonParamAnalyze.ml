@@ -208,7 +208,7 @@ let string_of_attack v recipes =
          (fun i a ->
             let sa = if a = 1 then "" else string_of_int a^"*" in
             if a = 0 then []
-            else [ Format.fprintf Format.str_formatter "%s%a" sa pp_recipe (L.nth recipes i) |> fsget ])
+            else [ fsprintf "%s%a" sa pp_recipe (L.nth recipes i) ])
        v)
   in String.concat " + " arecipe
 
