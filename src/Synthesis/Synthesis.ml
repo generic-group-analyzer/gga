@@ -148,7 +148,7 @@ let make_game ?(rma=false) sps vereqs =
   
   let weqs = L.map (fun p -> ("0 = ",p)) (L.map (rename_vars sps (fun v -> "w"^v)) vereqs) in
   let wineqs =
-    L.map (fun p -> ("0 <> ",p)) (L.map (fun v -> SP.(var ("w"^v) -@ var v)) (sps.msg_right_n @ sps.msg_left_n))
+    L.map (fun p -> ("forall i: 0 <> ",p)) (L.map (fun v -> SP.(var ("w"^v) -@ var (v^"_i"))) (sps.msg_right_n @ sps.msg_left_n))
   in
   
   let print_input xs g =
@@ -161,6 +161,10 @@ let make_game ?(rma=false) sps vereqs =
   if sps.setting = TY2 then F.fprintf fmt "iso G2 -> G1.\n";
   F.fprintf fmt "\n";
 
+  let global_rvars = get_vars (sps.key_left @ sps.key_right) in
+
+  F.fprintf fmt "sample %a.\n" (pp_list "," pp_string) global_rvars;
+  
   (* print verification keys *)
   print_input sps.key_left g1;
   print_input sps.key_right g2;
@@ -187,9 +191,10 @@ let make_game ?(rma=false) sps vereqs =
   F.fprintf fmt "\n";
 
   (* print winning condition *)
-  F.fprintf fmt "win (%a) =\n  (%a)."
+  F.fprintf fmt "win (%a) =\n (%a /\\ %a)."
     (pp_list "," (pp_tuple ":" pp_string)) (get_wc_params sps)
-    (pp_list " /\\ " (pp_pair' pp_string SP.pp)) (weqs @ wineqs) ;
+    (pp_list " /\\ " (pp_pair' pp_string SP.pp)) weqs
+    (pp_list " /\\ " (pp_pair' pp_string SP.pp)) wineqs;
   F.fprintf fmt "\n";
   
   Buffer.contents buf
