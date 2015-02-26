@@ -168,7 +168,9 @@ def interp(req):
     nzero = req['nzero']
 
     def rabvar(i): return "R__%i"%(i)
-    rvars = [ "R__%i"%(i) for i in range(len(nzero)) ]
+    def rabvar2(i,j): return "R__%i__%i"%(i,j)
+    rvars = [ rabvar(i) for i in range(len(nzero)) ]
+    rvars += [ rabvar2(i,j) for i in range(len(nzero)) for j in range(len(nzero[i])) ]
 
     debug(str(pvars))
     debug(str(zero))
@@ -188,7 +190,7 @@ def interp(req):
       if len(disj) == 1:
         f = disj[0]
       else:
-        f = PR.sum( [ f*f for f in disj ])
+        f = PR.sum( [ disj[j]*PR(rabvar2(i,j)) for j in range(len(disj)) ])
       rabino_polys += [PR(1) - f * PR(rabvar(i)) ]
       #g = g*f
 
