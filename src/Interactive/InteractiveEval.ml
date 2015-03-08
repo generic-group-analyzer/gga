@@ -164,17 +164,36 @@ let empty_eval_state = {
   es_mwcond   = None;
 }  
 
+let target_gids_of_estate estate =
+  L.map (fun iso -> iso.iso_codom) estate.es_gs.gs_isos
+  @ L.map (fun emap -> emap.em_codom) estate.es_gs.gs_emaps
+
 (* \ic{Raise error if oracle definition invalid.} *)
-let ensure_oracle_valid estate ovarnames =
+let ensure_oracle_valid estate ovarnames params =
   if not (unique ovarnames)
     then failwith "Oracle reuses names for arguments/sampled variables.";
   if estate.es_odefs <> []
-    then failwith "Oracle already defined, multiple oracles not supported."
+    then failwith "Oracle already defined, multiple oracles not supported.";
+  let target_param =
+    L.exists
+      (fun gid -> L.mem (Group gid) (L.map (fun tid -> tid.tid_ty) params))
+      (target_gids_of_estate estate)
+  in
+  if target_param
+    then failwith "Oracle arguments that are target of isomorphism or map not supported yet."
+
 
 (* \ic{Raise error if winning condition definition invalid.} *)
 let ensure_winning_valid estate choices =
   let names = estate.es_varnames @ L.map (fun tid -> tid.tid_id) choices in
-  if not (unique names) then failwith "Winning condition reuses names."
+  if not (unique names) then failwith "Winning condition reuses names.";
+  let target_choices =
+    L.exists
+      (fun gid -> L.mem (Group gid) (L.map (fun tid -> tid.tid_ty) choices))
+      (target_gids_of_estate estate)
+  in
+  if target_choices
+    then failwith "Oracle arguments that are target of isomorphism or map not supported yet."
 
 (* \ic{Raise error if one of supposedly fresh vars included in used.} *)
 let ensure_vars_fresh fresh used =
@@ -217,7 +236,7 @@ let eval_cmd estate cmd =
     let varnames =
       estate.es_varnames @ orvars @ L.map (fun tid -> tid.tid_id) params
     in
-    ensure_oracle_valid estate varnames;
+    ensure_oracle_valid estate varnames params;
     let od =
       { odef_name = oname;
         odef_return = L.map (fun (p, gid) -> (ipoly_to_opoly estate.es_rvars params orvars p,gid)) fs }

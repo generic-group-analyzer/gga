@@ -198,7 +198,9 @@ let complete_oracle od i st =
   in
   { st with known = st.known @ known_new }
 
-(* \ic{Complete state [st] with respect to group-setting [gs].}*)
+(* \ic{Complete state [st] with respect to group-setting [gs]. We do nothing
+       since we disallow parameters and choices that require completion
+       currently.}*)
 let complete_gs _gs st = st
 
 (* \ic{Complete state [st] with respect to given group setting [gs]
