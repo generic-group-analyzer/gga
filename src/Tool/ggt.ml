@@ -108,6 +108,4 @@ let main =
   match Sys.argv.(1) with
   | ("synth" | "count") as s ->
     SynthesisCmd.synth (s = "count") (try Sys.argv.(2) with _ -> "II")
-
-  | "test"  -> Unbounded.test ()
   | _       -> main_analyze ()

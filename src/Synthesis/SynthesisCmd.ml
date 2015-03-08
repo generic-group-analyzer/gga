@@ -40,7 +40,7 @@ let synth_spec countonly spec specname =
   in
 
   let analyze_external gdef n time attack_not_proof () =
-    let fname = prefix^"/tmp/sps.ec" in
+    let fname = prefix^"/tmp/sps.ggt" in
     output_file fname  gdef;
     let aorp = if attack_not_proof then "a" else "p" in
     let res = Sys.command (F.sprintf "gtimeout %i ./ggt.native interactive%s_%i %s >/dev/null 2>&1" time aorp n fname) in
@@ -104,7 +104,7 @@ let synth_spec countonly spec specname =
     
     if left_kernel = [] then (
       let sgdef = make_game sps [] in
-      output_file (F.sprintf "./%s/noverif/sps_%02i.ec" prefix !i_total) sgdef;
+      output_file (F.sprintf "./%s/noverif/sps_%02i.ggt" prefix !i_total) sgdef;
       F.printf "%i noeq %!" !i_total
     ) else (
       incr i_verif;
@@ -112,7 +112,7 @@ let synth_spec countonly spec specname =
         incr i_unknown;
         let eqs = kernel_to_eqns left_kernel tmpl in
         let sgdef = make_game sps eqs in
-        output_file (F.sprintf "./%s/count/sps_%02i.ec" prefix !i_unknown) sgdef
+        output_file (F.sprintf "./%s/count/sps_%02i.ggt" prefix !i_unknown) sgdef
       ) else (
         let eqs = kernel_to_eqns left_kernel tmpl in
         let sgdef = make_game sps eqs in
@@ -150,19 +150,19 @@ let synth_spec countonly spec specname =
         | Z3_Solver.Valid ->
           incr i_secure;
           F.printf "%i %!\n" !i_total;
-          output_file (F.sprintf "./%s/sps_%02i.ec" prefix !i_secure) sgdef;
-          output_file (F.sprintf "./%s/sigrand/sps_%02i.ec" prefix !i_secure) srgdef
+          output_file (F.sprintf "./%s/sps_%02i.ggt" prefix !i_secure) sgdef;
+          output_file (F.sprintf "./%s/sigrand/sps_%02i.ggt" prefix !i_secure) srgdef
         | Z3_Solver.Unknown s ->
-          output_file (F.sprintf "./%s/unknown/sps_%02i.ec" prefix !i_unknown) ("(* "^s^" *)\n"^sgdef);
+          output_file (F.sprintf "./%s/unknown/sps_%02i.ggt" prefix !i_unknown) ("(* "^s^" *)\n"^sgdef);
           F.printf "%i? %!\n" !i_total;
           F.printf "Unknown: %s\n" s;
           incr i_unknown
         | Z3_Solver.Attack _ ->
-          output_file (F.sprintf "./%s/attack/sps_%02i.ec" prefix !i_attack) sgdef;
+          output_file (F.sprintf "./%s/attack/sps_%02i.ggt" prefix !i_attack) sgdef;
           F.printf "%i! %!\n" !i_total;
           incr i_attack;
         | Z3_Solver.Error e ->
-          output_file (F.sprintf "./%s/error/sps_%02i.ec" prefix !i_error) sgdef;
+          output_file (F.sprintf "./%s/error/sps_%02i.ggt" prefix !i_error) sgdef;
           F.printf "Error: %s\n" e;
           incr i_error
       )
