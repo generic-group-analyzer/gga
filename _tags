@@ -1,11 +1,11 @@
 true: bin_annot
-<src/Interactive/InteractiveUnbounded.*>: package(yojson)
+<src/InteractiveUnbounded/IUnbounded*>: package(yojson)
 <src/Interactive/InteractiveBounded.*>: package(yojson)
 <src/Interactive/InteractiveAnalyze.*>: package(yojson)
 <src/Util/Util.*>: package(yojson)
 <src/Tool/wsggt.*>: package(websocket), package(yojson)
 <src/Tool> or <src/Poly> or <src/Util> or <src/Param> or <src/Synthesis>: include
-<src/NonParam> or <src/Solver> or <src/Interactive>: include
+<src/NonParam> or <src/Solver> or <src/Interactive> or <src/InteractiveUnbounded>: include
 <src/Tool/ggt.*> or <src/Solver/*.ml> or <src/Util/Util.ml>: package(yojson), package(str), package(num), package(unix), package(ctypes.foreign), package(cryptokit)
 <src/Synthesis/*>: package(cryptokit)
 <src/Param/ParamTest.*>: package(yojson), package(str), package(num), package(oUnit)

@@ -1,5 +1,6 @@
 S src
 S src/Interactive/
+S src/InteractiveUnbounded/
 S src/Solver
 S src/Util/
 S src/Poly
@@ -11,6 +12,7 @@ S src/Synthesis
 
 B _build/src
 B _build/src/Interactive/
+B _build/src/InteractiveUnbounded/
 B _build/src/Util/
 B _build/src/Solver/
 B _build/src/Poly/

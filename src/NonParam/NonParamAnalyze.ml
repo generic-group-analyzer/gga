@@ -164,9 +164,8 @@ let analyze assm =
 (* \hd{Analyze assumption given as string or from file} *)
 
 (* \ic{Convert lexer and parser errors to error with meaningful message.} *)
-let wrap_error f s0 =
-  let s = S.copy s0 in
-  let sbuf = Lexing.from_string s0 in
+let wrap_error f s =
+  let sbuf = Lexing.from_string s in
   try
     f sbuf
   with

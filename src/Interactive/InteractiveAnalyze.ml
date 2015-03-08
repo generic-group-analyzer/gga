@@ -9,7 +9,6 @@ module YS = Yojson.Safe
 
 (* open InteractiveUnbounded *)
 
-module FS = InteractiveFormalSum
 module IR = IntRing
 module II = InteractiveInput
 module IE = InteractiveEval
@@ -88,22 +87,3 @@ let analyze_bounded_from_string ?(counter=true) ?(proof=true) ?(fmt=F.std_format
     | _ -> 
       Z3_Solver.Unknown "no attack, proof disabled"
   )
-
-let analyze_unbounded_from_string _s =
-  (*i
-  let gdef = p_cmds s |> IE.eval_cmds in
-  F.printf "%a\n\n" II.pp_gdef gdef;
-  let eq_constrs, ineq_constrs, qineq_constrs = InteractiveUnbounded.gdef_to_constrs gdef in
-  
-  F.printf "\n#########################################################\n";
-  F.printf "Simplified constraints:\n\n";
-  pp_constrs F.std_formatter eq_constrs ineq_constrs qineq_constrs;
-  print_newline ();
-
-  let pconstrs1 = sorted_nub compare (L.map translate_eq eq_constrs) in
-  let pconstrs2 = sorted_nub compare (L.map translate_qineq qineq_constrs) in
-  let pconstrs3 = sorted_nub compare (L.map translate_ineq ineq_constrs) in
-
-  (*i List.iter (fun pc -> print_endline (YS.to_string pc)) (pconstrs1 @ pconstrs2 @ pconstrs3); i*)
-  i*)
-  Z3_Solver.check_sat [] (*i (pconstrs1 @ pconstrs2 @ pconstrs3) i*)

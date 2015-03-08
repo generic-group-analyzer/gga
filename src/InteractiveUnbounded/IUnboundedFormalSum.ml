@@ -1,10 +1,9 @@
 (*i*)
-(*i
 open Util
 open Poly
 
 module IR = IntRing
-module II = InteractiveInput
+module II = IUnboundedInput
 module S = String
 (*i*)
 
@@ -453,4 +452,3 @@ let pp_fs_rvars fmt fsr =
   F.fprintf fmt "@[%a@]" (pp_list "@.+ " pp_fsr_term) fsr
 
 (*i*)
-i*)

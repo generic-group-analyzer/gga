@@ -1,5 +1,3 @@
-(*i
-
 open Poly
 
 type db_idx = int
@@ -8,17 +6,17 @@ type input_idx = int
 
 type oreturn_idx = int
 
-type orvar_id = InteractiveInput.orvar_id * InteractiveInput.oname
+type orvar_id = IUnboundedInput.orvar_id * IUnboundedInput.oname
 
-type oparam_id = InteractiveInput.oparam_id * InteractiveInput.oname
+type oparam_id = IUnboundedInput.oparam_id * IUnboundedInput.oname
 
-type var = SRVar of InteractiveInput.rvar_id | ORVar of orvar_id * db_idx
+type var = SRVar of IUnboundedInput.rvar_id | ORVar of orvar_id * db_idx
 
 type param =
   | OParam of oparam_id * db_idx
-  | FieldChoice of InteractiveInput.fchoice_id
-  | ICoeff of InteractiveInput.gchoice_id * input_idx
-  | OCoeff of InteractiveInput.gchoice_id * InteractiveInput.oname * oreturn_idx * db_idx
+  | FieldChoice of IUnboundedInput.fchoice_id
+  | ICoeff of IUnboundedInput.gchoice_id * input_idx
+  | OCoeff of IUnboundedInput.gchoice_id * IUnboundedInput.oname * oreturn_idx * db_idx
 
 type t
 
@@ -56,9 +54,9 @@ type fs_rvars = (fs_param * var list) list
 
 val fs_to_fs_rvars : t -> fs_rvars
 
-type param_constr = (db_idx * InteractiveInput.oname) list * fs_param
+type param_constr = (db_idx * IUnboundedInput.oname) list * fs_param
 
-val fs_to_constr : t -> ((db_idx * InteractiveInput.oname) list * fs_param) list
+val fs_to_constr : t -> ((db_idx * IUnboundedInput.oname) list * fs_param) list
 
 val fs_to_bounded_constr : 'a -> 'b -> 'c list
 
@@ -98,11 +96,11 @@ val pp_fs_rvars :
 
 (* val term_compare : IntRing.t * 'a * 'b -> IntRing.t * 'a * 'b -> int *)
 
-(* val db_idx_of_var : var -> (int * InteractiveInput.oname) option *)
+(* val db_idx_of_var : var -> (int * IUnboundedInput.oname) option *)
 
-val db_idx_of_param : param -> (int * InteractiveInput.oname) option
+val db_idx_of_param : param -> (int * IUnboundedInput.oname) option
 
-(* val db_idx_of_term : param list -> var list -> (int * InteractiveInput.oname) list *)
+(* val db_idx_of_term : param list -> var list -> (int * IUnboundedInput.oname) list *)
 
 (* val map_idx_var : (int -> int) -> var -> var *)
 
@@ -146,4 +144,3 @@ val db_idx_of_param : param -> (int * InteractiveInput.oname) option
 
 (* val fs_to_fs_rvars : (IntRing.t * param list * var list) list -> fs_rvars *)
 
-i*)
