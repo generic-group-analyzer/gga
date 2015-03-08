@@ -1,0 +1,22 @@
+S src
+S src/Interactive/
+S src/Solver
+S src/Util/
+S src/Poly
+S src/Tool/
+S src/NonParam
+S src/Param/
+S src/NonParam/
+S src/Synthesis
+
+B _build/src
+B _build/src/Interactive/
+B _build/src/Util/
+B _build/src/Solver/
+B _build/src/Poly/
+B _build/src/Tool/
+B _build/src/NonParam
+B _build/src/Param/
+B _build/src/Synthesis
+
+PKG yojson websocket num unix ctypes cryptokit
