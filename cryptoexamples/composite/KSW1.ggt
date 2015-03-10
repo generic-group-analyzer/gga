@@ -1,7 +1,7 @@
 map G1 * G1 -> GT.
 composite 3.
 
-input [ (1,0,0), (0,0,1), (0,1,R1), (b,0,0), (b^2,0,0), (a,1,0), (a*b,Q1,0), (s,0,0), (b*s, Q2, R2) ] in G1.
+input [ (X,0,0), (0,0,Z), (0,Y,Z*R1), (X*b,0,0), (X*b^2,0,0), (X*a,Y,0), (X*a*b,Y*Q1,0), (X*s,0,0), (X*b*s, Y*Q2, Z*R2) ] in G1.
 
-input_left [ (b^2*s, 0, R3) ] in G1.
-input_right [ (b^2*s, Q3, R3) ] in G1.
+input_left [ (X*b^2*s, 0, Z*R3) ] in G1.
+input_right [ (X*b^2*s, Y*Q3, Z*R3) ] in G1.
