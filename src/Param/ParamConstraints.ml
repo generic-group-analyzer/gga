@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Generation of constraints for parametric problems. *)
 (*i*)
 open StringPoly

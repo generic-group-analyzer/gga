@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*i*)
 open LStringPoly
 open Synthesis

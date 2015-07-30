@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Input for non-parametric problems.\\ *)
 
 (*i*)

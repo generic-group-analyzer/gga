@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Inputs for parametric assumptions.
     See interface for explanation of types. *)
 

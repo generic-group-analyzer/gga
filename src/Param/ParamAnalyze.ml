@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Parametric assumption analysis: parsing wrappers and analysis. *)
 
 (*i*)

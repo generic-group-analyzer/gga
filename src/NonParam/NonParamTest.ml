@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Tests for the non-parametric setting. *)
 
 (*i*)

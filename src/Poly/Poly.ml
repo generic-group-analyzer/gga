@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Use [Var] and [Ring] types to define [MakePoly] functor.
     Also define [IntRing]. *)
 (*i*)

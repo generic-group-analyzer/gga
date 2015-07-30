@@ -1,5 +1,6 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 open Websocket
-(* open Util *)
 
 module YS = Yojson.Safe
 module F = Format

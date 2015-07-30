@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Z3 solver for constraints derived from parametric problems.
     Calls a Python script that uses the Python Z3 bindings
     and communicates using JSON over standard input and output.

@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Sage solver for non-parametric and interactive problems.
     Calls a Python script that uses the Sage library
     and communicates using JSON over standard input and output.

@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Tests for parametric assumption analysis: see \verb!tests/param! for test input. *)
 open ParamAnalyze
 open ParamInput

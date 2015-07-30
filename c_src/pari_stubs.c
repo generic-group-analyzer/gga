@@ -1,3 +1,5 @@
+/* This file is distributed under the MIT License (see LICENSE). */
+
 #include <pari/pari.h>
 #include <assert.h>
 #include <stdlib.h>

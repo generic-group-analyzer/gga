@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Analysis for interactive assumptions. *)
 
 (*i*)

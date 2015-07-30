@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Input for interactive assumptions. We assume that there is only one group for now,
     i.e., the setting is equivalent to the generic group setting.
 %  

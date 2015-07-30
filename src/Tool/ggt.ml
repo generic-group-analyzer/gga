@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Main function of the ggt tool. *)
 
 (*i*)

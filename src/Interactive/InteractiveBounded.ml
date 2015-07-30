@@ -1,3 +1,5 @@
+(* This file is distributed under the MIT License (see LICENSE). *)
+
 (*s Bounded analysis for interactive assumptions. Consists of three steps:
     \begin{itemize}
     \item Compute symbolic completion wrt. isos, maps, and oracle queries.
