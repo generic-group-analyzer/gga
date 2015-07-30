@@ -1,14 +1,11 @@
-# Generic Group Assumption Analyzer
+# Generic Group Analyzer
 
 ## Installation
 
 Use 'make native' to compile the commandline tool 'ggt.native'.
 
-[ The web-server is broken in this version. ]
-Use 'make wsggt' to compile the web-server tool 'wsggt.native'.
-
 You need an up-to-date ocaml installation with the packages
-'websocket', 'menhir', 'yojson', and 'ounit'.
+'menhir', 'yojson', and 'ounit'.
 
 Usually, the easiest way to achieve this is by using opam [^opam]. Our tool
 uses Sage, Pari/GP, and Z3 as a backend.
@@ -25,13 +22,12 @@ Sage and Z3 by running './scripts/ggt_Sage.py test' and './scripts/ggt_z3.py tes
 [^Pari]: [http://pari.math.u-bordeaux.fr/](http://pari.math.u-bordeaux.fr/)
 [^Z3Py]: [http://z3.codeplex.com](http://z3.codeplex.com) (you might have to set PYTHONPATH)
 
-
 ## Batch mode
 
 You can use the batch mode by running, e.g.:
 
 ~~~~~
-$ ./ggt.native nonparam tests/nonparam/valid/ddh_bilin_asym.ggt
+$ generic-group-analyzer nonparam tests/nonparam/valid/ddh_bilin_asym.ggt
 ~~~~~
 
 The tool supports four modes given as first argument:
@@ -84,7 +80,7 @@ of the generators of the subgroups.
 
 We use DHE as an example.
 
-~~~~~
+~~~
 setting symmetric.           (* symmetric (leveled) multilinear map *)
 levels 2.                    (* fixes the number of levels to 2 *)
 problem_type decisional.
@@ -96,7 +92,7 @@ input
   , forall j in [l + 1, 2*l]: X^j ] @ 1.
 
 challenge Y*X^l @ 2.
-~~~~~
+~~~
 
 Since we only support computational or real-or-random problems, the problem
 is always specified by giving the input and the challenge. Depending on
@@ -106,7 +102,7 @@ or distinguish it from a random value.
 We can analyze the assumption using
 
 ~~~~~
-$ ./ggt.native param tests/param/valid/ddhe.ggt
+$ generic-group-analyzer param tests/param/valid/ddhe.ggt
 ~~~~~
 
 
@@ -136,7 +132,7 @@ the oracle definition, and a winning condition.
 We can analyze the assumption using
 
 ~~~~~
-$ ./ggt.native interactive_2 tests/interactive/attack/mLRSW_bounded.ggt
+$ generic-group-analyzer interactive_2 tests/interactive/attack/mLRSW_bounded.ggt
 ~~~~~
 
 See [tests/interactive/](tests/interactive/) for more examples.
@@ -158,12 +154,10 @@ win (U:G, V:G, W:G, mm:Fp) =
 We can analyze the assumption using
 
 ~~~~~
-$ ./ggt.native interactive tests/interactive/valid/LRSW_unbounded.ggt
+$ generic-group-analyzer interactive tests/interactive/valid/LRSW_unbounded.ggt
 ~~~~~
 
-
 See [tests/interactive/](tests/interactive/) for more examples.
-
 
 ### Additional Problem Types
 
@@ -173,15 +167,4 @@ in [^IDDH]. The corresponding algorithm is not integrated
 into the tool and a separate implementation is given in
 scripts/interactive_decisional.
 
-We are also currently extending this implementation with support
-for a restricted class of parametric assumption with indexed
-random variables like k-lin and k-BDH.
-
 [^IDDH]: [www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf](www.di.ens.fr/~mabdalla/papers/AbPo05b-letter.pdf)
-
-## Web interface
-
-The web interface consists of an input editor and an output display.
-You can choose the mode, input the assumption, and press CTRL-return
-to run the tool with the right options. For long-running computations,
-you should install the tool on your own machine.

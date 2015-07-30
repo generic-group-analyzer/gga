@@ -1,3 +1,25 @@
+DESTDIR    ?=
+PREFIX     ?= /usr/local
+VERSION    ?= $(shell date '+%F')
+DISTDIR    := easycrypt-$(VERSION)
+INSTALL    := scripts/install/install-sh
+PWD        := $(shell pwd)
+
+BINDIR := $(PREFIX)/bin
+LIBDIR := $(PREFIX)/lib/easycrypt
+SHRDIR := $(PREFIX)/share/easycrypt
+
+INSTALL    := scripts/install/install-sh
+
+#############################################################################
+
+OCAMLBUILD_OPTS = -tag annot -tag debug -use-ocamlfind
+OCAMLBUILD_OPTS += -use-menhir -menhir "menhir -v"
+
+ifeq ($(shell echo $$TERM), dumb)
+ OCAMLBUILD_OPTS += -classic-display
+endif
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
   LIBFLAGS=-lflags -cclib,-Xlinker,-cclib,--no-as-needed,-cclib,-Lc_src,-cclib,-lpari,-cclib,-lparistubs
@@ -7,9 +29,68 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 OCAMLBUILD=LD_LIBRARY_PATH=_build/c_src/ ocamlbuild
-MENHIRFLAGS=-use-menhir -menhir "menhir -v"
-FINDLIBFLAGS=-use-ocamlfind -classic-display
 CFLAGS="-w +a-e-9"
+
+#############################################################################
+ 
+.PHONY: gga.native doc install uninstall
+
+all: gga.native
+
+gga.native:
+	test -d _build/c_src || mkdir -p _build/c_src
+	gcc -fPIC -c c_src/pari_stubs.c -o _build/c_src/pari_stubs.o
+	ar rc _build/c_src/libparistubs.a _build/c_src/pari_stubs.o
+	gcc -shared -o _build/c_src/libparistubs.so _build/c_src/pari_stubs.o -lpari
+	$(OCAMLBUILD) $(OCAMLBUILD_OPTS) -cflags $(CFLAGS) $(LIBFLAGS) src/Tool/gga.native
+
+install:
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 -T gga.native $(DESTDIR)$(BINDIR)/generic-group-analyzer
+
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/generic-group-analyzer
+
+#############################################################################
+# Development
+
+clean:
+	-rm doc/tool.pdf
+	$(OCAMLBUILD) -clean
+
+byte:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.byte
+	OCAMLRUNPARAM="-b" ./ggt.byte examples/dhe.ggt
+
+paramtest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Param/ParamTest.native
+	./ParamTest.native
+
+nonparamtest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/NonParam/NonParamTest.native
+	./NonParamTest.native
+
+interactivetest:
+	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Interactive/InteractiveTest.native
+	./InteractiveTest.native
+
+webdoc:
+	pandoc -s -S --toc -c buttondown.css README > web/help.html
+
+
+loc:
+	find src -name \*.ml\* | xargs wc -l
+
+cleangen:
+	rm -rf gen
+	mkdir gen
+	mkdir gen/attack
+
+%.inferred.mli:
+	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) src/$@ && cat _build/src/$@
+
+#############################################################################
+# Document generation
 
 INFRA_MODULES=Util/Util.ml Poly/PolyInterfaces.mli Poly/Poly.mli Poly/Poly.ml
 
@@ -46,47 +127,6 @@ INTERACTIVE_FILES=$(addprefix src/,$(INTERACTIVE_MODULES))
 SYNTH_FILES=$(addprefix src/,$(SYNTH_MODULES))
 TOOL_FILES=$(addprefix src/,$(TOOL_MODULES))
 
-
-.PHONY: native doc paramtest
-
-all: native # wsggt
-
-native:
-	test -d _build/c_src || mkdir -p _build/c_src
-	gcc -fPIC -c c_src/pari_stubs.c -o _build/c_src/pari_stubs.o
-	ar rc _build/c_src/libparistubs.a _build/c_src/pari_stubs.o
-	gcc -shared -o _build/c_src/libparistubs.so _build/c_src/pari_stubs.o -lpari
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.native
-
-byte:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/ggt.byte
-	OCAMLRUNPARAM="-b" ./ggt.byte examples/dhe.ggt
-
-paramtest:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Param/ParamTest.native
-	./ParamTest.native
-
-nonparamtest:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/NonParam/NonParamTest.native
-	./NonParamTest.native
-
-interactivetest:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Interactive/InteractiveTest.native
-	./InteractiveTest.native
-
-wsggt:
-	$(OCAMLBUILD) -tag annot -tag debug -cflags $(CFLAGS) $(LIBFLAGS) $(FINDLIBFLAGS) $(MENHIRFLAGS) src/Tool/wsggt.native
-
-webdoc:
-	pandoc -s -S --toc -c buttondown.css README > web/help.html
-
-clean:
-	-rm doc/tool.pdf
-	$(OCAMLBUILD) -clean
-
-loc:
-	find src -name \*.ml\* | xargs wc -l
-
 doc:
 	ocamlweb doc/prelude.tex \
 	  doc/chap-infra.tex $(INFRA_FILES) \
@@ -99,11 +139,3 @@ doc:
 	echo "\end{document}" >> doc/tool.tex.tmp
 	mv doc/tool.tex.tmp doc/tool.tex
 	cd doc && latexmk -pv -pdf tool.tex
-
-cleangen:
-	rm -rf gen
-	mkdir gen
-	mkdir gen/attack
-
-%.inferred.mli:
-	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) src/$@ && cat _build/src/$@
