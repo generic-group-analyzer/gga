@@ -240,5 +240,10 @@ let synth countonly specname =
     ; ("III.4",SpecIII.spec4)
     ]
   in
-  let spec = L.assoc specname specs in
+  let spec =
+    try
+      L.assoc specname specs
+    with
+      Not_found -> failwith ("Synthesis spec "^specname^" not found")
+  in
   synth_spec countonly (spec ()) specname

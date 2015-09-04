@@ -109,5 +109,5 @@ let main_analyze () =
 let main =
   match Sys.argv.(1) with
   | ("synth" | "count") as s ->
-    SynthesisCmd.synth (s = "count") (try Sys.argv.(2) with _ -> "II")
+    SynthesisCmd.synth (s = "count") (try Sys.argv.(2) with _ -> "II.1")
   | _       -> main_analyze ()
