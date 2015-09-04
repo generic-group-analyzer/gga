@@ -45,7 +45,10 @@ let synth_spec countonly spec specname =
     let fname = prefix^"/tmp/sps.ggt" in
     output_file fname  gdef;
     let aorp = if attack_not_proof then "a" else "p" in
-    let res = Sys.command (F.sprintf "gtimeout %i ./gga.native interactive%s_%i %s >/dev/null 2>&1" time aorp n fname) in
+    let res =
+      Sys.command
+        (F.sprintf "timeout %i ./gga.native interactive%s_%i %s >/dev/null 2>&1" time aorp n fname)
+    in
     if res = 0 then Z3_Solver.Valid
     else if res = 1 then Z3_Solver.Attack "attack not preserved"
     else Z3_Solver.Unknown "External call timed out or did not return valid"
@@ -184,12 +187,10 @@ let synth_spec countonly spec specname =
       L.exists (fun explored_polys -> polys_equal explored_polys equiv_polys) !explored
     in
     if not (List.exists sym_explored (snd spec.symmetries)) && not (List.exists equiv_explored spec.equivsigs) then (
-      (* F.printf "KKKKKKEEEEEEEEEPPPPPPP\n"; *)
       explored := (sym_polys)::!explored;
       analyze_sig v
     ) else (
       incr i_equiv
-      (* F.printf "KKKKKKIIIIIIILLLLLLLLL\n"; *)
     )
   in
 
