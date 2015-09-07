@@ -35,6 +35,8 @@ let synth_spec countonly spec specname =
 
   let analyze gdef n attack_not_proof () =
     try
+      let fname = prefix^"/tmp/sps.ggt" in
+      output_file fname  gdef;
       analyze_bounded_from_string
         ~counter:attack_not_proof ~proof:(not attack_not_proof) ~fmt:null_formatter gdef n
     with
@@ -45,10 +47,10 @@ let synth_spec countonly spec specname =
     let fname = prefix^"/tmp/sps.ggt" in
     output_file fname  gdef;
     let aorp = if attack_not_proof then "a" else "p" in
-    let res =
-      Sys.command
-        (F.sprintf "timeout %i ./gga.native interactive%s_%i %s >/dev/null 2>&1" time aorp n fname)
+    let cmd = 
+      F.sprintf "timeout %i ./gga interactive%s_%i %s >/dev/null 2>&1" time aorp n fname
     in
+    let res = Sys.command cmd in
     if res = 0 then Z3_Solver.Valid
     else if res = 1 then Z3_Solver.Attack "attack not preserved"
     else Z3_Solver.Unknown "External call timed out or did not return valid"
@@ -99,12 +101,6 @@ let synth_spec countonly spec specname =
     let b = basis c in
     let m = poly_list_to_matrix c b in
     let sig_ident = hash_string (make_game sps []) in
-    (*
-    F.printf "completion: %a\n\n" (pp_list "," SP.pp) tmpl;
-    F.printf "basis:\n %a\n\n" (pp_list ",\t" SP.pp) (L.map SP.from_mon b);
-    pp_matrix m;
-    F.printf "\n";
-    *)
     let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
     
     if left_kernel = [] then (
@@ -186,7 +182,8 @@ let synth_spec countonly spec specname =
       let equiv_polys = L.map (instantiate_poly subst) polys  in
       L.exists (fun explored_polys -> polys_equal explored_polys equiv_polys) !explored
     in
-    if not (List.exists sym_explored (snd spec.symmetries)) && not (List.exists equiv_explored spec.equivsigs) then (
+    if    not (List.exists sym_explored (snd spec.symmetries))
+       && not (List.exists equiv_explored spec.equivsigs) then (
       explored := (sym_polys)::!explored;
       analyze_sig v
     ) else (
@@ -205,11 +202,6 @@ let synth_spec countonly spec specname =
     guard (
       L.for_all (fun constr -> not (SP.equal SP.zero (eval_poly constr cs))) spec.nonzero_constrs &&
       L.for_all (fun constr -> (SP.equal SP.zero (eval_poly constr cs))) spec.zero_constrs
-      (* (vec_leq cs (L.map (fun v -> v*(-1)) cs)) &&   *)                     (* symmetry: adversary can multiply vector with -1 *)
-      (* L.for_all
-        (fun sym -> polys_leq sym_polys (L.map (apply_symmetry sym) sym_polys))
-        (snd spec.symmetries) *)
-      (* symmetry, e.g., V and W might be equivalent *)
     ) >> ret cs
   in
 

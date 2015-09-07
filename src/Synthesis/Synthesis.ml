@@ -47,13 +47,15 @@ let completion sps =
       |> sorted_nub SP.compare 
   in
   let right = match sps.setting with
-    | TY1 -> sorted_nub SP.compare (sps.key_left   @ sps.key_right @
-                                 L.map SP.var (sps.msg_left_n @ sps.msg_right_n @ sps.sig_left_n @ sps.sig_right_n))
-    | TY2 | TY3 -> sorted_nub SP.compare (sps.key_right @ L.map SP.var (sps.msg_right_n @ sps.sig_right_n))
+    | TY1 ->
+      sorted_nub SP.compare
+        (  sps.key_left @ sps.key_right
+         @ L.map SP.var (sps.msg_left_n @ sps.msg_right_n @ sps.sig_left_n @ sps.sig_right_n))
+    | TY2 | TY3 ->
+      sorted_nub SP.compare (sps.key_right @ L.map SP.var (sps.msg_right_n @ sps.sig_right_n))
   in
   let total_left  = SP.one :: left in
   let total_right = SP.one :: right in
-  
   conc_map (fun l -> L.map (fun r -> SP.(l *@ r)) total_right) total_left
   |> sorted_nub SP.compare
 
@@ -150,14 +152,20 @@ let make_game ?(rma=false) sps vereqs =
   
   let weqs = L.map (fun p -> ("0 = ",p)) (L.map (rename_vars sps (fun v -> "w"^v)) vereqs) in
   let wineqs =
-    L.map (fun p -> ("forall i: 0 <> ",p)) (L.map (fun v -> SP.(var ("w"^v) -@ var (v^"_i"))) (sps.msg_right_n @ sps.msg_left_n))
+    L.map (fun p -> ("forall i: 0 <> ",p))
+     (L.map (fun v -> SP.(var ("w"^v) -@ var (v^"_i"))) (sps.msg_right_n @ sps.msg_left_n))
   in
   
-  let print_input xs g =
-    if xs <> [] then F.fprintf fmt "input [ %a ] in %s.\n" (pp_list ", " SP.pp) xs g
+  let print_input xs g comment =
+    if xs <> [] then
+      F.fprintf fmt "input [ %a ] in %s. (* %s *)\n"
+        (pp_list ", " SP.pp) xs g comment
   in
-  let pp_sample fmt v = F.fprintf fmt "sample %s" v in
-  
+
+  let pp_sample fmt v =
+    F.fprintf fmt "sample %s" v
+  in
+
   (* print setting *)
   F.fprintf fmt "map %s * %s -> GT.\n" g1 g2;
   if sps.setting = TY2 then F.fprintf fmt "iso G2 -> G1.\n";
@@ -168,15 +176,20 @@ let make_game ?(rma=false) sps vereqs =
   F.fprintf fmt "sample %a.\n" (pp_list "," pp_string) global_rvars;
   
   (* print verification keys *)
-  print_input sps.key_left g1;
-  print_input sps.key_right g2;
+  print_input sps.key_left g1 "keys left";
+  print_input sps.key_right g2 "keys right";
   F.fprintf fmt "\n";
 
   (* print signatures for random message attack *)
   if rma then (
-    print_input (random_sigs sps.sig_left sps.msg_left_n) g1;
-    print_input (random_sigs sps.sig_left sps.msg_left_n) g1;
-    F.fprintf fmt "\n"
+    let sig_rvars =
+      get_vars (random_sigs sps.sig_left sps.msg_left_n @ random_sigs sps.sig_right sps.msg_right_n)
+      |> sorted_nub compare
+      |> L.filter (fun v -> not (L.mem v global_rvars))
+   in
+    F.fprintf fmt "sample %a.\n" (pp_list "," pp_string) sig_rvars;
+    print_input (random_sigs sps.sig_left sps.msg_left_n)   g1 "random left";
+    print_input (random_sigs sps.sig_right sps.msg_right_n) g2 "random right";
   );
 
   (* print oracle *)

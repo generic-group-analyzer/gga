@@ -71,9 +71,9 @@ let spec1 () =
     ; cS_rm + cS_rr + cS_vr + cS_wr ]  (* R used *)
   in
   let zero_constrs = [] in
+
   (* If two vectors coincide after applying one of the given
      permutations, then one of them is redundant *)
-
   let symmetries =
     ([ s_poly ],
      [ [(v,w); (w,v)]       (* swap V and W *)
