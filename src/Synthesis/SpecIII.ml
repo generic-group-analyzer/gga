@@ -74,7 +74,9 @@ let spec1 () =
   in
   let symmetries =
     ([ s_poly; r2_poly; r ],
-     [ [ (cS_v,cS_w); (cS_vm,cS_wm); (cS_rv,cS_rw) ] (* swap V and W *)
+     [ [ (v,w); (w,v) ] (* swap V and W *)
+     ; [ (m,m -@ one) ] (* message transformation *)
+     ; [ (m,m -@ one); (v,w); (w,v) ] (* combine first two *)
      ])
   in
   { sps_t           = sps_t;
