@@ -33,9 +33,9 @@ let synth_spec countonly spec specname =
   mkdir (prefix^"/tmp");
   mkdir (prefix^"/count");
 
-  let analyze gdef n attack_not_proof () =
+  let analyze gdef n attack_not_proof s () =
     try
-      let fname = prefix^"/tmp/sps.ggt" in
+      let fname = prefix^"/tmp/sps_"^string_of_int !i_total^"_"^s^".ggt" in
       output_file fname  gdef;
       analyze_bounded_from_string
         ~counter:attack_not_proof ~proof:(not attack_not_proof) ~fmt:null_formatter gdef n
@@ -43,8 +43,8 @@ let synth_spec countonly spec specname =
       InteractiveBounded.InvalidGame e -> Z3_Solver.Error e
   in
 
-  let analyze_external gdef n time attack_not_proof () =
-    let fname = prefix^"/tmp/sps.ggt" in
+  let analyze_external gdef n time attack_not_proof s () =
+    let fname = prefix^"/tmp/sps_"^string_of_int !i_total^"_"^s^".ggt" in
     output_file fname  gdef;
     let aorp = if attack_not_proof then "a" else "p" in
     let cmd = 
@@ -120,18 +120,18 @@ let synth_spec countonly spec specname =
         let srgdef = make_game ~rma:true sps eqs in
         let checks1 =
           [ (* try to find fast attacks *)
-            ("0-CMA attack", analyze sgdef 0 true)
-          ; ("1-RMA attack", analyze srgdef 0 true)
-          ; ("1-CMA attack", analyze_external sgdef 1 30 true)
+            ("0-CMA attack", analyze sgdef 0 true "0CMA")
+          ; ("1-RMA attack", analyze srgdef 0 true "1RMA")
+          ; ("1-CMA attack", analyze_external sgdef 1 30 true "1CMA")
           (* try to find proofs, if we find a proof, we are done *)
-          ; ("2-CMA proof", analyze_external sgdef 2 30 false) ]
+          ; ("2-CMA proof", analyze_external sgdef 2 30 false "2CMA") ]
         in
         let check2 = 
           [ (* try to find attacks *)
-            ("(1-CM+1-RM)A attack", analyze_external srgdef 1 30 true)
-          ; ("2-CMA attack", analyze_external sgdef 2 30 true)
-          ; ("(1-CM+1-RM)A proof", analyze_external srgdef 1 30 false)
-          ; ("1-CMA proof", analyze_external sgdef 1 30 false)
+            ("(1-CM+1-RM)A attack", analyze_external srgdef 1 30 true "1CM+1RMA_attack")
+          ; ("2-CMA attack", analyze_external sgdef 2 30 true "2CMA")
+          ; ("(1-CM+1-RM)A proof", analyze_external srgdef 1 30 false "1CM+1RMA_proof")
+          ; ("1-CMA proof", analyze_external sgdef 1 30 false "1-CMA_proof")
           ]
         in
         let cache_file = F.sprintf "./%s/%s" cache sig_ident in

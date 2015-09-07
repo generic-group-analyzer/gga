@@ -186,10 +186,11 @@ let make_game ?(rma=false) sps vereqs =
       get_vars (random_sigs sps.sig_left sps.msg_left_n @ random_sigs sps.sig_right sps.msg_right_n)
       |> sorted_nub compare
       |> L.filter (fun v -> not (L.mem v global_rvars))
-   in
+    in
     F.fprintf fmt "sample %a.\n" (pp_list "," pp_string) sig_rvars;
     print_input (random_sigs sps.sig_left sps.msg_left_n)   g1 "random left";
     print_input (random_sigs sps.sig_right sps.msg_right_n) g2 "random right";
+    F.fprintf fmt "\n";
   );
 
   (* print oracle *)
@@ -205,11 +206,16 @@ let make_game ?(rma=false) sps vereqs =
     (pp_list ", " SP.pp) sps.sig_right g2;
   F.fprintf fmt "\n";
 
+  let wineqs =
+    if not rma then wineqs
+    else wineqs @ (L.map (fun vm -> ("0 <> ", SP.(var ("s"^vm) -@ var ("w"^vm))))
+                     (sps.msg_right_n @ sps.msg_left_n))
+  in
   (* print winning condition *)
-  F.fprintf fmt "win (%a) =\n (%a /\\ %a)."
+  F.fprintf fmt "win (%a) =\n  (   %a@\n   /\\ %a)."
     (pp_list "," (pp_tuple ":" pp_string)) (get_wc_params sps)
-    (pp_list " /\\ " (pp_pair' pp_string SP.pp)) weqs
-    (pp_list " /\\ " (pp_pair' pp_string SP.pp)) wineqs;
+    (pp_list "@\n   /\\ " (pp_pair' pp_string SP.pp)) weqs
+    (pp_list "@\n   /\\ " (pp_pair' pp_string SP.pp)) wineqs;
   F.fprintf fmt "\n";
   
   Buffer.contents buf
