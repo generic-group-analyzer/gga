@@ -220,16 +220,33 @@ module MakePoly (V : Var) (C : Ring) = struct
     let rec loop acc b =
       match b with
       | [] -> acc
-      | x :: xs -> begin
-                     (* Find index of x in monomial list of f *)
-                     let i = index m x in
-                     if i < 0 then loop (C.zero :: acc) xs
-                     (* Return coefficient from corresponding element of t *)
-                     else loop (coeff f x :: acc) xs
-                   end
+      | x :: xs ->
+        (* Find index of x in monomial list of f *)
+        let i = index m x in
+        if i < 0 then loop (C.zero :: acc) xs
+        (* Return coefficient from corresponding element of t *)
+        else loop (coeff f x :: acc) xs
     in
     L.rev (loop [] b)
 
+  let div_mon f m =
+    let m' = L.map (fun (v,i) -> (v, -i)) m in
+    mult_term_poly (m', C.one) f
+
+  let ggt_mon m1 m2 =
+    let m =
+      L.map
+        (fun (v,i) ->
+           try
+             let j = L.assoc v m2 in
+             if      i < 0 && j < 0 then (v,max i j)
+             else if i > 0 && j > 0 then (v, min i j)
+             else                        (v, 0)
+           with
+             Not_found -> (v,0))
+        m1
+    in
+    norm_monom m
 
   let ( *@) = mult
   let ( +@) = add

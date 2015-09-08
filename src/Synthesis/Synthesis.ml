@@ -166,6 +166,16 @@ let make_game ?(rma=false) sps vereqs =
     F.fprintf fmt "sample %s" v
   in
 
+  let pp_ggt fmt f =
+    match SP.mons f with
+    | [] | [_] -> 
+      SP.pp fmt f
+    | mon0 :: mons ->
+      let m_ggt = List.fold_left (fun m_ggt m -> SP.ggt_mon m_ggt m) mon0 mons in
+      let f = SP.div_mon f m_ggt in
+      F.fprintf fmt "(%a)*%a" SP.pp f SP.pp_monom m_ggt
+  in
+
   (* print setting *)
   F.fprintf fmt "map %s * %s -> GT.\n" g1 g2;
   if sps.setting = TY2 then F.fprintf fmt "iso G2 -> G1.\n";
@@ -202,8 +212,8 @@ let make_game ?(rma=false) sps vereqs =
      "    [%a] in %s.\n")
     (pp_list ", " (pp_tuple ":" pp_string))  (get_oparams sps)
     (pp_list' ";\n  " pp_sample) sps.osample
-    (pp_list ", " SP.pp) sps.sig_left g1
-    (pp_list ", " SP.pp) sps.sig_right g2;
+    (pp_list ", " pp_ggt) sps.sig_left g1
+    (pp_list ", " pp_ggt) sps.sig_right g2;
   F.fprintf fmt "\n";
 
   let wineqs =

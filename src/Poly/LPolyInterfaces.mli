@@ -68,8 +68,11 @@ module type Poly = sig
   val mons : t -> monom list
   val coeff : t -> monom -> coeff
 
-  (* In tool we want to express a polynomial in terms of a monomial basis *)
+  (* In the tool we want to express a polynomial in terms of a monomial basis *)
   val to_vector : t -> monom list -> coeff list
+
+  val div_mon : t -> monom -> t
+  val ggt_mon : monom -> monom -> monom
 
   val ( *@) : t -> t -> t
   val (+@)  : t -> t -> t
