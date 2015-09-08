@@ -33,6 +33,8 @@ let spec1 () =
   let cS_rr  = gen () in
   let cR1_r  = gen () in
   let cR1_ri = gen () in
+  let cR2_r  = gen () in
+  let cR2_ri = gen () in
 
   let s_poly =
        (cS_v  * v)
@@ -46,6 +48,7 @@ let spec1 () =
   in
   
   let r1_poly = (cR1_r * r) + (cR1_ri * ri) in
+  let r2_poly = (cR2_r * r) + (cR2_ri * ri) in
 
   let sps_t =
     { key_left    = [ v; w ];
@@ -54,7 +57,7 @@ let spec1 () =
       msg_right_n = [ "M" ];
       sig_left    = [ r1_poly ];
       sig_left_n  = [ "R1" ];
-      sig_right   = [ r; s_poly ];
+      sig_right   = [ r2_poly; s_poly ];
       sig_right_n = [ "R2"; "S" ];
       setting     = TY3;
       osample     = [ "R" ]
@@ -67,13 +70,15 @@ let spec1 () =
     ; cS_w  + cS_wm + cS_rw         (* w used *)
     ; cS_rm + cS_rr + cS_rv + cS_rw (* r used *)
     ; cR1_r + cR1_ri                (* one of R or R^-1 for R1 nonzero *)
+    ; cR2_r + cR2_ri                (* one of R or R^-1 for R1 nonzero *)
     ]
   in
   let zero_constrs = 
-    [ cR1_r * cR1_ri ] (* one of R or R^-1 for R2 zero *)
+    [ cR1_r * cR1_ri;
+      cR2_r * cR2_ri ] (* one of R or R^-1 for R2 zero *)
   in
   let symmetries =
-    ([ s_poly; r1_poly; r ],
+    ([ s_poly; r1_poly; r2_poly ],
      [ [ (v,w); (w,v) ] (* swap V and W *)
      ; [ (m,m -@ one) ] (* message transformation *)
      ; [ (m,m -@ one); (v,w); (w,v) ] (* combine first two *)

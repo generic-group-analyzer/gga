@@ -173,7 +173,9 @@ let make_game ?(rma=false) sps vereqs =
     | mon0 :: mons ->
       let m_ggt = List.fold_left (fun m_ggt m -> SP.ggt_mon m_ggt m) mon0 mons in
       let f = SP.div_mon f m_ggt in
-      F.fprintf fmt "(%a)*%a" SP.pp f SP.pp_monom m_ggt
+      if SP.is_const (SP.from_mon m_ggt)
+      then SP.pp fmt f
+      else F.fprintf fmt "(%a)*%a" SP.pp f SP.pp_monom m_ggt
   in
 
   (* print setting *)
