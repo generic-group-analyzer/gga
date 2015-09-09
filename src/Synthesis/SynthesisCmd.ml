@@ -11,7 +11,15 @@ open Synthesis
 module IR = IntRing
 (*i*)
 
-let synth_spec countonly spec specname =
+type synth_type = CountOnly | Synth | SynthUB
+
+let synth_type_of_string = function
+  | "synth" -> Synth
+  | "synth_ub" -> SynthUB
+  | "count" -> CountOnly
+  | _ -> failwith "unknown option"
+
+let synth_spec synth_type spec specname =
   let i_total = ref 0 in
   let i_secure = ref 0 in
   let i_attack = ref 0 in
@@ -32,6 +40,8 @@ let synth_spec countonly spec specname =
   mkdir (prefix^"/error");
   mkdir (prefix^"/tmp");
   mkdir (prefix^"/count");
+  let current_dir = Sys.getcwd() in
+  mkdir (current_dir^"/gen/unbounded");
 
   let analyze gdef n attack_not_proof s () =
     try
@@ -41,6 +51,21 @@ let synth_spec countonly spec specname =
         ~counter:attack_not_proof ~proof:(not attack_not_proof) ~fmt:null_formatter gdef n
     with
       InteractiveBounded.InvalidGame e -> Z3_Solver.Error e
+  in
+
+  let analyze_unbounded gdef time () =
+    let fname = prefix^"/tmp/sps.ggt" in
+    output_file fname  gdef;
+    (* Set the env variable UBT_PATH *)
+    let ubt_path = Sys.getenv "UBT_PATH" in
+    let res = Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s automatic >/dev/null 2>&1" time ubt_path current_dir fname) in
+    if res = 0 then
+      let () = output_file (F.sprintf "%s/unbounded/sps_%02i.ggt" prefix !i_secure) gdef in
+      F.printf "Unbounded secure %i %!\n" !i_total
+    else if res = 1 then
+      F.printf "Not proven\n"
+    else
+      F.printf "External call timed out or did not return valid: exit %i\n" res
   in
 
   let analyze_external gdef n time attack_not_proof s () =
@@ -109,7 +134,7 @@ let synth_spec countonly spec specname =
       F.printf "%i noeq %!" !i_total
     ) else (
       incr i_verif;
-      if countonly then (
+      if (synth_type = CountOnly) then (
         incr i_unknown;
         let eqs = kernel_to_eqns left_kernel tmpl in
         let sgdef = make_game sps eqs in
@@ -150,6 +175,10 @@ let synth_spec countonly spec specname =
         match res with
         | Z3_Solver.Valid ->
           incr i_secure;
+      	  let () = 
+	    if (synth_type = SynthUB) then analyze_unbounded sgdef 1000 ()
+	    else ()
+	  in
           F.printf "%i %!\n" !i_total;
           output_file (F.sprintf "./%s/sps_%02i.ggt" prefix !i_secure) sgdef;
           output_file (F.sprintf "./%s/sigrand/sps_%02i.ggt" prefix !i_secure) srgdef
@@ -216,7 +245,7 @@ let synth_spec countonly spec specname =
   output_file (F.sprintf "./%s/results" prefix) res;
   print_endline res
 
-let synth countonly specname =
+let synth s specname =
   let specs =
     [ ("II.1",SpecII.spec1)
     ; ("II.2",SpecII.spec2)
@@ -239,4 +268,4 @@ let synth countonly specname =
     with
       Not_found -> failwith ("Synthesis spec "^specname^" not found")
   in
-  synth_spec countonly (spec ()) specname
+  synth_spec (synth_type_of_string s) (spec ()) specname
