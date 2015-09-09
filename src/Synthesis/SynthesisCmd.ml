@@ -41,7 +41,7 @@ let synth_spec synth_type spec specname =
   mkdir (prefix^"/tmp");
   mkdir (prefix^"/count");
   let current_dir = Sys.getcwd() in
-  mkdir (current_dir^"/gen/unbounded");
+  mkdir (current_dir^"/gen/"^specname^"/unbounded");
 
   let analyze gdef n attack_not_proof s () =
     try
