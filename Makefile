@@ -6,8 +6,6 @@ INSTALL    := scripts/install/install-sh
 PWD        := $(shell pwd)
 
 BINDIR := $(PREFIX)/bin
-LIBDIR := $(PREFIX)/lib/easycrypt
-SHRDIR := $(PREFIX)/share/easycrypt
 
 INSTALL    := scripts/install/install-sh
 

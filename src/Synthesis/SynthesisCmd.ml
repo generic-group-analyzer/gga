@@ -46,7 +46,7 @@ let synth_spec synth_type spec specname =
   let analyze gdef n attack_not_proof s () =
     try
       let fname = prefix^"/tmp/sps_"^string_of_int !i_total^"_"^s^".ggt" in
-      output_file fname  gdef;
+      output_file fname gdef;
       analyze_bounded_from_string
         ~counter:attack_not_proof ~proof:(not attack_not_proof) ~fmt:null_formatter gdef n
     with
@@ -55,7 +55,7 @@ let synth_spec synth_type spec specname =
 
   let analyze_unbounded gdef time () =
     let fname = prefix^"/tmp/sps.ggt" in
-    output_file fname  gdef;
+    output_file fname gdef;
     (* Set the env variable UBT_PATH *)
     let ubt_path = Sys.getenv "UBT_PATH" in
     let res = Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s automatic >/dev/null 2>&1" time ubt_path current_dir fname) in
@@ -72,7 +72,7 @@ let synth_spec synth_type spec specname =
     let fname = prefix^"/tmp/sps_"^string_of_int !i_total^"_"^s^".ggt" in
     output_file fname  gdef;
     let aorp = if attack_not_proof then "a" else "p" in
-    let cmd = 
+    let cmd =
       F.sprintf "timeout %i ./gga interactive%s_%i %s >/dev/null 2>&1" time aorp n fname
     in
     let res = Sys.command cmd in
@@ -80,7 +80,7 @@ let synth_spec synth_type spec specname =
     else if res = 1 then Z3_Solver.Attack "attack not preserved"
     else Z3_Solver.Unknown "External call timed out or did not return valid"
   in
-  
+
   let refine_analz checks =
     let rec go = function
       | [] -> Z3_Solver.Unknown "no check returned result"
@@ -109,7 +109,7 @@ let synth_spec synth_type spec specname =
     list_equal SP.equal p1s p2s
   in
   let apply_symmetry sym p =
-    let f x = 
+    let f x =
       try snd (L.find (fun (v,_p) -> SP.equal (SP.var x) v) sym)
       with _ -> SP.var x
     in
@@ -127,7 +127,7 @@ let synth_spec synth_type spec specname =
     let m = poly_list_to_matrix c b in
     let sig_ident = hash_string (make_game sps []) in
     let left_kernel = L.map (fun x -> L.map Big_int.big_int_of_int x) (Pari_Ker.kernel m) in
-    
+
     if left_kernel = [] then (
       let sgdef = make_game sps [] in
       output_file (F.sprintf "./%s/noverif/sps_%02i.ggt" prefix !i_total) sgdef;
@@ -151,7 +151,7 @@ let synth_spec synth_type spec specname =
           (* try to find proofs, if we find a proof, we are done *)
           ; ("2-CMA proof", analyze_external sgdef 2 30 false "2CMA") ]
         in
-        let check2 = 
+        let check2 =
           [ (* try to find attacks *)
             ("(1-CM+1-RM)A attack", analyze_external srgdef 1 30 true "1CM+1RMA_attack")
           ; ("2-CMA attack", analyze_external sgdef 2 30 true "2CMA")
@@ -164,7 +164,7 @@ let synth_spec synth_type spec specname =
           try
             Marshal.from_string (input_file cache_file) 0
           with
-            _ -> 
+            _ ->
               let res =
                 refine_analz
                   (L.map (fun (x,y) -> (x,y,true)) checks1 @ L.map  (fun (x,y) -> (x,y,false)) check2)
@@ -175,8 +175,9 @@ let synth_spec synth_type spec specname =
         match res with
         | Z3_Solver.Valid ->
           incr i_secure;
-      	  let () = 
-	    if (synth_type = SynthUB) then analyze_unbounded sgdef 1000 ()
+          let sgdef_ubt = make_game ~ubt:true sps eqs in
+      	  let () =
+	    if (synth_type = SynthUB) then analyze_unbounded sgdef_ubt 1000 ()
 	    else ()
 	  in
           F.printf "%i %!\n" !i_total;

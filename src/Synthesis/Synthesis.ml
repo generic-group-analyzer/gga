@@ -44,7 +44,7 @@ let completion sps =
       |> sorted_nub SP.compare
     | TY3 ->
       (sps.key_left @ L.map SP.var (sps.msg_left_n @ sps.sig_left_n))
-      |> sorted_nub SP.compare 
+      |> sorted_nub SP.compare
   in
   let right = match sps.setting with
     | TY1 ->
@@ -104,11 +104,11 @@ let make_eval_map sps =
   (fun x -> try L.assoc x z with _ -> SP.var x)
 
 let instantiate_poly subst p =
-  let evalf x = 
+  let evalf x =
     try SP.from_int (L.assoc x subst)
     with _ -> SP.var x
   in
-  SP.eval evalf p 
+  SP.eval evalf p
 
 (* Instantiates an sps template by applying subst *)
 let instantiate_template sps subst =
@@ -126,7 +126,7 @@ let get_oparams sps =
     (L.map (append_type g1) sps.msg_left_n)
   @ (L.map (append_type g2) sps.msg_right_n)
 
-let get_wc_params sps = 
+let get_wc_params sps =
   let (g1,g2) = gnames_of_setting sps.setting in
   let append_type t x = ("w" ^ x,t) in
      L.map (append_type g1) (sps.msg_left_n  @  sps.sig_left_n)
@@ -141,7 +141,7 @@ let rename_vars sps ren poly =
   let renaming = L.combine vars (L.map (fun v -> SP.var (ren v)) vars) in
   SP.eval (fun x -> try L.assoc x renaming with Not_found -> SP.var x) poly
 
-let make_game ?(rma=false) sps vereqs =
+let make_game ?(rma=false) ?(ubt=false) sps vereqs =
   let buf = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer buf in
   let (g1, g2) = gnames_of_setting sps.setting  in
@@ -149,13 +149,13 @@ let make_game ?(rma=false) sps vereqs =
     if not rma then []
     else L.map (rename_vars sps (fun v -> "s"^v)) (sigs @ L.map SP.var msgs)
   in
-  
+
   let weqs = L.map (fun p -> ("0 = ",p)) (L.map (rename_vars sps (fun v -> "w"^v)) vereqs) in
   let wineqs =
     L.map (fun p -> ("forall i: 0 <> ",p))
      (L.map (fun v -> SP.(var ("w"^v) -@ var (v^"_i"))) (sps.msg_right_n @ sps.msg_left_n))
   in
-  
+
   let print_input xs g comment =
     if xs <> [] then
       F.fprintf fmt "input [ %a ] in %s. (* %s *)\n"
@@ -168,7 +168,7 @@ let make_game ?(rma=false) sps vereqs =
 
   let pp_ggt fmt f =
     match SP.mons f with
-    | [] | [_] -> 
+    | [] | [_] ->
       SP.pp fmt f
     | mon0 :: mons ->
       let m_ggt = List.fold_left (fun m_ggt m -> SP.ggt_mon m_ggt m) mon0 mons in
@@ -179,14 +179,19 @@ let make_game ?(rma=false) sps vereqs =
   in
 
   (* print setting *)
-  F.fprintf fmt "map %s * %s -> GT.\n" g1 g2;
-  if sps.setting = TY2 then F.fprintf fmt "iso G2 -> G1.\n";
-  F.fprintf fmt "\n";
+  if ubt then (
+    let setting = match sps.setting with TY1 -> "1" | TY2 -> "2" | TY3 -> "3" in
+    F.fprintf fmt "group_setting %s.\n" setting
+  ) else (
+    F.fprintf fmt "map %s * %s -> GT.\n" g1 g2;
+    if sps.setting = TY2 then F.fprintf fmt "iso G2 -> G1.\n";
+    F.fprintf fmt "\n";
+  );
 
   let global_rvars = get_vars (sps.key_left @ sps.key_right) in
 
   F.fprintf fmt "sample %a.\n" (pp_list "," pp_string) global_rvars;
-  
+
   (* print verification keys *)
   print_input sps.key_left g1 "keys left";
   print_input sps.key_right g2 "keys right";
@@ -229,7 +234,7 @@ let make_game ?(rma=false) sps vereqs =
     (pp_list "@\n   /\\ " (pp_pair' pp_string SP.pp)) weqs
     (pp_list "@\n   /\\ " (pp_pair' pp_string SP.pp)) wineqs;
   F.fprintf fmt "\n";
-  
+
   Buffer.contents buf
 
 (*******************************************************************)
