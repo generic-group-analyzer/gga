@@ -200,8 +200,9 @@ let synth_spec synth_type spec specname =
           output_file (F.sprintf "./%s/sps_%02i.ggt" prefix !i_secure) sgdef;
           output_file (F.sprintf "./%s/sigrand/sps_%02i.ggt" prefix !i_secure) srgdef
         | Z3_Solver.Unknown s ->
+          let sgdef_ubt = make_game ~ubt:true sps eqs in
       	  let () = 
-	    if (synth_type = SynthUB) then analyze_unbounded_unknown sgdef 2000 ()
+	    if (synth_type = SynthUB) then analyze_unbounded_unknown sgdef_ubt 1000 ()
 	    else ()
 	  in
           output_file (F.sprintf "./%s/unknown/sps_%02i.ggt" prefix !i_unknown) ("(* "^s^" *)\n"^sgdef);
