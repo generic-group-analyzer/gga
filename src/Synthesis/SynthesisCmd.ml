@@ -68,6 +68,21 @@ let synth_spec synth_type spec specname =
       F.printf "External call timed out or did not return valid: exit %i\n" res
   in
 
+  let analyze_unbounded_unknown gdef time () =
+    let fname = prefix^"/tmp/sps.ggt" in
+    output_file fname  gdef;
+    (* Set the env variable UBT_PATH *)
+    let ubt_path = Sys.getenv "UBT_PATH" in
+    let res = Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s automatic >/dev/null 2>&1" time ubt_path current_dir fname) in
+    if res = 0 then
+      let () = output_file (F.sprintf "%s/unbounded/sps_unknown_%02i.ggt" prefix (!i_unknown + 1)) gdef in
+      F.printf "Unbounded secure %i %!\n" !i_total
+    else if res = 1 then
+      F.printf "Not proven\n"
+    else
+      F.printf "External call timed out or did not return valid: exit %i\n" res
+  in
+
   let analyze_external gdef n time attack_not_proof s () =
     let fname = prefix^"/tmp/sps_"^string_of_int !i_total^"_"^s^".ggt" in
     output_file fname  gdef;
@@ -178,16 +193,21 @@ let synth_spec synth_type spec specname =
           let sgdef_ubt = make_game ~ubt:true sps eqs in
       	  let () =
 	    if (synth_type = SynthUB) then analyze_unbounded sgdef_ubt 1000 ()
+
 	    else ()
 	  in
           F.printf "%i %!\n" !i_total;
           output_file (F.sprintf "./%s/sps_%02i.ggt" prefix !i_secure) sgdef;
           output_file (F.sprintf "./%s/sigrand/sps_%02i.ggt" prefix !i_secure) srgdef
         | Z3_Solver.Unknown s ->
+      	  let () = 
+	    if (synth_type = SynthUB) then analyze_unbounded_unknown sgdef 2000 ()
+	    else ()
+	  in
           output_file (F.sprintf "./%s/unknown/sps_%02i.ggt" prefix !i_unknown) ("(* "^s^" *)\n"^sgdef);
           F.printf "%i? %!\n" !i_total;
           F.printf "Unknown: %s\n" s;
-          incr i_unknown
+          incr i_unknown	  
         | Z3_Solver.Attack _ ->
           output_file (F.sprintf "./%s/attack/sps_%02i.ggt" prefix !i_attack) sgdef;
           F.printf "%i! %!\n" !i_total;
