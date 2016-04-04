@@ -58,29 +58,7 @@ let synth_spec synth_type spec specname =
     output_file fname gdef;
     (* Set the env variable UBT_PATH *)
     let ubt_path = Sys.getenv "UBT_PATH" in
-    let res = Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s automatic >/dev/null 2>&1" time ubt_path current_dir fname) in
-    if res = 0 then
-      let () = output_file (F.sprintf "%s/unbounded/sps_%02i.ggt" prefix !i_secure) gdef in
-      F.printf "Unbounded secure %i %!\n" !i_total
-    else if res = 1 then
-      F.printf "Not proven\n"
-    else
-      F.printf "External call timed out or did not return valid: exit %i\n" res
-  in
-
-  let analyze_unbounded_unknown gdef time () =
-    let fname = prefix^"/tmp/sps.ggt" in
-    output_file fname  gdef;
-    (* Set the env variable UBT_PATH *)
-    let ubt_path = Sys.getenv "UBT_PATH" in
-    let res = Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s automatic >/dev/null 2>&1" time ubt_path current_dir fname) in
-    if res = 0 then
-      let () = output_file (F.sprintf "%s/unbounded/sps_unknown_%02i.ggt" prefix (!i_unknown + 1)) gdef in
-      F.printf "Unbounded secure %i %!\n" !i_total
-    else if res = 1 then
-      F.printf "Not proven\n"
-    else
-      F.printf "External call timed out or did not return valid: exit %i\n" res
+    Sys.command (F.sprintf "timeout %i %s/ubt.native %s/%s >/dev/null 2>&1" time ubt_path current_dir fname)
   in
 
   let analyze_external gdef n time attack_not_proof s () =
@@ -191,20 +169,33 @@ let synth_spec synth_type spec specname =
         | Z3_Solver.Valid ->
           incr i_secure;
           let sgdef_ubt = make_game ~ubt:true sps eqs in
-      	  let () =
-	    if (synth_type = SynthUB) then analyze_unbounded sgdef_ubt 1000 ()
 
-	    else ()
-	  in
+          let () =
+            if (synth_type = SynthUB) then
+              let cache_file_ub = F.sprintf "%s_ub" cache_file in          
+              let t1 = Unix.gettimeofday() in
+              let res =
+                try
+                  Marshal.from_string (input_file cache_file_ub) 0
+                with
+                  _ -> analyze_unbounded sgdef_ubt 1000 ()
+              in
+              let t2 = Unix.gettimeofday() in
+              if res = 0 then
+                let () = output_file (F.sprintf "%s/unbounded/sps_%02i.ggt" prefix !i_secure) sgdef_ubt in
+                output_file cache_file_ub (Marshal.to_string res []);
+                F.printf "Unbounded secure %i %!\n# %F\n" !i_total (t2 -. t1)
+              else if res = 1 then
+                F.printf "Not proven\n$ %F\n" (t2 -. t1)
+              else
+                F.printf "External call timed out or did not return valid: exit %i\n$ %F\n" res (t2 -. t1)
+            else ()
+          in
+               
           F.printf "%i %!\n" !i_total;
           output_file (F.sprintf "./%s/sps_%02i.ggt" prefix !i_secure) sgdef;
           output_file (F.sprintf "./%s/sigrand/sps_%02i.ggt" prefix !i_secure) srgdef
         | Z3_Solver.Unknown s ->
-          let sgdef_ubt = make_game ~ubt:true sps eqs in
-      	  let () = 
-	    if (synth_type = SynthUB) then analyze_unbounded_unknown sgdef_ubt 1000 ()
-	    else ()
-	  in
           output_file (F.sprintf "./%s/unknown/sps_%02i.ggt" prefix !i_unknown) ("(* "^s^" *)\n"^sgdef);
           F.printf "%i? %!\n" !i_total;
           F.printf "Unknown: %s\n" s;
