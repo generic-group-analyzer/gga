@@ -102,6 +102,7 @@ type cmd =
   | AddInputRight of group_elem list
   | AddInput of group_elem list
   | SetChallenge of group_elem
+  | AddConst of string * int
 
 type incomp_assm = {
   ia_gs            : group_setting;
@@ -110,6 +111,7 @@ type incomp_assm = {
   ia_input_right   : group_elem list;
   ia_input         : group_elem list;
   ia_challenge     : group_elem option;
+  ia_constants     : (string * int) list;
 }
 
 val empty_ias : incomp_assm

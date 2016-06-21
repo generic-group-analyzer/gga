@@ -180,6 +180,8 @@ module MakePoly (V : Var) (C : Ring) = struct
   let mons (f : t) = sorted_nub (list_compare V.compare) (L.map fst f)
   let coeff f m = try L.assoc m f with Not_found -> C.zero
 
+  let coeff_mult = C.mult
+
   let ( *@) = mult
   let ( +@) = add
   let ( -@) = minus

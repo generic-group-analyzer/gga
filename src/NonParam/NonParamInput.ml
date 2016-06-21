@@ -248,6 +248,7 @@ type cmd =
   | AddInputRight of group_elem list
   | AddInput of group_elem list
   | SetChallenge of group_elem
+  | AddConst of string * int
 
 type incomp_assm = {
   ia_gs            : group_setting;
@@ -256,6 +257,7 @@ type incomp_assm = {
   ia_input_right   : group_elem list;
   ia_input         : group_elem list;
   ia_challenge     : group_elem option;
+  ia_constants     : (string * int) list;
 }
 
 let empty_ias = {
@@ -265,7 +267,31 @@ let empty_ias = {
   ia_input_right = [];
   ia_input = [];
   ia_challenge = None;
+  ia_constants = []
 }
+
+let rpoly_replace_vars_by_constants (consts : (string * int) list) rpoly =
+  let terms = RP.to_terms rpoly in
+  let terms' = 
+    L.map 
+    (fun (vars, c) ->
+      L.fold_left 
+        (fun (new_vars,new_c) v ->
+          try
+            let (_,c') = L.find (fun (v',_) -> v' = v) consts in
+            (new_vars, RP.coeff_mult new_c (Big_int.big_int_of_int c'))
+          with
+           | Not_found -> (new_vars @ [v], new_c)
+        )
+        ([],c)
+        vars
+    )
+    terms
+  in
+  RP.from_terms terms'
+
+let ge_replace_vars_by_constants consts ge =
+  { ge with ge_rpoly = L.map (rpoly_replace_vars_by_constants consts) ge.ge_rpoly }
 
 let handle_cmd cmd ias =
   let set_is_decisional b ias =
@@ -289,12 +315,15 @@ let handle_cmd cmd ias =
       ia_gs = { ias.ia_gs with
                 gs_emaps = ias.ia_gs.gs_emaps @ emaps } }
   | AddInputLeft ges  ->
+    let ges = L.map (ge_replace_vars_by_constants ias.ia_constants) ges in
     let ias = set_is_decisional true ias in
     { ias with ia_input_left = ias.ia_input_left @ ges }
   | AddInputRight ges ->
+    let ges = L.map (ge_replace_vars_by_constants ias.ia_constants) ges in
     let ias = set_is_decisional true ias in
     { ias with ia_input_right = ias.ia_input_right @ ges }
   | AddInput ges ->
+    let ges = L.map (ge_replace_vars_by_constants ias.ia_constants) ges in
     (* \ic{We add to all three lists since we might not know
        yet if the problem is decisional or computational.} *)
     { ias with
@@ -303,11 +332,14 @@ let handle_cmd cmd ias =
       ia_input_right = ias.ia_input_right @ ges;
     }
   | SetChallenge ge   ->
+    let ge = ge_replace_vars_by_constants ias.ia_constants ge in
     let ias = set_is_decisional false ias in
     begin match ias.ia_challenge with
     | Some _ -> fail_assm "Challenge already set."
     | None   -> { ias with ia_challenge = Some ge }
     end
+  | AddConst(name,i) ->
+     { ias with ia_constants = ias.ia_constants @ [(name,i)] }
 
 let eval_cmds cmds =
   let ias = L.fold_left (fun ia cmd -> handle_cmd cmd ia) empty_ias cmds in
@@ -383,6 +415,8 @@ let pp_cmd fmt cmd =
     F.fprintf fmt "input  %a.\n" (pp_list ", " pp_group_elem) ges
   | SetChallenge ge ->
     F.fprintf fmt "challenge %a.\n" pp_group_elem ge
+  | AddConst (name, i) ->
+    F.fprintf fmt "const %s = %d.\n" name i
 (*i*)
 
 (*i*)

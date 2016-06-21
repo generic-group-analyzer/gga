@@ -20,6 +20,7 @@
 %token RBRACK
 %token LPAR
 %token RPAR
+%token EQ
 
 /************************************************************************/
 /* \hd{Tokens for Commands} */
@@ -31,6 +32,7 @@
 %token INP
 %token CHAL
 %token COMP
+%token CONST
 
 /************************************************************************/
 /* \hd{Tokens for Input} */
@@ -106,7 +108,8 @@ cmd :
   { AddInput(L.map (fun ps -> { ge_rpoly = ps; ge_group = gid }) pss) }
 | CHAL; ps = poly_comp; IN; gid = GID; DOT
   { SetChallenge({ ge_rpoly = ps; ge_group = gid }) }
-
+| CONST; name = VARU; EQ; i = NAT; DOT
+  { AddConst(name,i) }
 ;
 
 /************************************************************************/

@@ -68,6 +68,8 @@ module type Poly = sig
 
   val mons : t -> monom list
   val coeff : t -> monom -> coeff
+    
+  val coeff_mult : coeff -> coeff -> coeff
 
   val ( *@) : t -> t -> t
   val (+@)  : t -> t -> t

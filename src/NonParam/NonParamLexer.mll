@@ -32,6 +32,7 @@ rule lex = parse
   | "]"     { RBRACK }
   | ","     { COMMA }
   | "^"     { EXP }
+  | "="     { EQ }
 
   | "maps"          { EMAPS }
   | "isos"          { ISOS }
@@ -43,6 +44,7 @@ rule lex = parse
   | "challenge"     { CHAL }
   | "composite"     { COMP }
   | "in"            { IN }
+  | "const"         { CONST }
 
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
   | ['a'-'z' 'A'-'F' 'H'-'Z']idchars* as s { VARU s }
