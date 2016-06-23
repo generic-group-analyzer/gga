@@ -46,8 +46,8 @@ rule lex = parse
   | "in"            { IN }
   | "const"         { CONST }
 
+  | '-'?['0'-'9']['0'-'9']* as s { INT(int_of_string(s)) }
   | ['0'-'9']['0'-'9']* as s { NAT(int_of_string(s)) }
-  | "-"?['0'-'9']['0'-'9']* as s { INT(int_of_string(s)) }
   | ['a'-'z' 'A'-'F' 'H'-'Z']idchars* as s { VARU s }
   | ['G']idchars* as s { GID (S.sub s 1 (S.length s - 1)) }
 
