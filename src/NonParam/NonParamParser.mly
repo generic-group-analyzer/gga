@@ -47,6 +47,7 @@
 %token MINUS
 
 %token <int> NAT
+%token <int> INT
 
 /************************************************************************/
 /* \hd{Priority and associativity} */
@@ -108,7 +109,7 @@ cmd :
   { AddInput(L.map (fun ps -> { ge_rpoly = ps; ge_group = gid }) pss) }
 | CHAL; ps = poly_comp; IN; gid = GID; DOT
   { SetChallenge({ ge_rpoly = ps; ge_group = gid }) }
-| CONST; name = VARU; EQ; i = NAT; DOT
+| CONST; name = VARU; EQ; i = INT; DOT
   { AddConst(name,i) }
 ;
 
