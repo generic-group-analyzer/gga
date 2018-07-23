@@ -45,6 +45,7 @@ gga.native:
 install:
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(BINDIR)
 	$(INSTALL) -m 0755 -T gga.native $(DESTDIR)$(BINDIR)/generic-group-analyzer
+	cp _build/c_src/libparistubs.so /usr/lib
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/generic-group-analyzer

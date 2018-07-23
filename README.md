@@ -2,7 +2,9 @@
 
 ## Installation
 
-Use 'make native' to compile the commandline tool 'ggt.native'.
+Use 'make' to compile the commandline tool 'ggt.native'.
+
+Then run 'make install' to install the binary files in your system.
 
 You need an up-to-date ocaml installation with the packages
 'menhir', 'yojson', and 'ounit'.
@@ -13,7 +15,7 @@ uses Sage, Pari/GP, and Z3 as a backend.
 For Sage[^Sage], you should be able to start 'sage -python'. For Pari/GP
 [^Pari], you need to be able to compile and link C code with libpari.
 On OS X, you can install Pari/GP with homebrew and on Ubuntu, the package
-is named pari-gp. We use a Z3 wrapper written in Python. This requires the Z3
+is named libpari-dev. We use a Z3 wrapper written in Python. This requires the Z3
 Python bindings [^Z3Py] to work. You can test the interaction of our tool with
 Sage and Z3 by running './scripts/ggt_Sage.py test' and './scripts/ggt_z3.py test'.
 
